@@ -58,11 +58,11 @@ exports.register = async (req, res) => {
 };
 exports.login = async (req, res) => {
     const { email, password } = req.body;
-
+    console.log("login", req.body);
     try {
         const user = await User.findOne({ email });
-        if(!user){
-            return res.status(401).json({success:false, message:"Account with this email does not exist"});
+        if (!user) {
+            return res.status(401).json({ success: false, message: "Account with this email does not exist" });
         }
         if (!user || !(await bcrypt.compare(password, user.password))) {
             return res.status(401).json({ success: false, message: 'Invalid credentials' });
@@ -183,7 +183,7 @@ exports.refreshToken = async (req, res) => {
             const newAccessToken = jwt.sign(
                 { username: user.email },
                 process.env.JWT_SECRET,
-                { expiresIn: '1h' } 
+                { expiresIn: '1h' }
             );
 
             res.status(200).json({ success: true, accessToken: newAccessToken });
@@ -193,9 +193,9 @@ exports.refreshToken = async (req, res) => {
     }
 };
 
-exports.loginSendOtp = async (req, res) => {    
+exports.loginSendOtp = async (req, res) => {
     try {
-        const { email,  } = req.body;
+        const { email, } = req.body;
         const user = await User.findOne({ email });
 
         if (!user) {
@@ -204,7 +204,7 @@ exports.loginSendOtp = async (req, res) => {
 
         const loginOtp = generateOTP();
         const loginOtpExpiration = new Date();
-        loginOtpExpiration.setMinutes(loginOtpExpiration.getMinutes() + 1); 
+        loginOtpExpiration.setMinutes(loginOtpExpiration.getMinutes() + 1);
 
         user.loginOtp = loginOtp;
         user.loginOtpExpiration = loginOtpExpiration;
@@ -271,12 +271,12 @@ exports.verifyLoginOtp = async (req, res) => {
         res.status(500).json({ success: false, message: 'Error verifying login OTP', error: error.message });
     }
 };
- 
+
 exports.resendLoginOtp = async (req, res) => {
     const { email } = req.body;
 
     try {
-        const user = await User.findOne({ email }); 
+        const user = await User.findOne({ email });
 
         if (!user) {
             return res.status(401).json({ success: false, message: 'Account with this email does not exist' });
@@ -299,7 +299,7 @@ exports.resendLoginOtp = async (req, res) => {
 
         transporter.sendMail(mailOptions, (error, info) => {
             if (error) {
-                console.error('Error sending email:', error);    
+                console.error('Error sending email:', error);
                 return res.status(500).json({ success: false, message: 'Error sending OTP' });
             }
             res.status(200).json({ success: true, message: 'Login OTP has been sent to your email' });
@@ -309,7 +309,7 @@ exports.resendLoginOtp = async (req, res) => {
         res.status(500).json({ success: false, message: 'Error sending login OTP', error: error.message });
     }
 };
-exports.logout = async (req, res) => {    
+exports.logout = async (req, res) => {
     try {
         const { email } = req.body;
         const user = await User.findOne({ email });
@@ -324,7 +324,7 @@ exports.logout = async (req, res) => {
         res.status(500).json({ success: false, message: 'Error logging out', error: error.message });
     }
 };
-exports.createAdmin = async (req, res) => {    
+exports.createAdmin = async (req, res) => {
     try {
         const { email, password } = req.body;
         const user = await User.findOne({ email });
@@ -339,7 +339,7 @@ exports.createAdmin = async (req, res) => {
         res.status(500).json({ success: false, message: 'Error creating admin', error: error.message });
     }
 };
-exports.getUserById = async (req, res) => {    
+exports.getUserById = async (req, res) => {
     try {
         const { id } = req.params;
         const user = await User.findById(id);
@@ -351,9 +351,9 @@ exports.getUserById = async (req, res) => {
         res.status(500).json({ success: false, message: 'Error getting user', error: error.message });
     }
 };
-exports.getAllUsers = async (req, res) => {    
+exports.getAllUsers = async (req, res) => {
     try {
-        const users = await User.find({role:'user'});
+        const users = await User.find({ role: 'user' });
         res.status(200).json({ success: true, message: 'Users found', users: users });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Error getting users', error: error.message });
