@@ -5,18 +5,21 @@ module.exports = (key) => {
     
     return {
         encrypt: (text) => {
-            const Key = process.env.CRYPTION_KEY;
-            const iv = crypto.randomBytes(16)
-
-            const cipher = crypto.createCipheriv(algorithm, Key, iv)
-
-            const encrypted = Buffer.concat([cipher.update(text), cipher.final()])
-            //  console.log("encrypted", encrypted.toString('hex'));
-            return {
-                iv: iv.toString('hex'),
-                content: encrypted.toString('hex')
+            try{
+                const Key = process.env.CRYPTION_KEY;
+                const iv = crypto.randomBytes(16)
+    
+                const cipher = crypto.createCipheriv(algorithm, Key, iv)
+    
+                const encrypted = Buffer.concat([cipher.update(text), cipher.final()])
+                //  console.log("encrypted", encrypted.toString('hex'));
+                return {
+                    iv: iv.toString('hex'),
+                    content: encrypted.toString('hex')
+                }
+            }catch(error){
+                console.log(error);
             }
-
             //   const iv = crypto.randomBytes(16);
             //   const iv2 = crypto.randomBytes(32);
             //   const key2 = Buffer.from(key, 'utf-8');
@@ -31,25 +34,15 @@ module.exports = (key) => {
         decrypt: (text) => {
             try{
                 const Key = process.env.CRYPTION_KEY;
-            console.log("key", Key);
-            const iv = Buffer.from(text.iv, 'hex');
-            const encryptedText = Buffer.from(text.content, 'hex');
-            console.log("encryptedText", encryptedText);
-            console.log("1) About to create decipher");
-            const decipher = crypto.createDecipheriv(algorithm, Key, iv);
-            console.log("2) Decipher created");
-            let decrypted = decipher.update(encryptedText);
-            console.log("3) After decipher.update()", decrypted);
-            decrypted = Buffer.concat([decrypted, decipher.final()]);
-            console.log("4) After decipher.final()", decrypted);
-
-            console.log("5) Decrypted text:", decrypted.toString());
-            return decrypted.toString();
+                const iv = Buffer.from(text.iv, 'hex');
+                const encryptedText = Buffer.from(text.content, 'hex');
+                const decipher = crypto.createDecipheriv(algorithm, Key, iv);
+                let decrypted = decipher.update(encryptedText);
+                decrypted = Buffer.concat([decrypted, decipher.final()]);
+                return decrypted.toString();
             }catch(error){
-                console.log("error", error);
-                return null;
-            }
-            
+                console.log(error);
+            } 
         }
     };
 };
