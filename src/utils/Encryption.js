@@ -29,7 +29,8 @@ module.exports = (key) => {
         },
 
         decrypt: (text) => {
-            const Key = process.env.CRYPTION_KEY;
+            try{
+                const Key = process.env.CRYPTION_KEY;
             console.log("key", Key);
             const iv = Buffer.from(text.iv, 'hex');
             const encryptedText = Buffer.from(text.content, 'hex');
@@ -39,6 +40,11 @@ module.exports = (key) => {
             decrypted = Buffer.concat([decrypted, decipher.final()]);
             console.log("decrypted", decrypted.toString());
             return decrypted.toString();
+            }catch(error){
+                console.log("error", error);
+                return null;
+            }
+            
         }
     };
 };
