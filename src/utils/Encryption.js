@@ -30,6 +30,7 @@ module.exports = (key) => {
 
         decrypt: (text) => {
             const Key = process.env.CRYPTION_KEY;
+            console.log("key", Key);
             const iv = Buffer.from(text.iv, 'hex');
             const encryptedText = Buffer.from(text.content, 'hex');
             const decipher = crypto.createDecipheriv(algorithm, Key, iv);

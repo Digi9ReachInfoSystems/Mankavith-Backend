@@ -4,6 +4,7 @@ module.exports = (encrypt, decrypt) => {
             if (req.headers.accept === 'application/unencrypted') {
             } else {
                 try {
+                    console.log("req.body", req.body);
                     const decrypted = decrypt(req.body.encryptedBody);
                     req.body = JSON.parse(decrypted);
                 } catch (error) {
