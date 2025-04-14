@@ -55,7 +55,6 @@ app.use("/question", questionRouter);
 app.use("/entrance", entranceRouter);
 app.use("/achiever", achieverRouter);
 
-
 app.listen(process.env.PORT, () => {
     console.log(`Server running on port ${process.env.PORT}`);
   });
