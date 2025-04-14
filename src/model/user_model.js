@@ -2,8 +2,8 @@ const e = require("express");
 const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema({
-    phone: { type: String, required: true },
-    displayName: { type: String, required: true },
+    phone: { type: String, required: false },
+    displayName: { type: String, required: false },
     photo_url: {
         type: String,
         required: false,
@@ -36,6 +36,9 @@ const userSchema = new mongoose.Schema({
     otp: { type: String }, 
     otpExpiration: { type: Date }, 
     isEmailVerified: { type: Boolean, default: false }, 
+    refreshToken: { type: String },
+    loginOtp: { type: String },
+    loginOtpExpiration: { type: Date },
 });
 
 // Create and export the User model
