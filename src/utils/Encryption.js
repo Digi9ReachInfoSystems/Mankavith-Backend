@@ -35,10 +35,15 @@ module.exports = (key) => {
             const iv = Buffer.from(text.iv, 'hex');
             const encryptedText = Buffer.from(text.content, 'hex');
             console.log("encryptedText", encryptedText);
+            console.log("1) About to create decipher");
             const decipher = crypto.createDecipheriv(algorithm, Key, iv);
+            console.log("2) Decipher created");
             let decrypted = decipher.update(encryptedText);
+            console.log("3) After decipher.update()", decrypted);
             decrypted = Buffer.concat([decrypted, decipher.final()]);
-            console.log("decrypted", decrypted.toString());
+            console.log("4) After decipher.final()", decrypted);
+
+            console.log("5) Decrypted text:", decrypted.toString());
             return decrypted.toString();
             }catch(error){
                 console.log("error", error);
