@@ -6,6 +6,7 @@ module.exports = (encrypt, decrypt) => {
                 try {
                     console.log("req.body", req.body);
                     const decrypted = decrypt(req.body.encryptedBody);
+                    console.log("decrypted", decrypted);
                     req.body = JSON.parse(decrypted);
                 } catch (error) {
                     return res.status(400).send('Decryption failed');
