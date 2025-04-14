@@ -2,13 +2,13 @@ const crypto = require('crypto');
 
 module.exports = (key) => {
     const algorithm = 'aes-256-cbc';
-
+    const Key = process.env.CRYPTION_KEY;
     return {
         encrypt: (text) => {
 
             const iv = crypto.randomBytes(16)
 
-            const cipher = crypto.createCipheriv(algorithm, process.env.CRYPTION_KEY, iv)
+            const cipher = crypto.createCipheriv(algorithm, Key, iv)
 
             const encrypted = Buffer.concat([cipher.update(text), cipher.final()])
             //  console.log("encrypted", encrypted.toString('hex'));
@@ -31,7 +31,7 @@ module.exports = (key) => {
         decrypt: (text) => {
             const iv = Buffer.from(text.iv, 'hex');
             const encryptedText = Buffer.from(text.content, 'hex');
-            const decipher = crypto.createDecipheriv(algorithm, key, iv);
+            const decipher = crypto.createDecipheriv(algorithm, Key, iv);
             let decrypted = decipher.update(encryptedText);
             decrypted = Buffer.concat([decrypted, decipher.final()]);
             return decrypted.toString();
