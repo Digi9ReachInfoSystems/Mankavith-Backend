@@ -33,9 +33,11 @@ module.exports = (key) => {
             console.log("key", Key);
             const iv = Buffer.from(text.iv, 'hex');
             const encryptedText = Buffer.from(text.content, 'hex');
+            console.log("encryptedText", encryptedText);
             const decipher = crypto.createDecipheriv(algorithm, Key, iv);
             let decrypted = decipher.update(encryptedText);
             decrypted = Buffer.concat([decrypted, decipher.final()]);
+            console.log("decrypted", decrypted.toString());
             return decrypted.toString();
         }
     };
