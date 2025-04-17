@@ -1,12 +1,10 @@
 module.exports = (encrypt, decrypt) => {
     return {
         decryptRequestBody: (req, res, next) => {
-            if (req.headers.accept === 'application/unencrypted') {
+            if (req.headers.api_key === process.env.FLUTTER_API_KEY) {
             } else {
                 try {
-                    console.log("req.body", req.body);
                     const decrypted = decrypt(req.body.encryptedBody);
-                    console.log("decrypted", decrypted);
                     req.body = JSON.parse(decrypted);
                 } catch (error) {
                     return res.status(400).send('Decryption failed');
@@ -18,7 +16,7 @@ module.exports = (encrypt, decrypt) => {
             const oldJson = res.json;
             res.json = async (body) => {
 
-                if (req.headers.accept === 'application/unencrypted') {
+                if (req.headers.api_key === process.env.FLUTTER_API_KEY) {
                     return oldJson.call(res, { body })
                 } else {
                     const encryptedBody = encrypt(JSON.stringify(body));
