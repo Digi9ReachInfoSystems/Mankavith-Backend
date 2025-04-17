@@ -17,7 +17,7 @@ const transporter = nodemailer.createTransport({
 });
 
 exports.register = async (req, res) => {
-    const { email, password } = req.body;
+    const { email, password, phone, name,role } = req.body;
     try {
         const existingUser = await User.findOne({ email: email });
         if (existingUser) {
@@ -31,6 +31,9 @@ exports.register = async (req, res) => {
         const newUser = new User({
             email,
             password: hashedPassword,
+            phone,
+            name,
+            role,
             otp,
             otpExpiration,
             isEmailVerified: false,
@@ -53,6 +56,7 @@ exports.register = async (req, res) => {
             res.status(201).json({ success: true, message: 'User registered successfully. OTP has been sent to your email.' });
         });
     } catch (error) {
+        console.error("error", error);
         res.status(500).json({ success: false, message: 'Error registering user', error: error.message });
     }
 };
@@ -89,6 +93,7 @@ exports.login = async (req, res) => {
             user: user
         });
     } catch (error) {
+        console.error("error", error);
         res.status(500).json({ success: false, message: 'Login failed', error: error.message });
     }
 };
@@ -112,10 +117,28 @@ exports.verifyOTP = async (req, res) => {
         user.isEmailVerified = true;
         user.otp = undefined;
         user.otpExpiration = undefined;
+        const accessToken = jwt.sign(
+            { username: user.email },
+            process.env.JWT_SECRET,
+            { expiresIn: "1h" }
+        );
+        const refreshToken = jwt.sign(
+            { username: user.email },
+            process.env.JWT_SECRET,
+            { expiresIn: "7d" }
+        );
+        user.refreshToken = refreshToken;
         await user.save();
 
-        res.status(200).json({ success: true, message: 'Email verified successfully' });
+        res.status(200).json({
+            success: true,
+            message: 'Email verified successfully',
+            accessToken,
+            refreshToken,
+            user: user
+        });
     } catch (error) {
+        console.error("error", error);
         res.status(500).json({ success: false, message: 'Error verifying OTP', error: error.message });
     }
 };
@@ -188,6 +211,7 @@ exports.refreshToken = async (req, res) => {
             res.status(200).json({ success: true, accessToken: newAccessToken });
         });
     } catch (error) {
+        console.error("error", error);
         res.status(500).json({ success: false, message: 'Error refreshing token', error: error.message });
     }
 };
