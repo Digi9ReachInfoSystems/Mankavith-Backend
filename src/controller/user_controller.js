@@ -17,11 +17,33 @@ const transporter = nodemailer.createTransport({
 });
 
 exports.register = async (req, res) => {
-    const { email, password, phone, name,role } = req.body;
+    const { email, password, confirmPassword, phone, name, role } = req.body;
     try {
+        const validMail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        if (!validMail) {
+            return res.status(400).json({ success: false, message: 'Invalid email format' });
+        }
         const existingUser = await User.findOne({ email: email });
         if (existingUser) {
             return res.status(400).json({ success: false, message: 'email already exists' });
+        }
+        const validPhone = /^\d{10}$/.test(phone);
+        if (!validPhone) {
+            return res.status(400).json({ success: false, message: 'Invalid phone number format' });
+        }
+        if (password !== confirmPassword) {
+            return res.status(400).json({ success: false, message: 'Passwords and Confirm Password do not match' });
+        }
+        if (role !== 'user' && role !== 'admin') {
+            return res.status(400).json({ success: false, message: 'Invalid role' });
+        }
+        const passwordStrengthRegex = /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*]).{8,}$/.test(password);
+        console.log(passwordStrengthRegex);
+        if (!passwordStrengthRegex) {
+            return res.status(400).json({
+                success: false,
+                message: 'Password must be at least 8 characters long, include a number, an uppercase letter, and a special character.'
+            });
         }
         const hashedPassword = await bcrypt.hash(password, 10);
         const otp = generateOTP();
@@ -63,6 +85,17 @@ exports.register = async (req, res) => {
 exports.login = async (req, res) => {
     const { email, password } = req.body;
     try {
+        if (email == undefined || email == "" || email == null) {
+            return res.status(400).json({ success: false, message: 'email cannot be empty ' });
+        }
+
+        const validMail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        if (!validMail) {
+            return res.status(400).json({ success: false, message: 'Invalid email format' });
+        }
+        if (password == undefined || password == "" || password == null) {
+            return res.status(400).json({ success: false, message: 'password cannot be empty ' });
+        }
         const user = await User.findOne({ email });
         if (!user) {
             return res.status(401).json({ success: false, message: "Account with this email does not exist" });
@@ -101,6 +134,13 @@ exports.verifyOTP = async (req, res) => {
     const { email, otp } = req.body;
 
     try {
+        const validMail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        if (!validMail) {
+            return res.status(400).json({ success: false, message: 'Invalid email format' });
+        }
+        if (otp == undefined || otp == "" || otp == null) {
+            return res.status(400).json({ success: false, message: "OTP is required" });
+        }
         const user = await User.findOne({ email });
 
         if (!user) {
@@ -146,14 +186,21 @@ exports.resendOTP = async (req, res) => {
     const { email } = req.body;
 
     try {
+        const validMail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        if (!validMail) {
+            return res.status(400).json({ success: false, message: 'Invalid email format' });
+        }
         const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
 
         if (!user) {
             return res.status(404).json({ success: false, message: 'User not found' });
         }
         const currentTime = new Date();
         if (user.otpExpiration && currentTime < user.otpExpiration) {
-            return res.status(400).json({ success: false, message: 'OTP is still valid. Please try again after it expires.', otpExpiration: user.otpExpiration.toISOString() });
+            return res.status(200).json({ success: false, message: 'OTP is still valid. Please try again after it expires.', otpExpiration: user.otpExpiration.toISOString() });
         }
         const otp = generateOTP();
         const otpExpiration = new Date();
@@ -219,6 +266,10 @@ exports.refreshToken = async (req, res) => {
 exports.loginSendOtp = async (req, res) => {
     try {
         const { email, } = req.body;
+        const validMail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        if (!validMail) {
+            return res.status(400).json({ success: false, message: 'Invalid email format' });
+        }
         const user = await User.findOne({ email });
 
         if (!user) {
@@ -256,6 +307,10 @@ exports.loginSendOtp = async (req, res) => {
 exports.verifyLoginOtp = async (req, res) => {
     const { email, loginOtp } = req.body;
     try {
+        const validMail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        if (!validMail) {
+            return res.status(400).json({ success: false, message: 'Invalid email format' });
+        }
         const user = await User.findOne({ email });
 
         if (!user) {
@@ -299,6 +354,10 @@ exports.resendLoginOtp = async (req, res) => {
     const { email } = req.body;
 
     try {
+        const validMail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        if (!validMail) {
+            return res.status(400).json({ success: false, message: 'Invalid email format' });
+        }
         const user = await User.findOne({ email });
 
         if (!user) {
@@ -335,6 +394,10 @@ exports.resendLoginOtp = async (req, res) => {
 exports.logout = async (req, res) => {
     try {
         const { email } = req.body;
+        const validMail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        if (!validMail) {
+            return res.status(400).json({ success: false, message: 'Invalid email format' });
+        }
         const user = await User.findOne({ email });
         if (!user) {
             return res.status(401).json({ success: false, message: 'Account with this email does not exist' });
