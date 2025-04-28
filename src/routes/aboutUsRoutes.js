@@ -5,7 +5,7 @@ const AboutUsController = require("../controller/aboutUsController");
 
 router.post("/create", AboutUsController.createAboutUs);
 router.get("/getAllAboutUs", AboutUsController.getAllAboutUs);
-router.put("/updateAboutUs/:id", AboutUsController.updateAboutUs);
-router.delete("/deleteAboutUs/:id", AboutUsController.deleteAboutUs);
+router.put("/updateAboutUs/:aboutUsId", AboutUsController.updateAboutUs);
+router.delete("/deleteAboutUs/:aboutUsId", AboutUsController.deleteAboutUs);
 
 module.exports = router;
