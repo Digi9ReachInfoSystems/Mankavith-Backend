@@ -17,11 +17,33 @@ const transporter = nodemailer.createTransport({
 });
 
 exports.register = async (req, res) => {
-    const { email, password, phone, name,role } = req.body;
+    const { email, password, confirmPassword, phone, name, role } = req.body;
     try {
+        const validMail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        if (!validMail) {
+            return res.status(400).json({ success: false, message: 'Invalid email format' });
+        }
         const existingUser = await User.findOne({ email: email });
         if (existingUser) {
             return res.status(400).json({ success: false, message: 'email already exists' });
+        }
+        const validPhone = /^\d{10}$/.test(phone);
+        if (!validPhone) {
+            return res.status(400).json({ success: false, message: 'Invalid phone number format' });
+        }
+        if (password !== confirmPassword) {
+            return res.status(400).json({ success: false, message: 'Passwords and Confirm Password do not match' });
+        }
+        if (role !== 'user' && role !== 'admin') {
+            return res.status(400).json({ success: false, message: 'Invalid role' });
+        }
+        const passwordStrengthRegex = /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*]).{8,}$/.test(password);
+        console.log(passwordStrengthRegex);
+        if (!passwordStrengthRegex) {
+            return res.status(400).json({
+                success: false,
+                message: 'Password must be at least 8 characters long, include a number, an uppercase letter, and a special character.'
+            });
         }
         const hashedPassword = await bcrypt.hash(password, 10);
         const otp = generateOTP();
@@ -32,7 +54,7 @@ exports.register = async (req, res) => {
             email,
             password: hashedPassword,
             phone,
-            name,
+            displayName:name,
             role,
             otp,
             otpExpiration,
@@ -62,7 +84,19 @@ exports.register = async (req, res) => {
 };
 exports.login = async (req, res) => {
     const { email, password } = req.body;
+    console.log(email, password);
     try {
+        if (email == undefined || email == "" || email == null) {
+            return res.status(400).json({ success: false, message: 'email cannot be empty ' });
+        }
+
+        const validMail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        if (!validMail) {
+            return res.status(400).json({ success: false, message: 'Invalid email format' });
+        }
+        if (password == undefined || password == "" || password == null) {
+            return res.status(400).json({ success: false, message: 'password cannot be empty ' });
+        }
         const user = await User.findOne({ email });
         if (!user) {
             return res.status(401).json({ success: false, message: "Account with this email does not exist" });
@@ -70,6 +104,8 @@ exports.login = async (req, res) => {
         if (!user || !(await bcrypt.compare(password, user.password))) {
             return res.status(401).json({ success: false, message: 'Invalid credentials' });
         }
+        const expiryTime = Date.now() + 3600 * 1000;
+        const expiryDate = new Date(expiryTime);
 
         const accessToken = jwt.sign(
             { username: user.email },
@@ -90,7 +126,8 @@ exports.login = async (req, res) => {
             message: 'Login successful',
             accessToken,
             refreshToken,
-            user: user
+            user: user,
+            expiresIn: expiryDate,
         });
     } catch (error) {
         console.error("error", error);
@@ -101,6 +138,13 @@ exports.verifyOTP = async (req, res) => {
     const { email, otp } = req.body;
 
     try {
+        const validMail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        if (!validMail) {
+            return res.status(400).json({ success: false, message: 'Invalid email format' });
+        }
+        if (otp == undefined || otp == "" || otp == null) {
+            return res.status(400).json({ success: false, message: "OTP is required" });
+        }
         const user = await User.findOne({ email });
 
         if (!user) {
@@ -146,14 +190,21 @@ exports.resendOTP = async (req, res) => {
     const { email } = req.body;
 
     try {
+        const validMail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        if (!validMail) {
+            return res.status(400).json({ success: false, message: 'Invalid email format' });
+        }
         const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
 
         if (!user) {
             return res.status(404).json({ success: false, message: 'User not found' });
         }
         const currentTime = new Date();
         if (user.otpExpiration && currentTime < user.otpExpiration) {
-            return res.status(400).json({ success: false, message: 'OTP is still valid. Please try again after it expires.', otpExpiration: user.otpExpiration.toISOString() });
+            return res.status(200).json({ success: false, message: 'OTP is still valid. Please try again after it expires.', otpExpiration: user.otpExpiration.toISOString() });
         }
         const otp = generateOTP();
         const otpExpiration = new Date();
@@ -219,6 +270,10 @@ exports.refreshToken = async (req, res) => {
 exports.loginSendOtp = async (req, res) => {
     try {
         const { email, } = req.body;
+        const validMail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        if (!validMail) {
+            return res.status(400).json({ success: false, message: 'Invalid email format' });
+        }
         const user = await User.findOne({ email });
 
         if (!user) {
@@ -256,6 +311,10 @@ exports.loginSendOtp = async (req, res) => {
 exports.verifyLoginOtp = async (req, res) => {
     const { email, loginOtp } = req.body;
     try {
+        const validMail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        if (!validMail) {
+            return res.status(400).json({ success: false, message: 'Invalid email format' });
+        }
         const user = await User.findOne({ email });
 
         if (!user) {
@@ -269,7 +328,8 @@ exports.verifyLoginOtp = async (req, res) => {
         if (user.loginOtpExpiration < new Date()) {
             return res.status(401).json({ success: false, message: 'OTP has expired' });
         }
-
+        const expiryTime = Date.now() + 3600 * 1000;
+        const expiryDate = new Date(expiryTime);
         const accessToken = jwt.sign(
             { username: user.email },
             process.env.JWT_SECRET,
@@ -288,7 +348,8 @@ exports.verifyLoginOtp = async (req, res) => {
             message: 'Login successful',
             accessToken,
             refreshToken,
-            user: user
+            user: user,
+            expiresIn: expiryDate,
         });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Error verifying login OTP', error: error.message });
@@ -299,6 +360,10 @@ exports.resendLoginOtp = async (req, res) => {
     const { email } = req.body;
 
     try {
+        const validMail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        if (!validMail) {
+            return res.status(400).json({ success: false, message: 'Invalid email format' });
+        }
         const user = await User.findOne({ email });
 
         if (!user) {
@@ -335,6 +400,10 @@ exports.resendLoginOtp = async (req, res) => {
 exports.logout = async (req, res) => {
     try {
         const { email } = req.body;
+        const validMail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        if (!validMail) {
+            return res.status(400).json({ success: false, message: 'Invalid email format' });
+        }
         const user = await User.findOne({ email });
         if (!user) {
             return res.status(401).json({ success: false, message: 'Account with this email does not exist' });
@@ -380,5 +449,18 @@ exports.getAllUsers = async (req, res) => {
         res.status(200).json({ success: true, message: 'Users found', users: users });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Error getting users', error: error.message });
+    }
+};
+
+exports.deleteUser = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const user = await User.findByIdAndDelete(id);
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+        res.status(200).json({ success: true, message: 'User deleted successfully' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Error deleting user', error: error.message });
     }
 };

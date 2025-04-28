@@ -3,11 +3,14 @@ module.exports = (encrypt, decrypt) => {
         decryptRequestBody: (req, res, next) => {
             if (req.headers.api_key === process.env.FLUTTER_API_KEY) {
             } else {
-                try {
-                    const decrypted = decrypt(req.body.encryptedBody);
-                    req.body = JSON.parse(decrypted);
-                } catch (error) {
-                    return res.status(400).send('Decryption failed');
+                if (req.body) {
+                    try {
+                        const decrypted = decrypt(req.body.encryptedBody);
+                        req.body = JSON.parse(decrypted);
+                    } catch (error) {
+                        console.log("error", error);
+                        return res.status(400).send('Decryption failed');
+                    }
                 }
             }
             next();
