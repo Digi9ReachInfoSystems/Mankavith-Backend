@@ -37,6 +37,8 @@ const questionRouter = require("./src/routes/questionRoutes");
 const entranceRouter = require("./src/routes/entranceRoutes");
 const achieverRouter = require("./src/routes/achieverRoutes");
 const aboutUsRouter = require("./src/routes/aboutUsRoutes");
+const WhyRouter = require("./src/routes/whyRoutes");
+const StaticRouter = require("./src/routes/staticRoutes");
 
 
 
@@ -54,7 +56,9 @@ app.use("/testimonials", testimonialRouter);
 app.use("/question", questionRouter);
 app.use("/entrance", entranceRouter);
 app.use("/achiever", achieverRouter);
-app.use("/aboutus", aboutUsRouter)
+app.use("/aboutus", aboutUsRouter);
+app.use("/why", WhyRouter);
+app.use("/static", StaticRouter);
 
 app.listen(process.env.PORT, () => {
     console.log(`Server running on port ${process.env.PORT}`);
