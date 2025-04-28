@@ -15,5 +15,6 @@ router.post("/logout", authenticateJWT, userController.logout);
 router.post("/createAdmin", userController.createAdmin);
 router.get("/get/userById/:id", authenticateJWT, userController.getUserById);
 router.get("/get/users", authenticateJWT, userController.getAllUsers);
+router.delete("/delete/userById/:id", userController.deleteUser);
 
 module.exports = router;
