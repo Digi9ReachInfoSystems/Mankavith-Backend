@@ -36,7 +36,7 @@ const testimonialRouter = require("./src/routes/testimonialsRoutes");
 const questionRouter = require("./src/routes/questionRoutes");
 const entranceRouter = require("./src/routes/entranceRoutes");
 const achieverRouter = require("./src/routes/achieverRoutes");
-
+const aboutUsRouter = require("./src/routes/aboutUsRoutes");
 
 
 
@@ -54,6 +54,7 @@ app.use("/testimonials", testimonialRouter);
 app.use("/question", questionRouter);
 app.use("/entrance", entranceRouter);
 app.use("/achiever", achieverRouter);
+app.use("/aboutus", aboutUsRouter)
 
 app.listen(process.env.PORT, () => {
     console.log(`Server running on port ${process.env.PORT}`);
