@@ -5,7 +5,7 @@ exports.createStatic = async (req, res) => {
         const static = await Static.create(req.body);
         res.status(201).send(static);
     } catch (error) {
-        res.status(500).send(error);
+        res.status(500).json({ error: "Failed to create static" });
     }
 };
 
