@@ -1,22 +1,22 @@
-const express = require('express');
-const { createCourse, getAllCourses, getCourseById, updateCourse, deleteCourse } = require('../controller/course_controller');
-const authenticateJWT = require('../middleware/authenticator');
-
+const express = require("express");
 const router = express.Router();
+const courseController = require("../controller/course_controller");
 
-// Create a new course
-router.post('/courses',authenticateJWT, createCourse);
+const authenticateJWT = require("../middleware/authenticator");
 
-// Get all courses
-router.get('/courses',authenticateJWT, getAllCourses);
+// Create a course
+router.post("/", courseController.createCourse);
 
-// Get course by ID
-router.get('/courses/:id',authenticateJWT, getCourseById);
+// Fetch all courses
+router.get("/courses", courseController.getAllCourses);
+
+// Fetch course by ID
+router.get("/courses/:id", courseController.getCourseById);
 
 // Update course by ID
-router.put('/courses/:id',authenticateJWT, updateCourse);
+router.put("/courses/:id", courseController.updateCourse);
 
 // Delete course by ID
-router.delete('/courses/:id',authenticateJWT, deleteCourse);
+router.delete("/courses/:id", courseController.deleteCourse);
 
 module.exports = router;
