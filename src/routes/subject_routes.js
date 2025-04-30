@@ -1,22 +1,28 @@
-const express = require('express');
-const { createSubject, getAllSubjects, getSubjectById, updateSubject, deleteSubject } = require('../controller/subject_controller');
-const authenticateJWT = require('../middleware/authenticator');
+const express = require("express");
+const {
+  createSubject,
+  getAllSubjects,
+  getSubjectById,
+  updateSubject,
+  deleteSubject,
+} = require("../controller/subject_controller");
+const authenticateJWT = require("../middleware/authenticator");
 
 const router = express.Router();
 
 // Create a new subject
-router.post('/subjects',authenticateJWT, createSubject);
+router.post("/", createSubject);
 
 // Get all subjects
-router.get('/subjects',authenticateJWT, getAllSubjects);
+router.get("/", getAllSubjects);
 
 // Get subject by ID
-router.get('/subjects/:id',authenticateJWT, getSubjectById);
+router.get("//:id", getSubjectById);
 
 // Update subject by ID
-router.put('/subjects/:id',authenticateJWT, updateSubject);
+router.put("//:id", updateSubject);
 
 // Delete subject by ID
-router.delete('/subjects/:id',authenticateJWT, deleteSubject);
+router.delete("/:id", deleteSubject);
 
 module.exports = router;
