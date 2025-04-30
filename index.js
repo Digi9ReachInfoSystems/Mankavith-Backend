@@ -8,17 +8,18 @@ const bodyParser = require("body-parser");
 const connectDB = require("./src/config/database");
 const encryptionUtils = require("./src/utils/Encryption");
 const encryptionMiddleware = require("./src/middleware/encryption");
-connectDB();
 const key = process.env.CRYPTION_KEY;
 const { encrypt, decrypt } = encryptionUtils(key);
 const { decryptRequestBody, encryptResponseBody } = encryptionMiddleware(
   encrypt,
   decrypt
 );
+connectDB();
 
 app.use(bodyParser.json());
 app.use(cors());
 app.use(express.json());
+
 // app.use(decryptRequestBody);
 // app.use(encryptResponseBody);
 
@@ -42,7 +43,7 @@ const StaticRouter = require("./src/routes/staticRoutes");
 
 app.use("/user", userRoutes);
 app.use("/api/v1/course", courseRoutes);
-app.use("/subject", subjectRoutes);
+app.use("/api/v1/subject", subjectRoutes);
 app.use("/note", notesRoutes);
 app.use("/faq", faqRouter);
 app.use("/content", contentRouter);
