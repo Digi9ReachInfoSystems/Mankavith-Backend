@@ -18,3 +18,12 @@ exports.updateStatic = async (req, res) => {
         res.status(500).send(error);
     }
 };
+
+exports.getAllStatic = async (req, res) => {
+    try {
+        const static = await Static.find();
+        res.status(200).send(static);
+    } catch (error) {
+        res.status(500).send(error);
+    }
+};
