@@ -20,8 +20,8 @@ app.use(bodyParser.json());
 app.use(cors());
 app.use(express.json());
 
-app.use(decryptRequestBody);
-app.use(encryptResponseBody);
+// app.use(decryptRequestBody);
+// app.use(encryptResponseBody);
 
 app.use(express.json());
 
@@ -40,6 +40,12 @@ const achieverRouter = require("./src/routes/achieverRoutes");
 const aboutUsRouter = require("./src/routes/aboutUsRoutes");
 const WhyRouter = require("./src/routes/whyRoutes");
 const StaticRouter = require("./src/routes/staticRoutes");
+const Feedback = require("./src/routes/feedbackRoutes");
+const certificatesRoutes = require("./src/routes/certificatesRoutes");
+const kycDetailsRouter = require("./src/routes/kycRoutes");
+const recordedSession = require("./src/routes/recordedSessionRoutes");
+const BannersRouter = require("./src/routes/bannerRoutes");
+const CategoryRouter = require("./src/routes/categoryRoutes");
 
 app.use("/user", userRoutes);
 app.use("/api/v1/course", courseRoutes);
@@ -56,6 +62,12 @@ app.use("/achiever", achieverRouter);
 app.use("/aboutus", aboutUsRouter);
 app.use("/why", WhyRouter);
 app.use("/static", StaticRouter);
+app.use("/feedback", Feedback);
+app.use("/kyc", kycDetailsRouter);
+app.use("/recordedSession", recordedSession);
+app.use("/certificates", certificatesRoutes);
+app.use("/banners", BannersRouter);
+app.use("/category", CategoryRouter);
 
 app.listen(process.env.PORT, () => {
   console.log(`Server running on port ${process.env.PORT}`);

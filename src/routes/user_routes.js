@@ -17,4 +17,15 @@ router.get("/get/userById/:id", authenticateJWT, userController.getUserById);
 router.get("/get/users", authenticateJWT, userController.getAllUsers);
 router.delete("/delete/userById/:id", userController.deleteUser);
 
+// Update wishlist (add/remove)
+router.post("/update", userController.updateWishlist);
+
+// Get wishlist
+router.get("/wishlist/:userId", userController.getWishlist);
+
+// Check if course is in wishlist
+router.get("/:userId/:courseId", userController.checkWishlistItem);
+
+module.exports = router;
+
 module.exports = router;

@@ -1,0 +1,236 @@
+const Kyc = require("../model/kycDetails");
+
+// Create KYC record
+exports.createKyc = async (req, res) => {
+  try {
+    const {
+      first_name,
+      last_name,
+      age,
+      email,
+      mobile_number,
+      id_proof,
+      passport_photo,
+      userref,
+    } = req.body;
+
+    // Validate required fields
+    if (
+      !first_name ||
+      !last_name ||
+      !age ||
+      !email ||
+      !mobile_number ||
+      !id_proof ||
+      !passport_photo ||
+      !userref
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "All fields are required",
+      });
+    }
+
+    // Check if KYC already exists for this user
+    const existingKyc = await Kyc.findOne({ userref });
+    if (existingKyc) {
+      return res.status(400).json({
+        success: false,
+        message: "KYC record already exists for this user",
+      });
+    }
+
+    // Validate age
+    if (age < 18) {
+      return res.status(400).json({
+        success: false,
+        message: "User must be at least 18 years old",
+      });
+    }
+
+    const newKyc = new Kyc({
+      first_name,
+      last_name,
+      age,
+      email,
+      mobile_number,
+      id_proof,
+      passport_photo,
+      userref,
+      status: "pending",
+    });
+
+    const savedKyc = await newKyc.save();
+
+    return res.status(201).json({
+      success: true,
+      message: "KYC record created successfully",
+      data: savedKyc,
+    });
+  } catch (error) {
+    console.error("Error creating KYC:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Server error. Could not create KYC record.",
+      error: error.message,
+    });
+  }
+};
+
+// Get all KYC records with optional status filter
+exports.getAllKyc = async (req, res) => {
+  try {
+    const { status } = req.query;
+    let query = {};
+
+    if (status) {
+      query.status = status;
+    }
+
+    const kycs = await Kyc.find(query)
+      .populate("userref", "name email")
+      .sort({ createdAt: -1 });
+
+    return res.status(200).json({
+      success: true,
+      count: kycs.length,
+      data: kycs,
+    });
+  } catch (error) {
+    console.error("Error fetching KYC records:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Server error. Could not fetch KYC records.",
+      error: error.message,
+    });
+  }
+};
+
+// Get KYC by ID
+exports.getKycById = async (req, res) => {
+  try {
+    const kycId = req.params.id;
+
+    const kyc = await Kyc.findById(kycId).populate("userref", "name email");
+
+    if (!kyc) {
+      return res.status(404).json({
+        success: false,
+        message: "KYC record not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: kyc,
+    });
+  } catch (error) {
+    console.error("Error fetching KYC by ID:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Server error. Could not fetch KYC record.",
+      error: error.message,
+    });
+  }
+};
+
+// Update KYC status
+exports.updateKycStatus = async (req, res) => {
+  try {
+    const kycId = req.params.id;
+    const { status } = req.body;
+
+    if (!status || !["pending", "approved", "rejected"].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Valid status is required (pending, approved, rejected)",
+      });
+    }
+
+    const updatedKyc = await Kyc.findByIdAndUpdate(
+      kycId,
+      { status },
+      { new: true, runValidators: true }
+    ).populate("userref", "name email");
+
+    if (!updatedKyc) {
+      return res.status(404).json({
+        success: false,
+        message: "KYC record not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "KYC status updated successfully",
+      data: updatedKyc,
+    });
+  } catch (error) {
+    console.error("Error updating KYC status:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Server error. Could not update KYC status.",
+      error: error.message,
+    });
+  }
+};
+
+// Delete KYC record
+exports.deleteKyc = async (req, res) => {
+  try {
+    const kycId = req.params.id;
+
+    const deletedKyc = await Kyc.findByIdAndDelete(kycId);
+
+    if (!deletedKyc) {
+      return res.status(404).json({
+        success: false,
+        message: "KYC record not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "KYC record deleted successfully",
+      data: deletedKyc,
+    });
+  } catch (error) {
+    console.error("Error deleting KYC record:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Server error. Could not delete KYC record.",
+      error: error.message,
+    });
+  }
+};
+
+// Get KYC by user reference
+exports.getKycByUser = async (req, res) => {
+  try {
+    const userId = req.params.userId;
+
+    const kyc = await Kyc.findOne({ userref: userId }).populate(
+      "userref",
+      "name email"
+    );
+
+    if (!kyc) {
+      return res.status(404).json({
+        success: false,
+        message: "No KYC record found for this user",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: kyc,
+    });
+  } catch (error) {
+    console.error("Error fetching KYC by user:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Server error. Could not fetch KYC record.",
+      error: error.message,
+    });
+  }
+};

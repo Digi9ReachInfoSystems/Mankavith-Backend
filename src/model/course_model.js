@@ -11,6 +11,16 @@ const courseSchema = new mongoose.Schema(
       required: true,
       unique: true,
     },
+    categories: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
+      ref: "Category", // Reference to the Category model
+      // enum: ["All", "Popular", "Newest", "Advance"],
+    },
+    isPublished: {
+      type: Boolean,
+      default: false,
+    },
     status: {
       type: String,
       enum: ["active", "inactive"],

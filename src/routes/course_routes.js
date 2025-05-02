@@ -2,21 +2,30 @@ const express = require("express");
 const router = express.Router();
 const courseController = require("../controller/course_controller");
 
-const authenticateJWT = require("../middleware/authenticator");
+// Course Routes
 
-// Create a course
+// Create a new course
 router.post("/", courseController.createCourse);
 
-// Fetch all courses
-router.get("/courses", courseController.getAllCourses);
+// Get all courses (with optional category filter via query parameter)
+router.get("/", courseController.getAllCourses);
 
-// Fetch course by ID
-router.get("/courses/:id", courseController.getCourseById);
+// Get courses by specific category (via route parameter)
+router.get("/category/:category", courseController.getCoursesByCategory);
 
-// Update course by ID
-router.put("/courses/:id", courseController.updateCourse);
+// Add this to your course_routes.js file
+router.get("/search", courseController.searchCourses);
 
-// Delete course by ID
-router.delete("/courses/:id", courseController.deleteCourse);
+// Get a single course by ID
+router.get("/:id", courseController.getCourseById);
+
+// Update a course by ID
+router.put("/:id", courseController.updateCourse);
+
+// Publish a course
+router.patch("/:id/publish", courseController.publishCourse);
+
+// Delete a course by ID
+router.delete("/:id", courseController.deleteCourse);
 
 module.exports = router;
