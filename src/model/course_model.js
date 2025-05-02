@@ -11,11 +11,10 @@ const courseSchema = new mongoose.Schema(
       required: true,
       unique: true,
     },
-    categories: {
+    category: {
+      // Changed from categories to category (singular)
       type: mongoose.Schema.Types.ObjectId,
-      required: true,
-      ref: "Category", // Reference to the Category model
-      // enum: ["All", "Popular", "Newest", "Advance"],
+      ref: "Category",
     },
     isPublished: {
       type: Boolean,

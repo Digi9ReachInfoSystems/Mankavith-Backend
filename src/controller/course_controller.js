@@ -1,18 +1,18 @@
 const Course = require("../model/course_model");
+const Category = require("../model/category_model");
 
-// Create a new course
+// Create a new course (updated for category reference)
 exports.createCourse = async (req, res) => {
   try {
     const courseData = req.body;
 
     // Validate category if provided
-    if (courseData.categories) {
-      const validCategories = ["All", "Popular", "Newest", "Advance"];
-      if (!validCategories.includes(courseData.categories)) {
+    if (courseData.category) {
+      const categoryExists = await Category.findById(courseData.category);
+      if (!categoryExists) {
         return res.status(400).json({
           success: false,
-          message:
-            "Invalid category. Must be one of: All, Popular, Newest, Advance",
+          message: "Category not found",
         });
       }
     }
@@ -30,7 +30,7 @@ exports.createCourse = async (req, res) => {
 
     const newCourse = new Course({
       ...courseData,
-      categories: courseData.categories || "All", // Default to "All" if not provided
+      category: courseData.category || null, // Default to null if not provided
     });
 
     const savedCourse = await newCourse.save();
@@ -50,7 +50,7 @@ exports.createCourse = async (req, res) => {
   }
 };
 
-// Search courses by name and filter by category
+// Search courses by name and filter by category (updated)
 exports.searchCourses = async (req, res) => {
   try {
     const { name, category } = req.query;
@@ -63,20 +63,20 @@ exports.searchCourses = async (req, res) => {
 
     // Add category filter if provided
     if (category) {
-      const validCategories = ["All", "Popular", "Newest", "Advance"];
-      if (!validCategories.includes(category)) {
+      const categoryExists = await Category.findById(category);
+      if (!categoryExists) {
         return res.status(400).json({
           success: false,
-          message:
-            "Invalid category. Must be one of: All, Popular, Newest, Advance",
+          message: "Category not found",
         });
       }
-      query.categories = category;
+      query.category = category;
     }
 
     const courses = await Course.find(query)
       .populate("subjects", "subjectName")
-      .sort({ courseName: 1 }); // Sort alphabetically by course name
+      .populate("category", "title")
+      .sort({ courseName: 1 });
 
     return res.status(200).json({
       success: true,
@@ -100,13 +100,19 @@ exports.getAllCourses = async (req, res) => {
     let query = {};
 
     if (category) {
-      query.categories = category;
+      const categoryExists = await Category.findById(category);
+      if (!categoryExists) {
+        return res.status(400).json({
+          success: false,
+          message: "Category not found",
+        });
+      }
+      query.category = category;
     }
 
-    const courses = await Course.find(query).populate(
-      "subjects",
-      "subjectName"
-    );
+    const courses = await Course.find(query)
+      .populate("subjects", "subjectName")
+      .populate("category", "title");
 
     return res.status(200).json({
       success: true,
@@ -123,28 +129,29 @@ exports.getAllCourses = async (req, res) => {
   }
 };
 
-// Get courses by category
+// Get courses by category (updated)
 exports.getCoursesByCategory = async (req, res) => {
   try {
-    const { category } = req.params;
+    const { categoryId } = req.params;
 
-    const validCategories = ["All", "Popular", "Newest", "Advance"];
-    if (!validCategories.includes(category)) {
-      return res.status(400).json({
+    // Check if category exists in database
+    const category = await Category.findById(categoryId);
+    if (!category) {
+      return res.status(404).json({
         success: false,
-        message:
-          "Invalid category. Must be one of: All, Popular, Newest, Advance",
+        message: "Category not found",
       });
     }
 
-    const courses = await Course.find({ categories: category }).populate(
-      "subjects",
-      "subjectName"
-    );
+    // Find courses that reference this category
+    const courses = await Course.find({ category: categoryId })
+      .populate("subjects", "subjectName")
+      .populate("category", "title");
 
     return res.status(200).json({
       success: true,
       count: courses.length,
+      category: category.title,
       data: courses,
     });
   } catch (error) {
@@ -157,20 +164,19 @@ exports.getCoursesByCategory = async (req, res) => {
   }
 };
 
-// Update course by ID - with category validation
+// Update course by ID (updated for category reference)
 exports.updateCourse = async (req, res) => {
   try {
     const courseId = req.params.id;
     const updateData = req.body;
 
     // Validate category if provided in update
-    if (updateData.categories) {
-      const validCategories = ["All", "Popular", "Newest", "Advance"];
-      if (!validCategories.includes(updateData.categories)) {
+    if (updateData.category) {
+      const categoryExists = await Category.findById(updateData.category);
+      if (!categoryExists) {
         return res.status(400).json({
           success: false,
-          message:
-            "Invalid category. Must be one of: All, Popular, Newest, Advance",
+          message: "Category not found",
         });
       }
     }
@@ -178,7 +184,9 @@ exports.updateCourse = async (req, res) => {
     const updatedCourse = await Course.findByIdAndUpdate(courseId, updateData, {
       new: true,
       runValidators: true,
-    });
+    })
+      .populate("subjects", "subjectName")
+      .populate("category", "title");
 
     if (!updatedCourse) {
       return res.status(404).json({
@@ -202,6 +210,7 @@ exports.updateCourse = async (req, res) => {
   }
 };
 
+// Publish course (updated to populate category)
 exports.publishCourse = async (req, res) => {
   try {
     const courseId = req.params.id;
@@ -210,7 +219,9 @@ exports.publishCourse = async (req, res) => {
       courseId,
       { isPublished: true },
       { new: true }
-    );
+    )
+      .populate("subjects", "subjectName")
+      .populate("category", "title");
 
     if (!updatedCourse) {
       return res.status(404).json({
@@ -234,16 +245,15 @@ exports.publishCourse = async (req, res) => {
   }
 };
 
-// Get course by ID
+// Get course by ID (updated to populate category)
 exports.getCourseById = async (req, res) => {
   try {
     const courseId = req.params.id;
 
-    const course = await Course.findById(courseId).populate(
-      "subjects",
-      "subjectName"
-    );
-    //   .populate("mockTests", "testName");
+    const course = await Course.findById(courseId)
+      .populate("subjects", "subjectName")
+      .populate("category", "title")
+      .populate("mockTests", "testName");
 
     if (!course) {
       return res.status(404).json({
@@ -261,39 +271,6 @@ exports.getCourseById = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Server error. Could not fetch course.",
-      error: error.message,
-    });
-  }
-};
-
-// Update course by ID
-exports.updateCourse = async (req, res) => {
-  try {
-    const courseId = req.params.id;
-    const updateData = req.body;
-
-    const updatedCourse = await Course.findByIdAndUpdate(courseId, updateData, {
-      new: true,
-      runValidators: true,
-    });
-
-    if (!updatedCourse) {
-      return res.status(404).json({
-        success: false,
-        message: "Course not found",
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: "Course updated successfully",
-      data: updatedCourse,
-    });
-  } catch (error) {
-    console.error("Error updating course:", error.message);
-    return res.status(500).json({
-      success: false,
-      message: "Server error. Could not update course.",
       error: error.message,
     });
   }
