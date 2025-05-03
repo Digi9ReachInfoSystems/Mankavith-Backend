@@ -252,8 +252,8 @@ exports.getCourseById = async (req, res) => {
 
     const course = await Course.findById(courseId)
       .populate("subjects", "subjectName")
-      .populate("category", "title")
-      .populate("mockTests", "testName");
+      .populate("category", "title");
+    // .populate("mockTests", "testName");
 
     if (!course) {
       return res.status(404).json({
