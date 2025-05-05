@@ -146,6 +146,7 @@ exports.getAllCourses = async (req, res) => {
 exports.getCoursesByCategory = async (req, res) => {
   try {
     const { categoryName } = req.params;
+    
 
     // Check if category exists in database
     const category = await Category.findOne({ title: categoryName });
