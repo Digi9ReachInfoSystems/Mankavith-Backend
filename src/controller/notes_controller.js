@@ -21,6 +21,16 @@ module.exports.createNote = async (req, res) => {
       fileUrl,
       subjects
     });
+    if(subjects.length > 0){
+      for(let i = 0; i < subjects.length; i++){
+        const subject = await Subject.findById(subjects[i]);
+        if(subject){
+          subject.notes.push(newNote._id);
+          await subject.save();
+        }
+        
+      }
+    }
 
     const savedNote = await newNote.save();
     return res.status(201).json({ success: true, message: 'Note created successfully', data: savedNote });
@@ -98,36 +108,3 @@ module.exports.deleteNote = async (req, res) => {
   }
 };
 
-exports.uploadNotestest = async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'No file uploaded.' });
-    }
-    const accountName = process.env.AZURE_STORAGE_ACCOUNT_NAME;
-    const accountKey = process.env.AZURE_STORAGE_ACCOUNT_KEY;
-    const containerName = process.env.AZURE_STORAGE_CONTAINER_NAME;
-    const sharedKeyCredential = new StorageSharedKeyCredential(accountName, accountKey);
-
-    const blobServiceClient = new BlobServiceClient(
-      `https://${accountName}.blob.core.windows.net`,
-      sharedKeyCredential
-    );
-
-    const blobName = `${Date.now()}-${req.file.originalname}`;
-    const containerClient = blobServiceClient.getContainerClient(containerName);
-
-    const blockBlobClient = containerClient.getBlockBlobClient(blobName);
-    const uploadOptions = {
-      blobHTTPHeaders: {
-        blobContentType: 'image/jpeg',
-        blobContentDisposition: 'inline'
-      }
-    };
-    await blockBlobClient.uploadData(req.file.buffer,uploadOptions);
-    const blobUrl = `https://${accountName}.blob.core.windows.net/${containerName}/${blobName}`;
-    return res.status(200).json({ message: 'File uploaded successfully', blobName ,blobUrl});
-  } catch (error) {
-    console.error('Error creating note:', error);
-    return res.status(500).json({ success: false, message: 'Error creating note', error: error.message });
-  }
-};

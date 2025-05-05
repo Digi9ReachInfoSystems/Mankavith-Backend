@@ -61,7 +61,8 @@ module.exports.createSubject = async (req, res) => {
 module.exports.getAllSubjects = async (req, res) => {
   try {
     const subjects = await Subject.find()
-      .populate("courses", "name description") // Only populate specific fields from Course
+      .populate("courses") // Only populate specific fields from Course
+      .populate("notes", "mockTests")
       .sort({ createdAt: -1 }); // Sort by newest first
 
     return res.status(200).json({

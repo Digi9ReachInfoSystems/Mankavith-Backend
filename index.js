@@ -20,8 +20,8 @@ app.use(bodyParser.json());
 app.use(cors());
 app.use(express.json());
 
-// app.use(decryptRequestBody);
-// app.use(encryptResponseBody);
+app.use(decryptRequestBody);
+app.use(encryptResponseBody);
 
 app.use(express.json());
 
@@ -46,6 +46,7 @@ const kycDetailsRouter = require("./src/routes/kycRoutes");
 const recordedSession = require("./src/routes/recordedSessionRoutes");
 const BannersRouter = require("./src/routes/bannerRoutes");
 const CategoryRouter = require("./src/routes/categoryRoutes");
+const uploadRoutes = require("./src/routes/uploadRoutes");
 
 app.use("/user", userRoutes);
 app.use("/api/v1/course", courseRoutes);
@@ -68,6 +69,7 @@ app.use("/recordedSession", recordedSession);
 app.use("/certificates", certificatesRoutes);
 app.use("/banners", BannersRouter);
 app.use("/category", CategoryRouter);
+app.use("/upload", uploadRoutes);
 
 app.listen(process.env.PORT, () => {
   console.log(`Server running on port ${process.env.PORT}`);
