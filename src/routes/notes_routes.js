@@ -1,5 +1,5 @@
 const express = require('express');
-const { createNote, getAllNotes, getNoteById, updateNote, deleteNote, uploadNotestest } = require('../controller/notes_controller');
+const { createNote, getAllNotes, getNoteById, updateNote, deleteNote } = require('../controller/notes_controller');
 const authenticateJWT = require('../middleware/authenticator');
 const multer = require('multer');
 const router = express.Router();
@@ -20,6 +20,6 @@ router.put('/notes/:id',authenticateJWT, updateNote);
 
 // Delete note by ID
 router.delete('/notes/:id',authenticateJWT, deleteNote);
-router.post('/upload', upload.single('file'), uploadNotestest);
+
 
 module.exports = router;

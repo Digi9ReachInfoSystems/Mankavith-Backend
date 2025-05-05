@@ -31,11 +31,11 @@ const courseSchema = new mongoose.Schema(
     },
     shortDescription: {
       type: String,
-      required: true,
+      required: false,
     },
     description: {
       type: String,
-      required: true,
+      required: false,
     },
     price: {
       type: Number,
@@ -43,23 +43,23 @@ const courseSchema = new mongoose.Schema(
     },
     duration: {
       type: String,
-      required: true,
+      required: false,
     },
     no_of_videos: {
       type: Number,
-      required: true,
+      required: false,
     },
     no_of_subjects: {
       type: Number,
-      required: true,
+      required: false,
     },
     no_of_notes: {
       type: Number,
-      required: true,
+      required: false,
     },
     successRate: {
       type: Number,
-      required: true,
+      required: false,
     },
     course_includes: [
       {
@@ -105,7 +105,7 @@ const courseSchema = new mongoose.Schema(
     subjects: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Subject", // Reference to the Subject model
+        ref: "Subject", 
       },
     ],
     mockTests: [

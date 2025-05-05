@@ -1,5 +1,6 @@
 const Course = require("../model/course_model");
 const Category = require("../model/category_model");
+const Subject = require("../model/subject_model");
 
 // Create a new course (updated for category reference)
 exports.createCourse = async (req, res) => {
@@ -28,12 +29,24 @@ exports.createCourse = async (req, res) => {
       });
     }
 
+
     const newCourse = new Course({
       ...courseData,
       category: courseData.category || null, // Default to null if not provided
     });
 
+
     const savedCourse = await newCourse.save();
+    if (courseData.subjects.length > 0) {
+      for (let i = 0; i < courseData.subjects.length; i++) {
+        const subject = await Subject.findById(courseData.subjects[i]);
+        if (subject) {
+          subject.courses.push(savedCourse._id);
+          await subject.save();
+        }
+
+      }
+    }
 
     return res.status(201).json({
       success: true,
