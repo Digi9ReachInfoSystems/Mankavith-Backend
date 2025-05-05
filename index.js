@@ -14,7 +14,7 @@ const { decryptRequestBody, encryptResponseBody } = encryptionMiddleware(
   encrypt,
   decrypt
 );
-connectDB();
+// connectDB();
 
 app.use(bodyParser.json());
 app.use(cors());
@@ -71,6 +71,20 @@ app.use("/banners", BannersRouter);
 app.use("/category", CategoryRouter);
 app.use("/upload", uploadRoutes);
 
-app.listen(process.env.PORT, () => {
-  console.log(`Server running on port ${process.env.PORT}`);
-});
+
+connectDB()
+  .then(() => {
+    console.log("Connected to MongoDB");
+
+    // Start the Server
+    const PORT = process.env.PORT ;
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error("MongoDB connection error:", err);
+    process.exit(1); // Exit process with failure
+  });
+
+
