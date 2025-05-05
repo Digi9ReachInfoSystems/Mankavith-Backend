@@ -145,10 +145,10 @@ exports.getAllCourses = async (req, res) => {
 // Get courses by category (updated)
 exports.getCoursesByCategory = async (req, res) => {
   try {
-    const { categoryId } = req.params;
+    const { categoryName } = req.params;
 
     // Check if category exists in database
-    const category = await Category.findById(categoryId);
+    const category = await Category.findOne({ title: categoryName });
     if (!category) {
       return res.status(404).json({
         success: false,
@@ -157,7 +157,7 @@ exports.getCoursesByCategory = async (req, res) => {
     }
 
     // Find courses that reference this category
-    const courses = await Course.find({ category: categoryId })
+    const courses = await Course.find({ category: category._id })
       .populate("subjects", "subjectName")
       .populate("category", "title");
 

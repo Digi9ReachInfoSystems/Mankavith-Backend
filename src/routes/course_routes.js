@@ -11,7 +11,7 @@ router.post("/", courseController.createCourse);
 router.get("/", courseController.getAllCourses);
 
 // Get courses by specific category (via route parameter)
-router.get("/category/:categoryId", courseController.getCoursesByCategory);
+router.get("/category/:categoryName", courseController.getCoursesByCategory);
 
 // Add this to your course_routes.js file
 router.get("/search", courseController.searchCourses);
