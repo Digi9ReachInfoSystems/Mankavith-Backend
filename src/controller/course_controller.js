@@ -146,7 +146,7 @@ exports.getAllCourses = async (req, res) => {
 exports.getCoursesByCategory = async (req, res) => {
   try {
     const { categoryName } = req.params;
-    
+
 
     // Check if category exists in database
     const category = await Category.findOne({ title: categoryName });
@@ -314,6 +314,40 @@ exports.deleteCourse = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Server error. Could not delete course.",
+      error: error.message,
+    });
+  }
+};
+exports.searchCourses = async (req, res) => {
+  try {
+    const { name, categoryName } = req.query;
+    let query = {};
+
+    if (name) query.courseDisplayName = { $regex: name, $options: "i" };
+    if(categoryName!='null') {
+      const categoryExists = await Category.findOne({ title: categoryName });
+      if (!categoryExists) {
+        return res.status(400).json({
+          success: false,
+          message: "Category not found",
+        });
+      }
+      query.category = categoryExists._id;      
+    }
+
+    const courses = await Course.find(query)
+      .populate("subjects" )
+      .populate("category" );
+
+    return res.status(200).json({
+      success: true,
+      data: courses,
+    });
+  } catch (error) {
+    console.error("Error searching courses:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Server error. Could not search courses.",
       error: error.message,
     });
   }
