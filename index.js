@@ -22,8 +22,8 @@ app.use(express.json());
 
 app.use(decryptRequestBody);
 app.use(encryptResponseBody);
+// app.use(express.json());
 
-app.use(express.json());
 
 const userRoutes = require("./src/routes/user_routes");
 const courseRoutes = require("./src/routes/course_routes");
@@ -47,6 +47,9 @@ const recordedSession = require("./src/routes/recordedSessionRoutes");
 const BannersRouter = require("./src/routes/bannerRoutes");
 const CategoryRouter = require("./src/routes/categoryRoutes");
 const uploadRoutes = require("./src/routes/uploadRoutes");
+const lectureRoutes = require("./src/routes/lectureRoutes");
+
+
 
 app.use("/user", userRoutes);
 app.use("/api/v1/course", courseRoutes);
@@ -70,6 +73,7 @@ app.use("/certificates", certificatesRoutes);
 app.use("/banners", BannersRouter);
 app.use("/category", CategoryRouter);
 app.use("/upload", uploadRoutes);
+app.use("/lecture", lectureRoutes);
 
 
 connectDB()

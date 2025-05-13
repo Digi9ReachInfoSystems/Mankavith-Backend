@@ -265,7 +265,7 @@ exports.getCourseById = async (req, res) => {
     const courseId = req.params.id;
 
     const course = await Course.findById(courseId)
-      .populate("subjects", "subjectName")
+      .populate("subjects", "subjectName image description")
       .populate("category", "title");
     // .populate("mockTests", "testName");
 
