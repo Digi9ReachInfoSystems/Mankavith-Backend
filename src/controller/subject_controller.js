@@ -1,5 +1,12 @@
 const Subject = require("../model/subject_model.js");
 const Course = require("../model/course_model.js");
+const mockTests = require("../model/mocktest.js");
+const notes = require("../model/notes_model.js");
+const lectures = require("../model/lecturesModel.js");
+const mongoose = require("mongoose");
+
+
+
 
 // @desc    Create a new subject
 // @route   POST /api/subjects
@@ -15,6 +22,7 @@ module.exports.createSubject = async (req, res) => {
       mockTests,
       courses,
       image,
+      lectures
     } = req.body;
 
     // Check if subject already exists
@@ -37,6 +45,7 @@ module.exports.createSubject = async (req, res) => {
       mockTests: mockTests || [],
       courses: courses || [],
       image,
+      lectures: lectures || [],
     });
 
     const savedSubject = await newSubject.save();
@@ -63,6 +72,7 @@ module.exports.getAllSubjects = async (req, res) => {
     const subjects = await Subject.find()
       .populate("courses") // Only populate specific fields from Course
       .populate("notes", "mockTests")
+      .populate("lectures", "lectureName duration videoUrl")
       .sort({ createdAt: -1 }); // Sort by newest first
 
     return res.status(200).json({
@@ -97,6 +107,7 @@ module.exports.getSubjectById = async (req, res) => {
     const subject = await Subject.findById(id)
       .populate("courses")
       .populate("notes")
+      .populate("lectures", "lectureName duration videoUrl")
       .populate("mockTests");
 
     if (!subject) {
@@ -154,7 +165,8 @@ module.exports.updateSubject = async (req, res) => {
     })
       .populate("courses")
       .populate("notes")
-      .populate("mockTests");
+      .populate("mockTests")
+      .populate("lectures", "lectureName duration videoUrl");
 
     if (!updatedSubject) {
       return res.status(404).json({
