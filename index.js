@@ -54,7 +54,7 @@ const lectureRoutes = require("./src/routes/lectureRoutes");
 app.use("/user", userRoutes);
 app.use("/api/v1/course", courseRoutes);
 app.use("/api/v1/subject", subjectRoutes);
-app.use("/note", notesRoutes);
+app.use("/notes", notesRoutes);
 app.use("/faq", faqRouter);
 app.use("/content", contentRouter);
 app.use("/exam", examRouter);

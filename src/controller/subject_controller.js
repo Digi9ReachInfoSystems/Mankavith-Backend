@@ -107,7 +107,7 @@ module.exports.getSubjectById = async (req, res) => {
     const subject = await Subject.findById(id)
       .populate("courses")
       .populate("notes")
-      .populate("lectures", "lectureName duration videoUrl")
+      .populate("lectures", "lectureName duration videoUrl description")
       .populate("mockTests");
 
     if (!subject) {
