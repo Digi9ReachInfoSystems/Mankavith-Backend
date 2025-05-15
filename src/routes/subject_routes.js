@@ -17,10 +17,10 @@ router.post("/", createSubject);
 router.get("/", getAllSubjects);
 
 // Get subject by ID
-router.get("//:id", getSubjectById);
+router.get("/:id", getSubjectById);
 
 // Update subject by ID
-router.put("//:id", updateSubject);
+router.put("/:id", updateSubject);
 
 // Delete subject by ID
 router.delete("/:id", deleteSubject);
