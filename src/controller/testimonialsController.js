@@ -1,10 +1,10 @@
 const Testimonials = require("../model/testimonialsModel");
 
 exports.createTestimonials = async (req, res) => {
-    const { name, rank, description } = req.body;
+    const { name, rank, description,testimonial_image } = req.body;
 
     try {
-        const testimonials = new Testimonials({ name, rank, description });
+        const testimonials = new Testimonials({ name, rank, description,testimonial_image });
         await testimonials.save();
         res.status(201).json(testimonials);
         res.status(201).json({ message: "Testimonials created successfully" });
@@ -38,9 +38,9 @@ exports.getAllTestimonials = async (req, res) => {
 
 exports.updateTestimonialsById = async (req, res) => {
     const { id } = req.params;
-    const { name, rank, description } = req.body;
+    const { name, rank, description,testimonial_image } = req.body;
     try {
-        const testimonials = await Testimonials.findByIdAndUpdate(id, { name, rank, description }, { new: true });
+        const testimonials = await Testimonials.findByIdAndUpdate(id, { name, rank, description, testimonial_image }, { new: true });
         if (!testimonials) {
             return res.status(404).json({ error: "Testimonials not found" });
         }
