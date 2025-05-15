@@ -48,6 +48,8 @@ const BannersRouter = require("./src/routes/bannerRoutes");
 const CategoryRouter = require("./src/routes/categoryRoutes");
 const uploadRoutes = require("./src/routes/uploadRoutes");
 const lectureRoutes = require("./src/routes/lectureRoutes");
+const missionRoutes= require("./src/routes/missionRoutes");
+const aspirantRoutes = require("./src/routes/aspirantRoutes");
 
 
 
@@ -74,6 +76,8 @@ app.use("/banners", BannersRouter);
 app.use("/category", CategoryRouter);
 app.use("/upload", uploadRoutes);
 app.use("/lecture", lectureRoutes);
+app.use("/mission", missionRoutes);
+app.use("/aspirants", aspirantRoutes);
 
 
 connectDB()
