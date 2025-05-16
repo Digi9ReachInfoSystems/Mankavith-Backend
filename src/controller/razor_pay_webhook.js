@@ -147,13 +147,47 @@ async function handlePaymentCaptured(payment) {
 
 // Common subscription update logic
 async function updateUserSubscription(paymentRecord) {
-  await User.findByIdAndUpdate(paymentRecord.userRef, {
-    $set: {
-      "subscription.payment_id": paymentRecord._id,
-      "subscription.payment_Status": "success",
-      "subscription.course_enrolled": paymentRecord.courseRef,
-      "subscription.is_subscription_active": true,
-      "subscription.created_at": new Date(),
-    },
-  });
+  try {
+    const userId = paymentRecord.userRef;
+
+    console.log(`[updateUserSubscription] Updating user: ${userId}`);
+
+    const subscriptionUpdate = {
+      payment_id: paymentRecord._id,
+      payment_Status: "success",
+      course_enrolled: paymentRecord.courseRef,
+      is_subscription_active: true,
+      created_at: new Date(),
+    };
+
+    const result = await User.findByIdAndUpdate(
+      userId,
+      {
+        $set: {
+          subscription: subscriptionUpdate,
+        },
+      },
+      { new: true } // Optional: return updated doc
+    );
+
+    if (!result) {
+      console.error(`[updateUserSubscription] User not found: ${userId}`);
+    } else {
+      console.log(
+        `[updateUserSubscription] Successfully created/updated subscription for user: ${userId}`
+      );
+    }
+
+    return result;
+  } catch (error) {
+    console.error(
+      `[updateUserSubscription] Error updating user subscription:`,
+      {
+        error: error.message,
+        stack: error.stack,
+        userId: paymentRecord.userRef,
+      }
+    );
+    throw error;
+  }
 }
