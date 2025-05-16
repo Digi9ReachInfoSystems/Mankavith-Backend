@@ -77,11 +77,17 @@ async function handlePaymentCaptured(payment) {
   try {
     // 1. Find the payment record
     const paymentRecord = await Payment.findOne({
-      razorpay_order_id: payment.order_id,
+      $or: [
+        { razorpay_order_id: payment.order_id },
+        { razorpay_reference_id: payment.reference_id },
+      ],
     });
 
     if (!paymentRecord) {
-      console.error("Payment record not found for order:", payment.order_id);
+      console.error("Payment not found for:", {
+        order_id: payment.order_id,
+        reference_id: payment.reference_id,
+      });
       return;
     }
 
