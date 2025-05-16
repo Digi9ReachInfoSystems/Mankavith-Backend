@@ -2,6 +2,7 @@ const crypto = require("crypto");
 const User = require("../model/user_model");
 const Payment = require("../model/paymentModel");
 const Course = require("../model/course_model");
+const mongoose = require("mongoose");
 
 exports.handleRazorpayWebhook = async (req, res) => {
   try {
