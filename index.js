@@ -20,8 +20,8 @@ app.use(bodyParser.json());
 app.use(cors());
 app.use(express.json());
 
-app.use(decryptRequestBody);
-app.use(encryptResponseBody);
+// app.use(decryptRequestBody);
+// app.use(encryptResponseBody);
 // app.use(express.json());
 
 const userRoutes = require("./src/routes/user_routes");
