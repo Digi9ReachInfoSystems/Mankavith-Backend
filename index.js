@@ -15,6 +15,13 @@ const { decryptRequestBody, encryptResponseBody } = encryptionMiddleware(
   decrypt
 );
 // connectDB();
+const webhookController = require("./src/controller/razor_pay_webhook");
+
+app.post(
+  "/razorpay-webhook",
+  express.raw({ type: "application/json" }),
+  webhookController.handleRazorpayWebhook
+);
 
 app.use(bodyParser.json());
 app.use(cors());
@@ -51,9 +58,7 @@ const missionRoutes = require("./src/routes/missionRoutes");
 const aspirantRoutes = require("./src/routes/aspirantRoutes");
 const studentRoutes = require("./src/routes/studentRoutes");
 
-
 const paymentRoutes = require("./src/routes/paymentRoutes");
-const webhookRoutes = require("./src/routes/webhookroutes");
 
 app.use("/user", userRoutes);
 app.use("/api/v1/course", courseRoutes);
@@ -83,7 +88,6 @@ app.use("/aspirants", aspirantRoutes);
 app.use("/student", studentRoutes);
 
 app.use("/api/v1/payment", paymentRoutes);
-app.use("/api/webhooks", webhookRoutes);
 
 connectDB()
   .then(() => {
