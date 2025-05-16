@@ -4,6 +4,29 @@ const mongoose = require("mongoose");
 const userSchema = new mongoose.Schema({
   phone: { type: String, required: false },
   displayName: { type: String, required: false },
+  subscription: {
+    payment_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Payment",
+    },
+    payment_Status: {
+      type: String,
+      // enum: ["pending", "success", "failed", "refunded"],
+      // default: "pending",
+    },
+    course_enrolled: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Course",
+    },
+    is_subscription_active: {
+      type: Boolean,
+      default: false,
+    },
+    created_at: {
+      type: Date,
+      default: Date.now,
+    },
+  },
   photo_url: {
     type: String,
     required: false,
