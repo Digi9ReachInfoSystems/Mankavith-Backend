@@ -1,207 +1,145 @@
-const crypto = require("crypto");
+// controller/razorpayWebhook.js
+// -------------------------------------------------------------------
+// Validates Razorpay webhooks (payment.authorized, payment.captured,
+// payment_link.paid) and updates the Payment collection plus the
+// user's subscription.  Mount this handler with:
+//   app.post("/razorpay-webhook", express.raw({type:"application/json"}), handleRazorpayWebhook)
+// -------------------------------------------------------------------
+
+const Razorpay = require("razorpay");
+const mongoose = require("mongoose");
 const User = require("../model/user_model");
 const Payment = require("../model/paymentModel");
-const Course = require("../model/course_model");
-const mongoose = require("mongoose");
+
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET,
+});
+
+// -------------------------------------------------------------------
+// MAIN ENTRY
+// -------------------------------------------------------------------
 exports.handleRazorpayWebhook = async (req, res) => {
+  const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
+  const signature = req.headers["x-razorpay-signature"];
+  const payloadBuf = req.body; // Buffer, provided by express.raw()
+
+  // 1️⃣ Signature verification – abort early if it fails
+  let verified = false;
   try {
-    // 1. Get raw body before any parsing
-    const rawBody =
-      req.rawBody ||
-      (() => {
-        let data = "";
-        req.on("data", (chunk) => {
-          data += chunk;
-        });
-        req.on("end", () => data);
-        return data;
-      })();
+    verified = Razorpay.validateWebhookSignature(payloadBuf, signature, secret);
+  } catch (err) {
+    console.error("[Webhook] Signature validation error:", err.message);
+  }
+  if (!verified)
+    return res
+      .status(400)
+      .json({ success: false, message: "Invalid signature" });
 
-    // 2. Verify webhook signature
-    const razorpaySignature = req.headers["x-razorpay-signature"];
-    const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
+  // 2️⃣ Parse JSON *after* verification passes
+  let eventData;
+  try {
+    eventData = JSON.parse(payloadBuf.toString());
+  } catch (err) {
+    console.error("[Webhook] Malformed JSON payload:", err);
+    return res
+      .status(400)
+      .json({ success: false, message: "Malformed payload" });
+  }
 
-    if (!webhookSecret) {
-      console.error("RAZORPAY_WEBHOOK_SECRET is not configured");
-      return res.status(500).json({ success: false, message: "Server error" });
+  // 3️⃣ Handle events
+  try {
+    const payment = eventData.payload?.payment?.entity;
+    switch (eventData.event) {
+      case "payment.authorized":
+        await handlePaymentAuthorized(payment);
+        break;
+      case "payment.captured":
+      case "payment_link.paid": // Payment Link flow ends here
+        await handlePaymentCaptured(payment);
+        break;
+      default:
+        console.log(`[Webhook] Unhandled event: ${eventData.event}`);
     }
-
-    const expectedSignature = crypto
-      .createHmac("sha256", webhookSecret)
-      .update(rawBody)
-      .digest("hex");
-
-    if (expectedSignature !== razorpaySignature) {
-      console.error("Invalid webhook signature", {
-        received: razorpaySignature,
-        expected: expectedSignature,
-        body: rawBody.toString(),
-      });
-      return res
-        .status(403)
-        .json({ success: false, message: "Invalid signature" });
-    }
-
-    // 3. Parse JSON only after verification
-    const webhookBody = JSON.parse(rawBody);
-    const event = webhookBody.event;
-    const paymentEntity = webhookBody.payload?.payment?.entity;
-
-    // 4. Handle payment.authorized event
-    if (event === "payment.authorized") {
-      await handlePaymentAuthorized(paymentEntity);
-    }
-    // Add other event handlers as needed
-    else {
-      console.log(`Unhandled event type: ${event}`);
-    }
-
-    res.status(200).json({ success: true });
-  } catch (error) {
-    console.error("Webhook Error:", error);
-    res.status(500).json({
-      success: false,
-      error: error.message,
-      note: "Check server logs for details",
-    });
+    // Acknowledge quickly – Razorpay expects 2xx within ~5 s
+    return res.sendStatus(200);
+  } catch (err) {
+    console.error("[Webhook] Processing error:", err);
+    return res
+      .status(500)
+      .json({ success: false, message: "Processing error" });
   }
 };
+
+// -------------------------------------------------------------------
+// HELPERS
+// -------------------------------------------------------------------
 async function handlePaymentAuthorized(payment) {
-  try {
-    // 1. Extract userRef from payment notes
-    const userRef = payment.notes?.userRef;
-    if (!userRef) {
-      throw new Error("userRef not found in payment notes");
-    }
-
-    // 2. Validate userRef format
-    if (!mongoose.Types.ObjectId.isValid(userRef)) {
-      throw new Error(`Invalid userRef format: ${userRef}`);
-    }
-
-    // 3. Find payment record
-    const paymentRecord = await Payment.findOne({
-      $or: [
-        { razorpay_order_id: payment.order_id },
-        { razorpay_payment_id: payment.id },
-      ],
-    });
-
-    if (!paymentRecord) {
-      console.error("Payment record not found for:", {
-        order_id: payment.order_id,
-        payment_id: payment.id,
-      });
-      return;
-    }
-
-    // 4. Verify userRef matches payment record
-    if (paymentRecord.userRef.toString() !== userRef) {
-      throw new Error(
-        `userRef mismatch: ${paymentRecord.userRef} vs ${userRef}`
-      );
-    }
-
-    // 5. Update payment status
-    paymentRecord.status = "authorized";
-    paymentRecord.razorpay_payment_id = payment.id;
-    paymentRecord.paymentMethod = payment.method;
-    await paymentRecord.save();
-
-    // 6. Update user subscription (if needed)
-    await updateUserSubscription(paymentRecord);
-
-    console.log(`Payment ${payment.id} authorized for user: ${userRef}`);
-  } catch (error) {
-    console.error("Error handling payment.authorized:", {
-      error: error.message,
-      payment_id: payment?.id,
-      stack: error.stack,
-    });
-    throw error;
+  // Guard: payment.notes must contain userRef injected at order creation
+  const userRef = payment.notes?.userRef;
+  if (!userRef || !mongoose.Types.ObjectId.isValid(userRef)) {
+    console.warn("[payment.authorized] Missing/invalid userRef", userRef);
+    return;
   }
+
+  const paymentRecord = await Payment.findOne({
+    $or: [
+      { razorpay_order_id: payment.order_id },
+      { razorpay_payment_id: payment.id },
+    ],
+  });
+  if (!paymentRecord) {
+    console.warn("[payment.authorized] Payment record not found", payment.id);
+    return;
+  }
+
+  paymentRecord.status = "authorized";
+  paymentRecord.razorpay_payment_id = payment.id;
+  paymentRecord.paymentMethod = payment.method;
+  await paymentRecord.save();
+
+  await updateUserSubscription(paymentRecord);
 }
-// Handle payment_link.paid event
-// Handle payment.captured event
+
 async function handlePaymentCaptured(payment) {
-  try {
-    // Find payment by multiple possible identifiers
-    const paymentRecord = await Payment.findOne({
-      $or: [
-        { razorpay_order_id: payment.order_id },
-        { razorpay_reference_id: payment.reference_id },
-        { razorpay_payment_link_id: payment.payment_link?.id }, // For payment_link references
-      ],
-    });
-
-    if (!paymentRecord) {
-      console.error("Payment not found for:", {
-        payment_id: payment.id,
-        order_id: payment.order_id,
-        reference_id: payment.reference_id,
-      });
-      return;
-    }
-
-    // Update payment status
-    paymentRecord.status = "captured";
-    paymentRecord.razorpay_payment_id = payment.id;
-    paymentRecord.paidAt = new Date();
-    await paymentRecord.save();
-
-    // Update user subscription
-    await updateUserSubscription(paymentRecord);
-
-    console.log(
-      `Payment ${payment.id} captured for user: ${paymentRecord.userRef}`
-    );
-  } catch (error) {
-    console.error("Error handling payment:", {
-      error: error.message,
-      payment_id: payment?.id,
-      stack: error.stack,
-    });
-    throw error;
+  const paymentRecord = await Payment.findOne({
+    $or: [
+      { razorpay_order_id: payment.order_id },
+      { razorpay_reference_id: payment.reference_id },
+      { razorpay_payment_link_id: payment.payment_link?.id },
+    ],
+  });
+  if (!paymentRecord) {
+    console.warn("[payment.captured] Payment record not found", payment.id);
+    return;
   }
+
+  paymentRecord.status = "captured";
+  paymentRecord.razorpay_payment_id = payment.id;
+  paymentRecord.paidAt = new Date();
+  await paymentRecord.save();
+
+  await updateUserSubscription(paymentRecord);
 }
 
-// Common subscription update logic
 async function updateUserSubscription(paymentRecord) {
-  try {
-    const userId = paymentRecord.userRef;
+  const userId = paymentRecord.userRef;
+  if (!mongoose.Types.ObjectId.isValid(userId))
+    throw new Error("Invalid userRef");
 
-    console.log(
-      `[updateUserSubscription] Updating subscription for user ID: ${userId}`
-    );
+  const subscription = {
+    payment_id: paymentRecord._id,
+    payment_Status: "success",
+    course_enrolled: paymentRecord.courseRef,
+    is_subscription_active: true,
+    created_at: new Date(),
+  };
 
-    // Ensure it's a valid ObjectId
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
-      throw new Error("Invalid userRef in payment record");
-    }
+  const user = await User.findByIdAndUpdate(
+    userId,
+    { $set: { subscription } },
+    { new: true }
+  );
 
-    const subscriptionUpdate = {
-      payment_id: paymentRecord._id,
-      payment_Status: "success",
-      course_enrolled: paymentRecord.courseRef,
-      is_subscription_active: true,
-      created_at: new Date(),
-    };
-
-    const result = await User.findByIdAndUpdate(
-      userId,
-      { $set: { subscription: subscriptionUpdate } },
-      { new: true }
-    );
-
-    if (!result) {
-      console.error(`[updateUserSubscription] User not found: ${userId}`);
-    } else {
-      console.log(`[updateUserSubscription] Subscription updated successfully`);
-    }
-
-    return result;
-  } catch (error) {
-    console.error("[updateUserSubscription] Error:", error.message);
-    throw error;
-  }
+  if (!user) console.error("[updateUserSubscription] User not found", userId);
 }
