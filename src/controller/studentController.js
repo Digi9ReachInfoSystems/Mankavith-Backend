@@ -4,7 +4,7 @@ const mongoose = require("mongoose");
 
 exports.createStudent = async (req, res) => {
     try {
-        const{email, password, confirmPassword, phone, name, role='user',} = req.body;
+        const{email, password, phone, name, role='user',} = req.body;
        
     } catch (error) {
         console.error("Error creating student:", error.message);
