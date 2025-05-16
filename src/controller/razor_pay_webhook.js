@@ -150,7 +150,14 @@ async function updateUserSubscription(paymentRecord) {
   try {
     const userId = paymentRecord.userRef;
 
-    console.log(`[updateUserSubscription] Updating user: ${userId}`);
+    console.log(
+      `[updateUserSubscription] Updating subscription for user ID: ${userId}`
+    );
+
+    // Ensure it's a valid ObjectId
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      throw new Error("Invalid userRef in payment record");
+    }
 
     const subscriptionUpdate = {
       payment_id: paymentRecord._id,
@@ -162,32 +169,19 @@ async function updateUserSubscription(paymentRecord) {
 
     const result = await User.findByIdAndUpdate(
       userId,
-      {
-        $set: {
-          subscription: subscriptionUpdate,
-        },
-      },
-      { new: true } // Optional: return updated doc
+      { $set: { subscription: subscriptionUpdate } },
+      { new: true }
     );
 
     if (!result) {
       console.error(`[updateUserSubscription] User not found: ${userId}`);
     } else {
-      console.log(
-        `[updateUserSubscription] Successfully created/updated subscription for user: ${userId}`
-      );
+      console.log(`[updateUserSubscription] Subscription updated successfully`);
     }
 
     return result;
   } catch (error) {
-    console.error(
-      `[updateUserSubscription] Error updating user subscription:`,
-      {
-        error: error.message,
-        stack: error.stack,
-        userId: paymentRecord.userRef,
-      }
-    );
+    console.error("[updateUserSubscription] Error:", error.message);
     throw error;
   }
 }
