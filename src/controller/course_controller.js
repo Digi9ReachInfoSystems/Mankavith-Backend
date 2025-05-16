@@ -263,14 +263,27 @@ exports.publishCourse = async (req, res) => {
 };
 
 // Get course by ID (updated to populate category)
+
 exports.getCourseById = async (req, res) => {
   try {
     const courseId = req.params.id;
 
     const course = await Course.findById(courseId)
-      .populate("subjects", "subjectName")
+      .populate({
+        path: "subjects",
+        select: "subjectName image description lectures notes",
+        populate: [
+          {
+            path: "lectures",
+            select: "_id"
+          },
+          {
+            path: "notes",
+            select: "_id"
+          }
+        ]
+      })
       .populate("category", "title");
-    // .populate("mockTests", "testName");
 
     if (!course) {
       return res.status(404).json({
@@ -279,9 +292,35 @@ exports.getCourseById = async (req, res) => {
       });
     }
 
+    const courseObj = course.toObject();
+
+    // 🧮 Initialize counts
+    let totalLectures = 0;
+    let totalNotes = 0;
+
+    // 📊 Count subjects and iterate for lectures + notes
+    courseObj.no_of_subjects = courseObj.subjects?.length || 0;
+
+    courseObj.subjects = courseObj.subjects.map(subject => {
+      const lectureCount = subject.lectures?.length || 0;
+      const noteCount = subject.notes?.length || 0;
+
+      totalLectures += lectureCount;
+      totalNotes += noteCount;
+
+      return {
+        ...subject,
+        no_of_lectures: lectureCount
+        // optionally: no_of_notes: noteCount
+      };
+    });
+
+    courseObj.no_of_videos = totalLectures;
+    courseObj.no_of_notes = totalNotes;
+
     return res.status(200).json({
       success: true,
-      data: course,
+      data: courseObj,
     });
   } catch (error) {
     console.error("Error fetching course by ID:", error.message);

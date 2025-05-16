@@ -22,8 +22,8 @@ app.use(express.json());
 
 app.use(decryptRequestBody);
 app.use(encryptResponseBody);
+// app.use(express.json());
 
-app.use(express.json());
 
 const userRoutes = require("./src/routes/user_routes");
 const courseRoutes = require("./src/routes/course_routes");
@@ -47,11 +47,16 @@ const recordedSession = require("./src/routes/recordedSessionRoutes");
 const BannersRouter = require("./src/routes/bannerRoutes");
 const CategoryRouter = require("./src/routes/categoryRoutes");
 const uploadRoutes = require("./src/routes/uploadRoutes");
+const lectureRoutes = require("./src/routes/lectureRoutes");
+const missionRoutes= require("./src/routes/missionRoutes");
+const aspirantRoutes = require("./src/routes/aspirantRoutes");
+
+
 
 app.use("/user", userRoutes);
 app.use("/api/v1/course", courseRoutes);
 app.use("/api/v1/subject", subjectRoutes);
-app.use("/note", notesRoutes);
+app.use("/notes", notesRoutes);
 app.use("/faq", faqRouter);
 app.use("/content", contentRouter);
 app.use("/exam", examRouter);
@@ -70,6 +75,9 @@ app.use("/certificates", certificatesRoutes);
 app.use("/banners", BannersRouter);
 app.use("/category", CategoryRouter);
 app.use("/upload", uploadRoutes);
+app.use("/lecture", lectureRoutes);
+app.use("/mission", missionRoutes);
+app.use("/aspirants", aspirantRoutes);
 
 
 connectDB()

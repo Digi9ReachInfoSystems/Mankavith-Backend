@@ -11,13 +11,19 @@ const LectureSchema = new mongoose.Schema(
     },
     duration: {
       type: String,
+      required: true,
     },
     videoUrl: {
       type: String,
+      required: true,
     },
     courseRef: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Course",
+    },
+    subjectRef: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Subject",
     },
   },
   { timestamps: true }
