@@ -20,10 +20,9 @@ app.use(bodyParser.json());
 app.use(cors());
 app.use(express.json());
 
-app.use(decryptRequestBody);
-app.use(encryptResponseBody);
+// app.use(decryptRequestBody);
+// app.use(encryptResponseBody);
 // app.use(express.json());
-
 
 const userRoutes = require("./src/routes/user_routes");
 const courseRoutes = require("./src/routes/course_routes");
@@ -48,11 +47,13 @@ const BannersRouter = require("./src/routes/bannerRoutes");
 const CategoryRouter = require("./src/routes/categoryRoutes");
 const uploadRoutes = require("./src/routes/uploadRoutes");
 const lectureRoutes = require("./src/routes/lectureRoutes");
-const missionRoutes= require("./src/routes/missionRoutes");
+const missionRoutes = require("./src/routes/missionRoutes");
 const aspirantRoutes = require("./src/routes/aspirantRoutes");
 const studentRoutes = require("./src/routes/studentRoutes");
 
 
+const paymentRoutes = require("./src/routes/paymentRoutes");
+const webhookRoutes = require("./src/routes/webhookroutes");
 
 app.use("/user", userRoutes);
 app.use("/api/v1/course", courseRoutes);
@@ -81,13 +82,15 @@ app.use("/mission", missionRoutes);
 app.use("/aspirants", aspirantRoutes);
 app.use("/student", studentRoutes);
 
+app.use("/api/v1/payment", paymentRoutes);
+app.use("/api/webhooks", webhookRoutes);
 
 connectDB()
   .then(() => {
     console.log("Connected to MongoDB");
 
     // Start the Server
-    const PORT = process.env.PORT ;
+    const PORT = process.env.PORT;
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });
@@ -96,5 +99,3 @@ connectDB()
     console.error("MongoDB connection error:", err);
     process.exit(1); // Exit process with failure
   });
-
-
