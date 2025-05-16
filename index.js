@@ -18,7 +18,7 @@ const { decryptRequestBody, encryptResponseBody } = encryptionMiddleware(
 const webhookController = require("./src/controller/razor_pay_webhook");
 
 app.post(
-  "/razorpay-webhook",
+  "/api/webhooks/razorpay-webhook",
   express.raw({ type: "application/json" }),
   webhookController.handleRazorpayWebhook
 );
