@@ -24,18 +24,18 @@ const studentSchema = new mongoose.Schema({
         default: false
       },
       subscribe_status: {
-        type: string,
+        type: String,
         default: false,
         enum: ["active", "inactive", "pending"],
         default: "active",
       },
       payment_status: {
-        type: string,
+        type: String,
         enum: ["paid", "failed", "pending"],
         default: "active",
       },
       payment_id: {
-        type: string,
+        type: String,
         default: "",
       },
     },
