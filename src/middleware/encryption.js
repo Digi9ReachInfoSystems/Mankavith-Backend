@@ -1,7 +1,13 @@
 module.exports = (encrypt, decrypt) => {
     return {
         decryptRequestBody: (req, res, next) => {
-            if (req.headers.api_key === process.env.FLUTTER_API_KEY) {
+            // add paths to skip decryption
+            const excludedRoutes = [
+                // '/',
+            ];
+            if (excludedRoutes.some(route => req.path.startsWith(route))) {
+               
+            } else if (req.headers.api_key === process.env.FLUTTER_API_KEY) {
             } else {
                 if (req.body) {
                     try {
@@ -18,8 +24,13 @@ module.exports = (encrypt, decrypt) => {
         encryptResponseBody: (req, res, next) => {
             const oldJson = res.json;
             res.json = async (body) => {
-
-                if (req.headers.api_key === process.env.FLUTTER_API_KEY) {
+                 // add paths to skip encryption
+                const excludedRoutes = [
+                    // '/',
+                ];
+                if (excludedRoutes.some(route => req.path.startsWith(route))) {
+                    return oldJson.call(res,  body )
+                } else if (req.headers.api_key === process.env.FLUTTER_API_KEY) {
                     return oldJson.call(res, { body })
                 } else {
                     const encryptedBody = encrypt(JSON.stringify(body));

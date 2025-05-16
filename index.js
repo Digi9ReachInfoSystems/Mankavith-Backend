@@ -49,6 +49,9 @@ const uploadRoutes = require("./src/routes/uploadRoutes");
 const lectureRoutes = require("./src/routes/lectureRoutes");
 const missionRoutes = require("./src/routes/missionRoutes");
 const aspirantRoutes = require("./src/routes/aspirantRoutes");
+const studentRoutes = require("./src/routes/studentRoutes");
+
+
 const paymentRoutes = require("./src/routes/paymentRoutes");
 const webhookRoutes = require("./src/routes/webhookroutes");
 
@@ -77,6 +80,8 @@ app.use("/upload", uploadRoutes);
 app.use("/lecture", lectureRoutes);
 app.use("/mission", missionRoutes);
 app.use("/aspirants", aspirantRoutes);
+app.use("/student", studentRoutes);
+
 app.use("/api/v1/payment", paymentRoutes);
 app.use("/api/webhooks", webhookRoutes);
 
