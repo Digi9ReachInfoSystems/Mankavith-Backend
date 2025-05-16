@@ -36,6 +36,7 @@ exports.handleRazorpayWebhook = async (req, res) => {
     const event = req.body.event;
     const paymentEntity = req.body.payload.payment?.entity;
     const paymentLinkEntity = req.body.payload.payment_link?.entity;
+    const orderEntity = req.body.payload.order?.entity;
 
     switch (event) {
       case "payment_link.paid":
@@ -43,11 +44,14 @@ exports.handleRazorpayWebhook = async (req, res) => {
         break;
 
       case "payment.captured":
-        await handlePaymentCaptured(paymentEntity);
+      case "order.paid": // Handle both payment.captured and order.paid
+        await handlePaymentCaptured(paymentEntity || orderEntity.payment);
         break;
 
       default:
         console.log(`Unhandled event type: ${event}`);
+        // Consider logging the full payload for debugging:
+        console.log("Full webhook payload:", JSON.stringify(req.body, null, 2));
     }
 
     res.status(200).json({ success: true });
@@ -101,37 +105,43 @@ async function handlePaymentLinkPaid(paymentLink, payment) {
 // Handle payment.captured event
 async function handlePaymentCaptured(payment) {
   try {
-    // 1. Find the payment record
+    // Find payment by multiple possible identifiers
     const paymentRecord = await Payment.findOne({
       $or: [
         { razorpay_order_id: payment.order_id },
         { razorpay_reference_id: payment.reference_id },
+        { razorpay_payment_link_id: payment.payment_link?.id }, // For payment_link references
       ],
     });
 
     if (!paymentRecord) {
       console.error("Payment not found for:", {
+        payment_id: payment.id,
         order_id: payment.order_id,
         reference_id: payment.reference_id,
       });
       return;
     }
 
-    // 2. Update payment status
+    // Update payment status
     paymentRecord.status = "captured";
     paymentRecord.razorpay_payment_id = payment.id;
     paymentRecord.paidAt = new Date();
     await paymentRecord.save();
 
-    // 3. Update user subscription
+    // Update user subscription
     await updateUserSubscription(paymentRecord);
 
     console.log(
       `Payment ${payment.id} captured for user: ${paymentRecord.userRef}`
     );
   } catch (error) {
-    console.error("Error handling payment captured:", error);
-    throw error; // Propagate to main handler
+    console.error("Error handling payment:", {
+      error: error.message,
+      payment_id: payment?.id,
+      stack: error.stack,
+    });
+    throw error;
   }
 }
 
