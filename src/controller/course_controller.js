@@ -41,6 +41,9 @@ exports.createCourse = async (req, res) => {
       for (let i = 0; i < courseData.subjects.length; i++) {
         const subject = await Subject.findById(courseData.subjects[i]);
         if (subject) {
+          if (subject.courses.includes(savedCourse._id)) {
+            continue;
+          }
           subject.courses.push(savedCourse._id);
           await subject.save();
         }
@@ -324,7 +327,7 @@ exports.searchCourses = async (req, res) => {
     let query = {};
 
     if (name) query.courseDisplayName = { $regex: name, $options: "i" };
-    if(categoryName!='null') {
+    if (categoryName != 'null') {
       const categoryExists = await Category.findOne({ title: categoryName });
       if (!categoryExists) {
         return res.status(400).json({
@@ -332,12 +335,12 @@ exports.searchCourses = async (req, res) => {
           message: "Category not found",
         });
       }
-      query.category = categoryExists._id;      
+      query.category = categoryExists._id;
     }
 
     const courses = await Course.find(query)
-      .populate("subjects" )
-      .populate("category" );
+      .populate("subjects")
+      .populate("category");
 
     return res.status(200).json({
       success: true,
@@ -352,3 +355,41 @@ exports.searchCourses = async (req, res) => {
     });
   }
 };
+
+exports.addFeedbackToCourse = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    const { student_ref, review, rating } = req.body;
+
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: "Course not found",
+      });
+    }
+
+    if (!student_ref || !review || !rating) {
+      return res.status(400).json({
+        success: false,
+        message: "All fields are required",
+      });
+    }
+    if (!(course.student_feedback.some(feedback => feedback.student_ref === student_ref))) {
+      course.student_feedback.push({ student_ref, review, rating });
+      await course.save();
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Feedback added successfully",
+    });
+  } catch (error) {
+    console.error("Error adding feedback:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Server error. Could not add feedback.",
+      error: error.message,
+    });
+  }
+};  

@@ -28,5 +28,6 @@ router.patch("/:id/publish", courseController.publishCourse);
 // Delete a course by ID
 router.delete("/:id", courseController.deleteCourse);
 router.get("/search/CourseandCategory", courseController.searchCourses);
+router.post("/addFeedback/:courseId", courseController.addFeedbackToCourse);
 
 module.exports = router;
