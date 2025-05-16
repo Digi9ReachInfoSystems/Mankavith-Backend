@@ -15,14 +15,6 @@ const studentSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "Course",
       },
-      kycRef: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "KycDetails",
-      },
-      kyc_status: {
-        type: Boolean,
-        default: false
-      },
       subscribe_status: {
         type: String,
         default: false,
@@ -36,7 +28,12 @@ const studentSchema = new mongoose.Schema({
       },
       payment_id: {
         type: String,
-        default: "",
+        default: null,
+      },
+      kyc_status: {
+        type: String,
+        enum: ["pending", "approved", "rejected", "not-applied"],
+        default: "pending",
       },
     },
   ],
@@ -46,9 +43,14 @@ const studentSchema = new mongoose.Schema({
       ref: "Course",
     },
   ],
-  id_proof: {
+  kycRef: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "KycDetails",
+  },
+  kyc_status: {
     type: String,
-    required: true
+    enum: ["pending", "approved", "rejected", "not-applied"],
+    default: "pending",
   },
 
   // image: { type: String, required: true },
