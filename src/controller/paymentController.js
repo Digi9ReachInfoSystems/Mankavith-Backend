@@ -1,4 +1,6 @@
 const Payment = require("../model/paymentModel");
+const crypto = require("crypto");
+const express = require("express");
 const Razorpay = require("razorpay");
 const Course = require("../model/course_model");
 const User = require("../model/user_model");
@@ -85,5 +87,98 @@ exports.createOrder = async (req, res) => {
       error: "Payment processing failed",
       details: err.error?.description || err.message,
     });
+  }
+};
+
+exports.handleWebhook = async (req, res) => {
+  const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
+  const razorpaySig = req.headers["x-razorpay-signature"];
+
+  // 1️⃣  Verify HMAC
+  const digest = crypto
+    .createHmac("sha256", webhookSecret)
+    .update(req.body) // because we used express.raw()
+    .digest("hex");
+
+  if (digest !== razorpaySig) {
+    return res.status(400).send("❌  Invalid webhook signature");
+  }
+
+  // 2️⃣  Parse event
+  const { event } = JSON.parse(req.body);
+
+  try {
+    switch (event) {
+      /* ───────────────────────────────────────────────────────── payment_link.paid */
+      case "payment_link.paid": {
+        const link = JSON.parse(req.body).payload.payment_link.entity;
+        const payId = link.payment_id; // Razorpay payment_id
+        const linkId = link.id; // Razorpay payment_link_id
+
+        // Fetch our Payment record that we created earlier
+        const payment = await Payment.findOne({
+          razorpay_payment_link_id: linkId,
+        });
+        if (!payment) break; // no matching record → ignore event
+
+        payment.status = "success";
+        payment.transactionId = payId;
+        payment.razorpay_payment_id = payId;
+        await payment.save();
+
+        // Update user subscription
+        await User.findByIdAndUpdate(
+          payment.userRef,
+          {
+            subscription: {
+              payment_id: payment._id,
+              payment_Status: "success",
+              course_enrolled: payment.courseRef,
+              is_subscription_active: true,
+              created_at: new Date(),
+            },
+          },
+          { new: true }
+        );
+
+        break;
+      }
+
+      /* ──────────────────────────────────────────────────────── payment_link.failed */
+      case "payment_link.failed": {
+        const link = JSON.parse(req.body).payload.payment_link.entity;
+        const linkId = link.id;
+
+        const payment = await Payment.findOne({
+          razorpay_payment_link_id: linkId,
+        });
+        if (!payment) break;
+
+        payment.status = "failed";
+        payment.failure_reason = link.failure_reason || "Unknown";
+        await payment.save();
+
+        await User.findByIdAndUpdate(payment.userRef, {
+          subscription: {
+            payment_id: payment._id,
+            payment_Status: "failed",
+            course_enrolled: null,
+            is_subscription_active: false,
+            created_at: new Date(),
+          },
+        });
+        break;
+      }
+
+      /* ───────────────────────────────────────────────────────────── default/ignore */
+      default:
+        // Unhandled event – safely ignore
+        console.log(`ℹ️  Received unhandled event ${event}`);
+    }
+
+    res.json({ status: "ok" });
+  } catch (err) {
+    console.error("Webhook processing error:", err);
+    res.status(500).send("Internal webhook error");
   }
 };

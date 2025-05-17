@@ -20,7 +20,7 @@ const webhookController = require("./src/controller/razor_pay_webhook");
 app.post(
   "/api/webhooks/razorpay-webhook",
   express.raw({ type: "application/json" }),
-  webhookController.handleRazorpayWebhook
+  paymentController.handleWebhook
 );
 
 app.use(bodyParser.json());
