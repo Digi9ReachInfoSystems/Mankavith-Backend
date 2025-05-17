@@ -22,6 +22,7 @@ const crypto = require("crypto");
 const Razorpay = require("razorpay");
 const Payment = require("../model/paymentModel");
 const User = require("../model/user_model");
+const Student = require("../model/studentModel");
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
@@ -184,6 +185,11 @@ exports.handleWebhook = async (req, res) => {
         created_at: new Date(),
       },
     });
+    await upsertStudent({
+      userRef: payment.userRef,
+      courseRef: payment.courseRef, // field already saved in Payment
+      payId,
+    });
     console.log("✅  User subscription activated for", payment.userRef);
   };
 
@@ -261,4 +267,41 @@ exports.handleWebhook = async (req, res) => {
     console.error("❌  Webhook processing error:", err);
     res.status(500).send("Internal webhook error");
   }
+};
+
+/* ------------------------------------------------------------
+ * Upsert Student record when a payment is confirmed
+ * ---------------------------------------------------------- */
+const upsertStudent = async ({ userRef, courseRef, payId }) => {
+  // shape that matches the sub-schema inside Student.courseRef[]
+  const courseObj = {
+    courseRef,
+    subscribe_status: "active",
+    payment_status: "paid",
+    payment_id: payId,
+    kyc_status: "not-applied",
+  };
+
+  let student = await Student.findOne({ userRef });
+
+  if (!student) {
+    /* First purchase → create the Student doc */
+    student = new Student({
+      userRef,
+      courseRef: [courseObj], // <-- triggers isEnrolled=true via pre('save')
+    });
+  } else {
+    /* Returning customer → update / push the course node */
+    const idx = student.courseRef.findIndex(
+      (c) => c.courseRef.toString() === courseRef.toString()
+    );
+
+    if (idx === -1) {
+      student.courseRef.push(courseObj);
+    } else {
+      Object.assign(student.courseRef[idx], courseObj); // refresh payment data
+    }
+  }
+
+  await student.save(); // middleware runs → isEnrolled stays accurate
 };
