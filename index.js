@@ -10,6 +10,7 @@ const encryptionUtils = require("./src/utils/Encryption");
 const encryptionMiddleware = require("./src/middleware/encryption");
 const key = process.env.CRYPTION_KEY;
 const { encrypt, decrypt } = encryptionUtils(key);
+const paymentController = require("./src/controller/paymentController");
 const { decryptRequestBody, encryptResponseBody } = encryptionMiddleware(
   encrypt,
   decrypt
