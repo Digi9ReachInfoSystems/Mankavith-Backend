@@ -1,84 +1,99 @@
-const Payment = require("../model/paymentModel");
+/* ──────────────────────────────────────────────────────────────────────────────
+ * controllers/paymentController.js
+ * ---------------------------------------------------------------------------
+ *  • createOrder   — builds a Razorpay order + payment-link, stores “pending”
+ *                    Payment doc, returns link to the client.
+ *  • handleWebhook — verifies Razorpay HMAC, handles success / failure events,
+ *                    updates Payment + User.subscription in MongoDB.
+ * ---------------------------------------------------------------------------
+ *  NOTE
+ *  ----
+ *  In your route file make sure the webhook endpoint uses `express.raw`
+ *  BEFORE any JSON/body-parser middleware or the HMAC check will fail:
+ *
+ *      router.post(
+ *        "/webhook/razorpay",
+ *        express.raw({ type: "application/json" }),
+ *        paymentController.handleWebhook
+ *      );
+ * --------------------------------------------------------------------------- */
+
 const crypto = require("crypto");
-const express = require("express");
 const Razorpay = require("razorpay");
-const Course = require("../model/course_model");
+const Payment = require("../model/paymentModel");
 const User = require("../model/user_model");
+
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
   key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
+
+/* ────────────────────────────────────────────────────────────────────────────
+ *  CREATE ORDER + PAYMENT-LINK
+ * ────────────────────────────────────────────────────────────────────────── */
 exports.createOrder = async (req, res) => {
   const { userRef, courseRef, amountPaid, paymentType, callback_url } =
     req.body;
 
   try {
-    // 1. Fetch user details
+    /* 1️⃣  Make sure user exists */
     const user = await User.findById(userRef);
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
+    if (!user) return res.status(404).json({ error: "User not found" });
 
-    // 2. Create Razorpay order
-    const orderOptions = {
-      amount: amountPaid * 100,
+    /* 2️⃣  Create Razorpay *order* (just an amount container) */
+    const order = await razorpay.orders.create({
+      amount: amountPaid * 100, // paise
       currency: "INR",
       receipt: `receipt_${Date.now()}`,
-      payment_capture: 1,
-    };
+      payment_capture: 1, // auto-capture
+    });
 
-    const order = await razorpay.orders.create(orderOptions);
-
-    // 3. Generate payment link using order.id as reference
+    /* 3️⃣  Generate a payment-link tied to that order */
     const paymentLink = await razorpay.paymentLink.create({
       amount: amountPaid * 100,
       currency: "INR",
       accept_partial: false,
-      reference_id: order.id, // Use order.id as reference
+      reference_id: order.id,
       description: `Payment for course ${courseRef}`,
       customer: {
         name: user.displayName || "Customer",
         email: user.email,
         contact: user.phone || "9999999999",
       },
-      notify: {
-        sms: true,
-        email: true,
-      },
-      reminder_enable: true,
+      notify: { sms: true, email: true },
       notes: {
         userRef,
         courseRef,
         paymentType,
-        razorpay_order_id: order.id, // Explicitly include order ID
+        razorpay_order_id: order.id, // <-- we’ll need this later
       },
+      reminder_enable: true,
       callback_url,
       callback_method: "get",
     });
 
-    // 4. Save payment record with proper IDs
-    const payment = new Payment({
+    /* 4️⃣  Persist “pending” Payment record */
+    const payment = await new Payment({
       userRef,
       courseRef,
       amountPaid,
-      transactionId: order.receipt,
       paymentType,
-      razorpay_order_id: order.id, // Store the actual order ID
+      transactionId: order.receipt,
+      razorpay_order_id: order.id,
       razorpay_payment_link_id: paymentLink.id,
-      razorpay_reference_id: paymentLink.reference_id, // For cross-reference
+      razorpay_reference_id: paymentLink.reference_id,
       payment_link: paymentLink.short_url,
       status: "created",
-    });
+    }).save();
 
-    await payment.save();
-
-    // 5. Return response
+    /* 5️⃣  Return data to frontend */
     res.json({
       success: true,
-      orderId: order.id, // Return the actual order ID
+      orderId: order.id,
       paymentLink: paymentLink.short_url,
       paymentLinkId: paymentLink.id,
       referenceId: paymentLink.reference_id,
+      paymentDocId: payment._id,
     });
   } catch (err) {
     console.error("Payment Error:", err.error || err);
@@ -89,20 +104,24 @@ exports.createOrder = async (req, res) => {
     });
   }
 };
+
+/* ────────────────────────────────────────────────────────────────────────────
+ *  RAZORPAY WEBHOOK HANDLER
+ * ────────────────────────────────────────────────────────────────────────── */
 exports.handleWebhook = async (req, res) => {
   const tsISO = new Date().toISOString();
   const sigHeader = req.headers["x-razorpay-signature"];
-  const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
+  const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
 
-  /* ── 0️⃣  RAW LOGGING (helps confirm you’re really getting the data you expect) */
+  /* 0️⃣  Log raw payload (comment-out in prod) */
   console.log(`\n📨  Razorpay webhook @ ${tsISO}`);
   console.log("Headers:", JSON.stringify(req.headers, null, 2));
   console.log("Body (raw):", req.body.toString());
 
-  /* ── 1️⃣  VERIFY SIGNATURE  ────────────────────────────────────────────────── */
+  /* 1️⃣  Verify HMAC signature */
   const expectedSig = crypto
-    .createHmac("sha256", webhookSecret)
-    .update(req.body) // req.body is a Buffer because you used express.raw()
+    .createHmac("sha256", secret)
+    .update(req.body) // Buffer, because route uses express.raw()
     .digest("hex");
 
   console.log("Expected-HMAC:", expectedSig);
@@ -113,26 +132,40 @@ exports.handleWebhook = async (req, res) => {
     return res.status(400).send("Invalid signature");
   }
 
-  /* ── 2️⃣  PARSE PAYLOAD  ───────────────────────────────────────────────────── */
+  /* 2️⃣  Parse payload */
   let payload;
   try {
     payload = JSON.parse(req.body);
   } catch (err) {
-    console.error("❌  Couldn’t parse JSON body:", err);
+    console.error("❌  Malformed JSON in webhook:", err);
     return res.status(400).send("Malformed JSON");
   }
 
   const { event } = payload;
   console.log(`⚡  Event → ${event}`);
 
-  /* ── 3️⃣  HELPER FUNCTIONS  ───────────────────────────────────────────────── */
-  const recordSuccess = async ({ linkId, payId }) => {
-    console.log(`➡️  SUCCESS  linkId=${linkId}  payId=${payId}`);
+  /* ─────────────────────────────────────────────────────────── HELPERS ─── */
+  const findPayment = async ({ linkId, orderId }) => {
+    // 1. by payment-link ID
+    if (linkId) {
+      const p = await Payment.findOne({ razorpay_payment_link_id: linkId });
+      if (p) return p;
+    }
+    // 2. by original order ID stored when link was created
+    if (orderId) {
+      const p = await Payment.findOne({ razorpay_order_id: orderId });
+      if (p) return p;
+    }
+    return null;
+  };
 
-    // 1. Mark Payment document
-    const payment = await Payment.findOne({ razorpay_payment_link_id: linkId });
+  const recordSuccess = async ({ linkId, orderId, payId }) => {
+    console.log(
+      `➡️  SUCCESS linkId=${linkId} orderId=${orderId} payId=${payId}`
+    );
+    const payment = await findPayment({ linkId, orderId });
     if (!payment) {
-      console.warn("⚠️  No Payment doc found for linkId", linkId);
+      console.warn("⚠️  No Payment doc matched", { linkId, orderId });
       return;
     }
 
@@ -142,7 +175,6 @@ exports.handleWebhook = async (req, res) => {
     await payment.save();
     console.log("✅  Payment doc updated:", payment._id);
 
-    // 2. Patch User subscription
     await User.findByIdAndUpdate(payment.userRef, {
       subscription: {
         payment_id: payment._id,
@@ -152,15 +184,16 @@ exports.handleWebhook = async (req, res) => {
         created_at: new Date(),
       },
     });
-    console.log("✅  User subscription activated for user", payment.userRef);
+    console.log("✅  User subscription activated for", payment.userRef);
   };
 
-  const recordFailure = async ({ linkId, reason }) => {
-    console.log(`➡️  FAILURE  linkId=${linkId}  reason=${reason}`);
-
-    const payment = await Payment.findOne({ razorpay_payment_link_id: linkId });
+  const recordFailure = async ({ linkId, orderId, reason }) => {
+    console.log(
+      `➡️  FAILURE linkId=${linkId} orderId=${orderId} reason=${reason}`
+    );
+    const payment = await findPayment({ linkId, orderId });
     if (!payment) {
-      console.warn("⚠️  No Payment doc found for linkId", linkId);
+      console.warn("⚠️  No Payment doc matched", { linkId, orderId });
       return;
     }
 
@@ -178,42 +211,47 @@ exports.handleWebhook = async (req, res) => {
         created_at: new Date(),
       },
     });
-    console.log("✅  User subscription de-activated for user", payment.userRef);
+    console.log("✅  User subscription de-activated for", payment.userRef);
   };
 
-  /* ── 4️⃣  ROUTING  ─────────────────────────────────────────────────────────── */
+  /* ─────────────────────────────────────────────────────────── ROUTING ─── */
   try {
     switch (event) {
-      /* ——————————————————————————————————————————— success-type events ———————— */
+      /* ---------- SUCCESS-type events ---------- */
       case "payment_link.paid": {
         const link = payload.payload.payment_link.entity;
-        await recordSuccess({ linkId: link.id, payId: link.payment_id });
+        await recordSuccess({
+          linkId: link.id,
+          orderId: link.notes?.razorpay_order_id,
+          payId: link.payment_id,
+        });
         break;
       }
 
-      case "payment.authorized": /* customer paid, auth completed  */
-      case "order.paid": /* full order paid                */
+      case "payment.authorized":
+      case "order.paid":
       case "payment.captured": {
-        /* funds captured (auto-capture)  */
         const pay = payload.payload.payment.entity;
         await recordSuccess({
-          linkId: pay.notes?.razorpay_payment_link_id || pay.order_id,
+          linkId: pay.notes?.razorpay_payment_link_id, // usually undefined
+          orderId: pay.notes?.razorpay_order_id || pay.order_id, // order we stored OR Razorpay’s
           payId: pay.id,
         });
         break;
       }
 
-      /* ——————————————————————————————————————————— failure-type events ———————— */
+      /* ---------- FAILURE-type events ---------- */
       case "payment_link.failed": {
         const link = payload.payload.payment_link.entity;
         await recordFailure({
           linkId: link.id,
+          orderId: link.notes?.razorpay_order_id,
           reason: link.failure_reason || "unknown",
         });
         break;
       }
 
-      /* ——————————————————————————————————————————— everything else ————————— */
+      /* ---------- Unknown / ignored ---------- */
       default:
         console.log("ℹ️  Unhandled event – nothing to do");
     }
