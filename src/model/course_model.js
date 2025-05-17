@@ -16,6 +16,10 @@ const courseSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Category",
     },
+    scheduled_class:{
+      
+      
+    },
     isPublished: {
       type: Boolean,
       default: false,

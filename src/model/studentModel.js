@@ -37,12 +37,7 @@ const studentSchema = new mongoose.Schema({
       },
     },
   ],
-  wishList: [
-    {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Course",
-    },
-  ],
+
   kycRef: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "KycDetails",
@@ -57,7 +52,9 @@ const studentSchema = new mongoose.Schema({
 });
 
 studentSchema.pre("save", function (next) {
-  this.isEnrolled = this.courseRef?.some(course => course.subscribe_status === "active");
+  this.isEnrolled = this.courseRef?.some(
+    (course) => course.subscribe_status === "active"
+  );
   next();
 });
 
