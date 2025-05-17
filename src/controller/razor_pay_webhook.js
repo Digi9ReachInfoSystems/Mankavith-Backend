@@ -75,24 +75,20 @@ exports.handleRazorpayWebhook = async (req, res) => {
 // HELPERS
 // -------------------------------------------------------------------
 async function handlePaymentAuthorized(payment) {
-  // Guard: payment.notes must contain userRef injected at order creation
-  const userRef = payment.notes?.userRef;
-  if (!userRef || !mongoose.Types.ObjectId.isValid(userRef)) {
-    console.warn("[payment.authorized] Missing/invalid userRef", userRef);
-    return;
-  }
-
+  // 🔄 Instead of reading payment.notes, look up the Payment record first
   const paymentRecord = await Payment.findOne({
     $or: [
       { razorpay_order_id: payment.order_id },
       { razorpay_payment_id: payment.id },
     ],
   });
+
   if (!paymentRecord) {
     console.warn("[payment.authorized] Payment record not found", payment.id);
     return;
   }
 
+  // Now you already have the correct userRef inside paymentRecord
   paymentRecord.status = "authorized";
   paymentRecord.razorpay_payment_id = payment.id;
   paymentRecord.paymentMethod = payment.method;
@@ -124,6 +120,7 @@ async function handlePaymentCaptured(payment) {
 
 async function updateUserSubscription(paymentRecord) {
   const userId = paymentRecord.userRef;
+  console.log(userId);
   if (!mongoose.Types.ObjectId.isValid(userId))
     throw new Error("Invalid userRef");
 
