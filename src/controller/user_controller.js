@@ -75,7 +75,7 @@ exports.register = async (req, res) => {
     });
 
     const savedUser = await newUser.save();
-    if(role === "user"){
+    if (role === "user") {
       const student = new Student({
         userRef: savedUser._id,
         isEnrolled: false,
@@ -162,13 +162,17 @@ exports.login = async (req, res) => {
     );
     user.refreshToken = refreshToken;
     await user.save();
-
+    let student;
+    if (user.role === "user") {
+      student = await Student.findOne({ userRef: user._id });
+    }
     res.status(200).json({
       success: true,
       message: "Login successful",
       accessToken,
       refreshToken,
       user: user,
+      kyc_status: user.role === "user" ? student.kyc_status : null,
       expiresIn: expiryDate,
     });
   } catch (error) {
@@ -448,13 +452,17 @@ exports.verifyLoginOtp = async (req, res) => {
     );
     user.refreshToken = refreshToken;
     await user.save();
-
+    let student;
+    if (user.role === "user") {
+      student = await Student.findOne({ userRef: user._id });
+    }
     res.status(200).json({
       success: true,
       message: "Login successful",
       accessToken,
       refreshToken,
       user: user,
+      kyc_status: user.role === "user" ? student.kyc_status : null,
       expiresIn: expiryDate,
     });
   } catch (error) {
