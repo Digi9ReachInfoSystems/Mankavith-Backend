@@ -9,6 +9,12 @@ const studentSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  scheduled_meet: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "meeting",
+    },
+  ],
   courseRef: [
     {
       courseRef: {

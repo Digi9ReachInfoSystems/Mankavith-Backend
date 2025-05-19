@@ -28,8 +28,8 @@ app.use(bodyParser.json());
 app.use(cors());
 app.use(express.json());
 
-app.use(decryptRequestBody);
-app.use(encryptResponseBody);
+// app.use(decryptRequestBody);
+// app.use(encryptResponseBody);
 // app.use(express.json());
 
 const userRoutes = require("./src/routes/user_routes");
@@ -58,7 +58,7 @@ const lectureRoutes = require("./src/routes/lectureRoutes");
 const missionRoutes = require("./src/routes/missionRoutes");
 const aspirantRoutes = require("./src/routes/aspirantRoutes");
 const studentRoutes = require("./src/routes/studentRoutes");
-
+const zoomRoutes = require("./src/routes/zoomRoutes");
 const paymentRoutes = require("./src/routes/paymentRoutes");
 
 app.use("/user", userRoutes);
@@ -87,6 +87,7 @@ app.use("/lecture", lectureRoutes);
 app.use("/mission", missionRoutes);
 app.use("/aspirants", aspirantRoutes);
 app.use("/student", studentRoutes);
+app.use("/api/v1/zoom", zoomRoutes);
 
 app.use("/api/v1/payment", paymentRoutes);
 
