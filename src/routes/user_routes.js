@@ -25,6 +25,7 @@ router.get("/wishlist/:userId", userController.getWishlist);
 
 // Check if course is in wishlist
 router.get("/:userId/:courseId", userController.checkWishlistItem);
+router.put("/updateUser/:userId", userController.editUser);
 
 module.exports = router;
 
