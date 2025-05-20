@@ -305,3 +305,28 @@ const upsertStudent = async ({ userRef, courseRef, payId }) => {
 
   await student.save(); // middleware runs → isEnrolled stays accurate
 };
+
+exports.checkPaymentStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({ message: "Payment ID is required" });
+    }
+
+    const payment = await Payment.findById(id)
+      .populate("userRef", "displayName email")
+      .populate("courseRef", "title");
+
+    if (!payment) {
+      return res.status(404).json({ message: "Payment not found" });
+    }
+
+    res.status(200).json({ success: true, payment });
+  } catch (error) {
+    console.error("Error checking payment status:", error);
+    res
+      .status(500)
+      .json({ message: "Internal server error", error: error.message });
+  }
+};

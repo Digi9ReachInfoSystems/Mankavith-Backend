@@ -8,5 +8,6 @@ router.post(
   express.raw({ type: "application/json" }),
   paymentController.handleWebhook
 );
+router.get("/status/:id", paymentController.checkPaymentStatus);
 
 module.exports = router;
