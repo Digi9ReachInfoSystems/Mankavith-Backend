@@ -4,6 +4,7 @@ const User = require("../model/user_model");
 const nodemailer = require("nodemailer");
 const Course = require("../model/course_model");
 const mongoose = require("mongoose");
+const Student = require("../model/studentModel");
 const generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000).toString(); // Generates a 6-digit OTP
 };
@@ -73,7 +74,15 @@ exports.register = async (req, res) => {
       isEmailVerified: false,
     });
 
-    await newUser.save();
+    const savedUser = await newUser.save();
+    if (role === "user") {
+      const student = new Student({
+        userRef: savedUser._id,
+        isEnrolled: false,
+        courseRef: [],
+      });
+      await student.save();
+    }
 
     const mailOptions = {
       from: "Info@gully2global.com",
@@ -153,13 +162,17 @@ exports.login = async (req, res) => {
     );
     user.refreshToken = refreshToken;
     await user.save();
-
+    let student;
+    if (user.role === "user") {
+      student = await Student.findOne({ userRef: user._id });
+    }
     res.status(200).json({
       success: true,
       message: "Login successful",
       accessToken,
       refreshToken,
       user: user,
+      kyc_status: user.role === "user" ? student.kyc_status : null,
       expiresIn: expiryDate,
     });
   } catch (error) {
@@ -439,13 +452,17 @@ exports.verifyLoginOtp = async (req, res) => {
     );
     user.refreshToken = refreshToken;
     await user.save();
-
+    let student;
+    if (user.role === "user") {
+      student = await Student.findOne({ userRef: user._id });
+    }
     res.status(200).json({
       success: true,
       message: "Login successful",
       accessToken,
       refreshToken,
       user: user,
+      kyc_status: user.role === "user" ? student.kyc_status : null,
       expiresIn: expiryDate,
     });
   } catch (error) {

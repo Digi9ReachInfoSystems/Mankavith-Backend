@@ -10,11 +10,19 @@ const encryptionUtils = require("./src/utils/Encryption");
 const encryptionMiddleware = require("./src/middleware/encryption");
 const key = process.env.CRYPTION_KEY;
 const { encrypt, decrypt } = encryptionUtils(key);
+const paymentController = require("./src/controller/paymentController");
 const { decryptRequestBody, encryptResponseBody } = encryptionMiddleware(
   encrypt,
   decrypt
 );
 // connectDB();
+const webhookController = require("./src/controller/razor_pay_webhook");
+
+app.post(
+  "/api/webhooks/razorpay-webhook",
+  express.raw({ type: "application/json" }),
+  paymentController.handleWebhook
+);
 
 app.use(bodyParser.json());
 app.use(cors());
@@ -23,7 +31,6 @@ app.use(express.json());
 app.use(decryptRequestBody);
 app.use(encryptResponseBody);
 // app.use(express.json());
-
 
 const userRoutes = require("./src/routes/user_routes");
 const courseRoutes = require("./src/routes/course_routes");
@@ -48,10 +55,11 @@ const BannersRouter = require("./src/routes/bannerRoutes");
 const CategoryRouter = require("./src/routes/categoryRoutes");
 const uploadRoutes = require("./src/routes/uploadRoutes");
 const lectureRoutes = require("./src/routes/lectureRoutes");
-const missionRoutes= require("./src/routes/missionRoutes");
+const missionRoutes = require("./src/routes/missionRoutes");
 const aspirantRoutes = require("./src/routes/aspirantRoutes");
-
-
+const studentRoutes = require("./src/routes/studentRoutes");
+const zoomRoutes = require("./src/routes/zoomRoutes");
+const paymentRoutes = require("./src/routes/paymentRoutes");
 
 app.use("/user", userRoutes);
 app.use("/api/v1/course", courseRoutes);
@@ -78,14 +86,17 @@ app.use("/upload", uploadRoutes);
 app.use("/lecture", lectureRoutes);
 app.use("/mission", missionRoutes);
 app.use("/aspirants", aspirantRoutes);
+app.use("/student", studentRoutes);
+app.use("/api/v1/zoom", zoomRoutes);
 
+app.use("/api/v1/payment", paymentRoutes);
 
 connectDB()
   .then(() => {
     console.log("Connected to MongoDB");
 
     // Start the Server
-    const PORT = process.env.PORT ;
+    const PORT = process.env.PORT;
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });
@@ -94,5 +105,3 @@ connectDB()
     console.error("MongoDB connection error:", err);
     process.exit(1); // Exit process with failure
   });
-
-

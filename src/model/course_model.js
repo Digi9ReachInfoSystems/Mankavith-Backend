@@ -16,6 +16,10 @@ const courseSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Category",
     },
+    scheduled_class:{
+      
+      
+    },
     isPublished: {
       type: Boolean,
       default: false,
@@ -66,6 +70,10 @@ const courseSchema = new mongoose.Schema(
         type: String,
       },
     ],
+    course_rating: {
+      type: Number,
+      default: 0,
+    },
     student_feedback: [
       {
         student_ref: {
@@ -74,6 +82,9 @@ const courseSchema = new mongoose.Schema(
         },
         review: {
           type: String,
+        },
+        rating: {
+          type: Number,
         },
       },
     ],
@@ -105,7 +116,7 @@ const courseSchema = new mongoose.Schema(
     subjects: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Subject", 
+        ref: "Subject",
       },
     ],
     mockTests: [
@@ -118,8 +129,31 @@ const courseSchema = new mongoose.Schema(
       type: String, // URL of the course image
       required: true,
     },
+    isKycRequired: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );
+
+courseSchema.methods.calculateAverageRating = function () {
+  if (!this.student_feedback.length) {
+    this.rating = 0;
+  } else {
+    const total = this.student_feedback.reduce((sum, feedback) => sum + (feedback.rating || 0), 0);
+    const avg = total / this.student_feedback.length;
+    this.rating = Number(avg.toFixed(2)); // round to 2 decimals
+  }
+};
+
+
+
+courseSchema.pre("save", function (next) {
+  this.calculateAverageRating();
+  this.no_of_subjects = this.subjects?.length || 0;
+  this.student_enrolled = this.student_enrolled?.length || 0;
+  next();
+});
 
 module.exports = mongoose.model("Course", courseSchema);
