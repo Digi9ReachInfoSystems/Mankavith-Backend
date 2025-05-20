@@ -38,3 +38,13 @@ exports.deleteWhyById = async (req, res) => {
         res.status(500).send(error);
     }
 }   
+
+exports.getWhyById = async (req, res) => {
+    const { whyId } = req.params;
+    try {
+        const why = await Why.findById(whyId);
+        res.status(200).send(why);
+    } catch (error) {
+        res.status(500).send(error);
+    }
+}
