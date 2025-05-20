@@ -108,3 +108,20 @@ module.exports.deleteNote = async (req, res) => {
   }
 };
 
+
+module.exports.getNoOfNotes = async (req, res) => {
+  try {
+    const count = await Note.countDocuments();
+    return res.status(200).json({
+      success: true,
+      count: count,  // Changed from 'data' to 'count' for clarity
+    });
+  } catch (error) {
+    console.error("Error fetching number of notes:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Server error. Could not fetch number of notes.",
+      error: error.message,
+    });
+  }
+};

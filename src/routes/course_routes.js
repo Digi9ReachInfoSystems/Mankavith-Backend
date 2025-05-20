@@ -4,7 +4,9 @@ const courseController = require("../controller/course_controller");
 
 // Course Routes
 
+router.get("/total", courseController.getNoOfCourses);
 // Create a new course
+
 router.post("/", courseController.createCourse);
 
 // Get all courses (with optional category filter via query parameter)
@@ -29,5 +31,6 @@ router.patch("/:id/publish", courseController.publishCourse);
 router.delete("/:id", courseController.deleteCourse);
 router.get("/search/CourseandCategory", courseController.searchCourses);
 router.post("/addFeedback/:courseId", courseController.addFeedbackToCourse);
+
 
 module.exports = router;
