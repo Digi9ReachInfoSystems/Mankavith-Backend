@@ -139,3 +139,20 @@ exports.deleteStudentById = async (req, res) => {
         });
     }
 };
+
+exports.getTotalStudents = async (req, res) => {
+    try {
+        const count = await Student.countDocuments();
+        return res.status(200).json({
+            success: true,
+            count: count,  // Changed from 'data' to 'count' for clarity
+        });
+    } catch (error) {
+        console.error("Error fetching number of students:", error.message);
+        return res.status(500).json({
+            success: false,
+            message: "Server error. Could not fetch number of students.",
+            error: error.message,
+        });
+    }
+};

@@ -432,3 +432,20 @@ exports.addFeedbackToCourse = async (req, res) => {
     });
   }
 };  
+
+exports.getNoOfCourses = async (req, res) => {
+  try {
+    const count = await Course.countDocuments();
+    return res.status(200).json({
+      success: true,
+      count: count,  // Changed from 'data' to 'count' for clarity
+    });
+  } catch (error) {
+    console.error("Error fetching number of courses:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Server error. Could not fetch number of courses.",
+      error: error.message,
+    });
+  }
+};
