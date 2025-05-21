@@ -60,6 +60,7 @@ const aspirantRoutes = require("./src/routes/aspirantRoutes");
 const studentRoutes = require("./src/routes/studentRoutes");
 const zoomRoutes = require("./src/routes/zoomRoutes");
 const paymentRoutes = require("./src/routes/paymentRoutes");
+const userProgressRoutes = require("./src/routes/userProgressRoutes");
 
 app.use("/user", userRoutes);
 app.use("/api/v1/course", courseRoutes);
@@ -90,6 +91,11 @@ app.use("/student", studentRoutes);
 app.use("/api/v1/zoom", zoomRoutes);
 
 app.use("/api/v1/payment", paymentRoutes);
+
+app.use("/userProgress", userProgressRoutes);   
+
+
+
 
 connectDB()
   .then(() => {
