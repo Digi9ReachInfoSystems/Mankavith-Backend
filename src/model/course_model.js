@@ -106,7 +106,7 @@ const courseSchema = new mongoose.Schema(
     student_enrolled: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Student", // Reference to the Student model
+        ref: "User", 
       },
     ],
     discountActive: {

@@ -173,7 +173,7 @@ exports.login = async (req, res) => {
       accessToken,
       refreshToken,
       user: user,
-      kyc_status: user.role === "user" ? student.kyc_status : null,
+      kyc_status: user.role === "user" ? user.kyc_status : null,
       expiresIn: expiryDate,
     });
   } catch (error) {
@@ -463,7 +463,7 @@ exports.verifyLoginOtp = async (req, res) => {
       accessToken,
       refreshToken,
       user: user,
-      kyc_status: user.role === "user" ? student.kyc_status : null,
+      kyc_status: user.role === "user" ? user.kyc_status : null,
       expiresIn: expiryDate,
     });
   } catch (error) {
@@ -826,6 +826,8 @@ exports.getAllEnrolledCourses = async (req, res) => {
         .status(404)
         .json({ success: false, message: "User not found" });
     }
+    if (user.kyc_status !== "approved") return res.status(200).json({ success: true, enrolledCourses: [] ,message:"Please complete kyc to view Course" });
+    if (!user.subscription) return res.status(200).json({ success: true, enrolledCourses: [] });
     const subscribedCourses = user.subscription;
     let enrolledCourses = user.subscription.map(sub => sub.course_enrolled);
     const userProgress = await UserProgress.findOne({ user_id: userId });
@@ -867,7 +869,8 @@ exports.getOngoingCourses = async (req, res) => {
     if (!user) {
       return res.status(404).json({ success: false, message: "User not found" });
     }
-
+    if (user.kyc_status !== "approved") return res.status(200).json({ success: true, enrolledCourses: []  ,message:"Please complete kyc to view Course"});
+    if (!user.subscription) return res.status(200).json({ success: true, enrolledCourses: [] });
     const userProgress = await UserProgress.findOne({ user_id: userId });
     if (!userProgress) return res.status(200).json({ success: true, enrolledCourses: [] });
 
@@ -906,7 +909,8 @@ exports.getCompletedCourses = async (req, res) => {
     if (!user) {
       return res.status(404).json({ success: false, message: "User not found" });
     }
-
+    if (user.kyc_status !== "approved") return res.status(200).json({ success: true, enrolledCourses: []  ,message:"Please complete kyc to view Course"});
+    if (!user.subscription) return res.status(200).json({ success: true, enrolledCourses: [] });
     const userProgress = await UserProgress.findOne({ user_id: userId });
     if (!userProgress) return res.status(200).json({ success: true, enrolledCourses: [] });
 
@@ -945,6 +949,8 @@ exports.getNotStartedCourses = async (req, res) => {
     if (!user) {
       return res.status(404).json({ success: false, message: "User not found" });
     }
+    if (user.kyc_status !== "approved") return res.status(200).json({ success: true, enrolledCourses: [] ,message:"Please complete kyc to view Course"});
+    if (!user.subscription) return res.status(200).json({ success: true, enrolledCourses: [] });
 
     const userProgress = await UserProgress.findOne({ user_id: userId });
     let enrolledCourses = user.subscription.map(sub => sub.course_enrolled);
