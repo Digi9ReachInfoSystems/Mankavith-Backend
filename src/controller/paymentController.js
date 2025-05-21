@@ -256,6 +256,7 @@ exports.handleWebhook = async (req, res) => {
       case "order.paid":
       case "payment.captured": {
         const pay = payload.payload.payment.entity;
+        console.log("✅  Payment captured:", pay);
         await recordSuccess({
           linkId: pay.notes?.razorpay_payment_link_id, // usually undefined
           orderId: pay.notes?.razorpay_order_id || pay.order_id, // order we stored OR Razorpay’s

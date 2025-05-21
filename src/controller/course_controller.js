@@ -486,7 +486,14 @@ exports.getAllUserCoursesByCategory = async (req, res) => {
         message: "User not found",
       });
     }
-    let courses = await Course.find({ category: category });
+    const categoryExists = await Category.findOne({title: category});
+    if (!categoryExists) {
+      return res.status(404).json({
+        success: false,
+        message: "Category not found",
+      });
+    }
+    let courses = await Course.find({ category: categoryExists._id });
     courses = courses.filter(course => !(user.subscription.find(sub => sub.course_enrolled.equals(course._id))));
     return res.status(200).json({
       success: true,
