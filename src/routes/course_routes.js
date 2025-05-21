@@ -31,6 +31,8 @@ router.patch("/:id/publish", courseController.publishCourse);
 router.delete("/:id", courseController.deleteCourse);
 router.get("/search/CourseandCategory", courseController.searchCourses);
 router.post("/addFeedback/:courseId", courseController.addFeedbackToCourse);
-
+router.get("/getAllCourses/users/:user_id", courseController.getAllUserCourses);
+router.get("/getAllCourses/users/category/:user_id/:category", courseController.getAllUserCoursesByCategory);
+router.get("/search/CourseandCategory/:user_id/:categoryName", courseController.searchUserCourses);
 
 module.exports = router;

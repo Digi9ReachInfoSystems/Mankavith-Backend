@@ -1,6 +1,7 @@
 const Course = require("../model/course_model");
 const Category = require("../model/category_model");
 const Subject = require("../model/subject_model");
+const User = require("../model/user_model");
 
 // Create a new course (updated for category reference)
 exports.createCourse = async (req, res) => {
@@ -431,7 +432,7 @@ exports.addFeedbackToCourse = async (req, res) => {
       error: error.message,
     });
   }
-};  
+};
 
 exports.getNoOfCourses = async (req, res) => {
   try {
@@ -445,6 +446,103 @@ exports.getNoOfCourses = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Server error. Could not fetch number of courses.",
+      error: error.message,
+    });
+  }
+};
+
+exports.getAllUserCourses = async (req, res) => {
+  try {
+    const { user_id } = req.params;
+    const user = await User.findById(user_id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+    let courses = await Course.find();
+    courses = courses.filter(course => !(user.subscription.find(sub => sub.course_enrolled.equals(course._id))));
+    return res.status(200).json({
+      success: true,
+      data: courses,
+    });
+  } catch (error) {
+    console.error("Error fetching user courses:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Server error. Could not fetch user courses.",
+      error: error.message,
+    });
+  }
+};
+exports.getAllUserCoursesByCategory = async (req, res) => {
+  try {
+    const { user_id, category } = req.params;
+    const user = await User.findById(user_id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+    let courses = await Course.find({ category: category });
+    courses = courses.filter(course => !(user.subscription.find(sub => sub.course_enrolled.equals(course._id))));
+    return res.status(200).json({
+      success: true,
+      data: courses,
+    });
+  } catch (error) {
+    console.error("Error fetching user courses:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Server error. Could not fetch user courses.",
+      error: error.message,
+    });
+  }
+};
+
+exports.searchUserCourses = async (req, res) => {
+  try {
+    const { name } = req.query;
+    const{user_id, categoryName} = req.params
+    let query = {};
+    const user = await User.findById(user_id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+    
+
+    if (name) query.courseDisplayName = { $regex: name, $options: "i" };
+    if (categoryName != 'null') {
+      const categoryExists = await Category.findOne({ title: categoryName });
+      if (!categoryExists) {
+        return res.status(400).json({
+          success: false,
+          message: "Category not found",
+        });
+      }
+      query.category = categoryExists._id;
+    }
+
+    let courses = await Course.find(query)
+      .populate("subjects")
+      .populate("category");
+
+    courses = courses.filter(course => !(user.subscription.find(sub => sub.course_enrolled.equals(course._id))));
+
+    return res.status(200).json({
+      success: true,
+      data: courses,
+    });
+  } catch (error) {
+    console.error("Error searching courses:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Server error. Could not search courses.",
       error: error.message,
     });
   }
