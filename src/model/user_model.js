@@ -67,6 +67,15 @@ const userSchema = new mongoose.Schema({
   refreshToken: { type: String },
   loginOtp: { type: String },
   loginOtpExpiration: { type: Date },
+  kycRef: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "KycDetails",
+  },
+  kyc_status: {
+    type: String,
+    enum: ["pending", "approved", "rejected", "not-applied"],
+    default: "pending",
+  },
 });
 
 // Create and export the User model

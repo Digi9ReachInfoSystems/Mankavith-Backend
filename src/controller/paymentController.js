@@ -23,6 +23,7 @@ const Razorpay = require("razorpay");
 const Payment = require("../model/paymentModel");
 const User = require("../model/user_model");
 const Student = require("../model/studentModel");
+const Course = require("../model/course_model");
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
@@ -177,19 +178,32 @@ exports.handleWebhook = async (req, res) => {
     console.log("✅  Payment doc updated:", payment._id);
 
     await User.findByIdAndUpdate(payment.userRef, {
-      subscription: {
-        payment_id: payment._id,
-        payment_Status: "success",
-        course_enrolled: payment.courseRef,
-        is_subscription_active: true,
-        created_at: new Date(),
+      $push: {
+        subscription: {
+          payment_id: payment._id,
+          payment_Status: "success",
+          course_enrolled: payment.courseRef,
+          is_subscription_active: true,
+          created_at: new Date(),
+        }
+      }
+    },
+      { new: true },
+    );
+    const course = await Course.findByIdAndUpdate(payment.courseRef,
+      {
+        $addToSet: { 
+          student_enrolled: payment.userRef
+        }
       },
-    });
-    await upsertStudent({
-      userRef: payment.userRef,
-      courseRef: payment.courseRef, // field already saved in Payment
-      payId,
-    });
+      { new: true }
+    );
+
+    // await upsertStudent({
+    //   userRef: payment.userRef,
+    //   courseRef: payment.courseRef, // field already saved in Payment
+    //   payId,
+    // });
     console.log("✅  User subscription activated for", payment.userRef);
   };
 
@@ -208,15 +222,19 @@ exports.handleWebhook = async (req, res) => {
     await payment.save();
     console.log("✅  Payment marked failed:", payment._id);
 
-    await User.findByIdAndUpdate(payment.userRef, {
-      subscription: {
-        payment_id: payment._id,
-        payment_Status: "failed",
-        course_enrolled: null,
-        is_subscription_active: false,
-        created_at: new Date(),
-      },
-    });
+    // await User.findByIdAndUpdate(payment.userRef, {
+    //   $push: {
+    //     subscription: {
+    //       payment_id: payment._id,
+    //       payment_Status: "success",
+    //       course_enrolled: payment.courseRef,
+    //       is_subscription_active: true,
+    //       created_at: new Date(),
+    //     }
+    //   }
+    // },
+    //   { new: true },
+    // );
     console.log("✅  User subscription de-activated for", payment.userRef);
   };
 
