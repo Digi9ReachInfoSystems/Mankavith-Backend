@@ -252,8 +252,8 @@ exports.handleWebhook = async (req, res) => {
         break;
       }
 
-      case "payment.authorized":
-      case "order.paid":
+      // case "payment.authorized":
+      // case "order.paid":
       case "payment.captured": {
         const pay = payload.payload.payment.entity;
         console.log("✅  Payment captured:", pay);
