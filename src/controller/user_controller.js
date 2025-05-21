@@ -5,6 +5,7 @@ const nodemailer = require("nodemailer");
 const Course = require("../model/course_model");
 const mongoose = require("mongoose");
 const Student = require("../model/studentModel");
+const UserProgress = require("../model/userProgressModel");
 const generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000).toString(); // Generates a 6-digit OTP
 };
@@ -804,7 +805,7 @@ exports.editUser = async (req, res) => {
     });
     res
       .status(200)
-      .json({ success: true, message: "User updated successfully", user:updatedUser });
+      .json({ success: true, message: "User updated successfully", user: updatedUser });
   } catch (error) {
     console.error("Error updating user:", error.message);
     return res.status(500).json({
@@ -813,4 +814,162 @@ exports.editUser = async (req, res) => {
       error: error.message,
     });
   }
-};  
+};
+
+
+exports.getAllEnrolledCourses = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const user = await User.findById(userId).populate("subscription.course_enrolled");
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+    const subscribedCourses = user.subscription;
+    let enrolledCourses = user.subscription.map(sub => sub.course_enrolled);
+    const userProgress = await UserProgress.findOne({ user_id: userId });
+    enrolledCourses = await Promise.all(enrolledCourses.map(course => {
+      const plainCourse = course.toObject();
+      const courseProgress = userProgress.courseProgress.find((progress) => progress.course_id.equals(course._id));
+      if (courseProgress) {
+        return ({
+          ...plainCourse,
+          course_status: courseProgress.status,
+          completePercentage: courseProgress.completedPercentage,
+        })
+      } else {
+        return ({
+          ...plainCourse,
+          course_status: "Not started",
+          completePercentage: 0,
+        })
+      }
+    }));
+
+    res
+      .status(200)
+      .json({ success: true, message: "Subscribed courses fetched successfully", enrolledCourses });
+  } catch (error) {
+    console.error("Error fetching subscribed courses:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Server error. Could not fetch subscribed courses.",
+      error: error.message,
+    });
+  }
+};
+
+exports.getOngoingCourses = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const user = await User.findById(userId).populate("subscription.course_enrolled");
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    const userProgress = await UserProgress.findOne({ user_id: userId });
+    if (!userProgress) return res.status(200).json({ success: true, enrolledCourses: [] });
+
+    let enrolledCourses = user.subscription.map(sub => sub.course_enrolled);
+
+    let filteredCourses = await Promise.all(enrolledCourses.map(course => {
+      const plainCourse = course.toObject();
+      const progress = userProgress.courseProgress.find(p => p.course_id.equals(course._id));
+      if (progress && progress.status === 'ongoing') {
+        return {
+          ...plainCourse,
+          course_status: progress.status,
+          completePercentage: progress.completedPercentage,
+        };
+      }
+      return null;
+    }));
+    filteredCourses = filteredCourses.filter(Boolean);
+
+    res.status(200).json({
+      success: true,
+      enrolledCourses: filteredCourses,
+      message: "Ongoing courses fetched successfully"
+    });
+
+  } catch (error) {
+    console.error("Error fetching ongoing courses:", error.message);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+};
+
+exports.getCompletedCourses = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const user = await User.findById(userId).populate("subscription.course_enrolled");
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    const userProgress = await UserProgress.findOne({ user_id: userId });
+    if (!userProgress) return res.status(200).json({ success: true, enrolledCourses: [] });
+
+    let enrolledCourses = user.subscription.map(sub => sub.course_enrolled);
+
+    let filteredCourses = await Promise.all(enrolledCourses.map(course => {
+      const plainCourse = course.toObject();
+      const progress = userProgress.courseProgress.find(p => p.course_id.equals(course._id));
+      if (progress && progress.status === 'completed') {
+        return {
+          ...plainCourse,
+          course_status: progress.status,
+          completePercentage: progress.completedPercentage,
+        };
+      }
+      return null;
+    }));
+    filteredCourses = filteredCourses.filter(Boolean)
+    res.status(200).json({
+      success: true,
+      enrolledCourses: filteredCourses,
+      message: "Completed courses fetched successfully"
+    });
+
+  } catch (error) {
+    console.error("Error fetching completed courses:", error.message);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+};
+
+
+exports.getNotStartedCourses = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const user = await User.findById(userId).populate("subscription.course_enrolled");
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    const userProgress = await UserProgress.findOne({ user_id: userId });
+    let enrolledCourses = user.subscription.map(sub => sub.course_enrolled);
+
+    let filteredCourses = await Promise.all(enrolledCourses.map(course => {
+      const plainCourse = course.toObject();
+      const progress = userProgress?.courseProgress.find(p => p.course_id.equals(course._id));
+      if (!progress) {
+        return {
+          ...plainCourse,
+          course_status: "Not started",
+          completePercentage: 0
+        };
+      }
+      return null;
+    }));
+    filteredCourses = filteredCourses.filter(Boolean)
+    res.status(200).json({
+      success: true,
+      enrolledCourses: filteredCourses,
+      message: "Not started courses fetched successfully"
+    });
+
+  } catch (error) {
+    console.error("Error fetching not started courses:", error.message);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+};

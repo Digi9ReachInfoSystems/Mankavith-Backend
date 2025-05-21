@@ -4,7 +4,7 @@ const mongoose = require("mongoose");
 const userSchema = new mongoose.Schema({
   phone: { type: String, required: false },
   displayName: { type: String, required: false },
-  subscription: {
+  subscription: [{
     payment_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Payment",
@@ -26,7 +26,7 @@ const userSchema = new mongoose.Schema({
       type: Date,
       default: Date.now,
     },
-  },
+  }],
   photo_url: {
     type: String,
     required: false,

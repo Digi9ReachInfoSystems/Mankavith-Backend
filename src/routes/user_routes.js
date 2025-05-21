@@ -26,7 +26,10 @@ router.get("/wishlist/:userId", userController.getWishlist);
 // Check if course is in wishlist
 router.get("/:userId/:courseId", userController.checkWishlistItem);
 router.put("/updateUser/:userId", userController.editUser);
-
+router.get("/get/allEnrolledCourses/:userId", userController.getAllEnrolledCourses);
+router.get("/get/ongoingEnrolledCourses/:userId", userController.getOngoingCourses);
+router.get("/get/completedEnrolledCourses/:userId", userController.getCompletedCourses);
+router.get("/get/notStartedEnrolledCourses/:userId", userController.getNotStartedCourses);
 module.exports = router;
 
 module.exports = router;
