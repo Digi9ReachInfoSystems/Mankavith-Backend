@@ -5,11 +5,13 @@ const {
   getSubjectById,
   updateSubject,
   deleteSubject,
+  getNoOfSubjects,
 } = require("../controller/subject_controller");
 const authenticateJWT = require("../middleware/authenticator");
 
 const router = express.Router();
 
+router.get("/total", getNoOfSubjects);
 // Create a new subject
 router.post("/", createSubject);
 

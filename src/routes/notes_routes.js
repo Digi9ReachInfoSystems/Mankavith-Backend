@@ -1,10 +1,12 @@
 const express = require('express');
-const { createNote, getAllNotes, getNoteById, updateNote, deleteNote } = require('../controller/notes_controller');
+const { createNote, getAllNotes, getNoteById, updateNote, deleteNote, getNoOfNotes } = require('../controller/notes_controller');
 const authenticateJWT = require('../middleware/authenticator');
 const multer = require('multer');
 const router = express.Router();
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
+
+router.get('/total', getNoOfNotes);
 
 // Create a new note
 router.post('/notes',authenticateJWT, createNote);

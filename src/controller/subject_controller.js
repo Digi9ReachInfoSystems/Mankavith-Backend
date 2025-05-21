@@ -71,7 +71,7 @@ module.exports.getAllSubjects = async (req, res) => {
   try {
     const subjects = await Subject.find()
       .populate("courses") // Only populate specific fields from Course
-      .populate("notes", "mockTests")
+      .populate("notes", "fileUrl")
       .populate("lectures", "lectureName duration videoUrl")
       .sort({ createdAt: -1 }); // Sort by newest first
 
@@ -164,7 +164,7 @@ module.exports.updateSubject = async (req, res) => {
       runValidators: true, // Run model validators on update
     })
       .populate("courses")
-      .populate("notes")
+      .populate("notes fileUrl")
       .populate("mockTests")
       .populate("lectures", "lectureName duration videoUrl");
 
@@ -226,6 +226,23 @@ module.exports.deleteSubject = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Error deleting subject",
+      error: error.message,
+    });
+  }
+};
+
+exports.getNoOfSubjects = async (req, res) => {
+  try {
+    const count = await Subject.countDocuments();
+    return res.status(200).json({
+      success: true,
+      count: count,  // Changed from 'data' to 'count' for clarity
+    });
+  } catch (error) {
+    console.error("Error fetching number of courses:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Server error. Could not fetch number of courses.",
       error: error.message,
     });
   }
