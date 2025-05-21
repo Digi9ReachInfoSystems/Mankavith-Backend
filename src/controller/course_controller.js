@@ -276,11 +276,11 @@ exports.getCourseById = async (req, res) => {
         populate: [
           {
             path: "lectures",
-            select: "_id"
+            // select: "_id"
           },
           {
             path: "notes",
-            select: "_id"
+            // select: "_id"
           }
         ]
       })
