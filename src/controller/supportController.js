@@ -24,7 +24,8 @@ exports.createSupport = async (req, res) => {
 exports.getSupportById = async (req, res) => {
     try {
         const supportId = req.params.id;
-        const support = await Support.findById(supportId);
+        const support = await Support.findById(supportId)
+            .populate("userRef", "name email");
         if (!support) {
             return res.status(404).json({ error: "Support not found" });
         }
@@ -36,7 +37,8 @@ exports.getSupportById = async (req, res) => {
 
 exports.getAllSupports = async (req, res) => {
     try {
-        const supports = await Support.find();
+        const supports = await Support.find()
+            .populate("userRef", "name email");
         res.status(200).json(supports);
     } catch (error) {
         res.status(500).json({ error: error.message });
