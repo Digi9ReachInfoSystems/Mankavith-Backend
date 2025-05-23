@@ -4,18 +4,22 @@ const LectureSchema = new mongoose.Schema(
   {
     lectureName: {
       type: String,
-      required: true,
+      required: false,
     },
     description: {
       type: String,
     },
     duration: {
       type: String,
-      required: true,
+      required: false,
     },
     videoUrl: {
       type: String,
-      required: true,
+      required: false,
+    },
+    thumbnail: {
+      type: String,
+      required: false,
     },
     // courseRef: {
     //   type: mongoose.Schema.Types.ObjectId,
