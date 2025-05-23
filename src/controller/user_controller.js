@@ -831,6 +831,7 @@ exports.getAllEnrolledCourses = async (req, res) => {
     const subscribedCourses = user.subscription;
     let enrolledCourses = user.subscription.map(sub => sub.course_enrolled);
     const userProgress = await UserProgress.findOne({ user_id: userId });
+    if(!userProgress) return res.status(200).json({ success: true, enrolledCourses});
     enrolledCourses = await Promise.all(enrolledCourses.map(course => {
       const plainCourse = course.toObject();
       const courseProgress = userProgress.courseProgress.find((progress) => progress.course_id.equals(course._id));
