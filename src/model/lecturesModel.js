@@ -17,14 +17,14 @@ const LectureSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    courseRef: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Course",
-    },
-    subjectRef: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Subject",
-    },
+    // courseRef: {
+    //   type: mongoose.Schema.Types.ObjectId,
+    //   ref: "Course",
+    // },
+    // subjectRef: {
+    //   type: mongoose.Schema.Types.ObjectId,
+    //   ref: "Subject",
+    // },
   },
   { timestamps: true }
 );
