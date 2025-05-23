@@ -584,7 +584,8 @@ exports.createAdmin = async (req, res) => {
 exports.getUserById = async (req, res) => {
   try {
     const { id } = req.params;
-    const user = await User.findById(id);
+    const user = await User.findById(id)
+    .populate("subscription.course_enrolled");
     if (!user) {
       return res
         .status(404)
