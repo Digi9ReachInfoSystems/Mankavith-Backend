@@ -3,6 +3,8 @@ const axios = require("axios");
 const Meeting = require("../model/meetingsModel");
 const Student = require("../model/studentModel");
 const mongoose = require("mongoose");
+const jwt = require("jsonwebtoken");
+const KJUR = require("jsrsasign");
 
 /* -------------------------------------------------------------------------- */
 /*                               Zoom token helper                            */
@@ -218,5 +220,52 @@ exports.getmeetingBystudent = async (req, res) => {
   } catch (err) {
     console.error("getmeetingBystudent ►", err);
     res.status(500).json({ error: "Unable to fetch meetings for student" });
+  }
+};
+
+
+exports.generateZoomSignature = async (req, res) => {
+  try {
+    const { meetingNumber, role } = req.body;
+
+    if (!meetingNumber || role === undefined) {
+      return res
+        .status(400)
+        .json({ error: "Missing meetingNumber or role in request body." });
+    }
+
+    const sdkKey =process.env.ZOOM_CLIENT_ID;
+    const sdkSecret =process.env.ZOOM_CLIENT_SECRET;
+
+    if (!sdkKey || !sdkSecret) {
+      return res
+        .status(500)
+        .json({ error: "Zoom SDK Key and Secret are not configured." });
+    }
+
+    const iat = Math.floor(Date.now() / 1000) - 30;
+    const exp = iat + 60 * 60 * 2;
+
+    const oHeader = { alg: "HS256", typ: "JWT" };
+
+    const oPayload = {
+      sdkKey: sdkKey,
+      mn: meetingNumber,
+      role: role,
+      iat: iat,
+      exp: exp,
+      // appKey: sdkKey,
+      tokenExp: exp,
+    };
+
+    const sHeader = JSON.stringify(oHeader);
+    const sPayload = JSON.stringify(oPayload);
+
+    const signature = KJUR.jws.JWS.sign("HS256", sHeader, sPayload, sdkSecret);
+
+    res.json({ signature });
+  } catch (error) {
+    console.error("Error generating Zoom signature:", error);
+    res.status(500).json({ error: "Failed to generate Zoom signature." });
   }
 };

@@ -62,6 +62,7 @@ const zoomRoutes = require("./src/routes/zoomRoutes");
 const paymentRoutes = require("./src/routes/paymentRoutes");
 const blogRoutes = require("./src/routes/blogRoutes");
 const userProgressRoutes = require("./src/routes/userProgressRoutes");
+const meetingRoutes = require("./src/routes/meetingRoutes");
 
 app.use("/user", userRoutes);
 app.use("/api/v1/course", courseRoutes);
@@ -95,6 +96,7 @@ app.use("/blog", blogRoutes);
 
 
 app.use("/userProgress", userProgressRoutes);   
+app.use("/meeting", meetingRoutes);
 
 
 
