@@ -30,6 +30,8 @@ router.get("/get/allEnrolledCourses/:userId", userController.getAllEnrolledCours
 router.get("/get/ongoingEnrolledCourses/:userId", userController.getOngoingCourses);
 router.get("/get/completedEnrolledCourses/:userId", userController.getCompletedCourses);
 router.get("/get/notStartedEnrolledCourses/:userId", userController.getNotStartedCourses);
+router.post("/createStudent", userController.createStudent);
+router.get("/get/all/students", userController.getAllStudents);
 module.exports = router;
 
 module.exports = router;
