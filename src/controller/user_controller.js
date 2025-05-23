@@ -826,7 +826,7 @@ exports.getAllEnrolledCourses = async (req, res) => {
         .status(404)
         .json({ success: false, message: "User not found" });
     }
-    if (user.kyc_status !== "approved") return res.status(200).json({ success: true, enrolledCourses: [] ,message:"Please complete kyc to view Course" });
+    if (user.kyc_status !== "approved") return res.status(200).json({ success: true, enrolledCourses: [], message: "Please complete kyc to view Course" });
     if (!user.subscription) return res.status(200).json({ success: true, enrolledCourses: [] });
     const subscribedCourses = user.subscription;
     let enrolledCourses = user.subscription.map(sub => sub.course_enrolled);
@@ -869,7 +869,7 @@ exports.getOngoingCourses = async (req, res) => {
     if (!user) {
       return res.status(404).json({ success: false, message: "User not found" });
     }
-    if (user.kyc_status !== "approved") return res.status(200).json({ success: true, enrolledCourses: []  ,message:"Please complete kyc to view Course"});
+    if (user.kyc_status !== "approved") return res.status(200).json({ success: true, enrolledCourses: [], message: "Please complete kyc to view Course" });
     if (!user.subscription) return res.status(200).json({ success: true, enrolledCourses: [] });
     const userProgress = await UserProgress.findOne({ user_id: userId });
     if (!userProgress) return res.status(200).json({ success: true, enrolledCourses: [] });
@@ -909,7 +909,7 @@ exports.getCompletedCourses = async (req, res) => {
     if (!user) {
       return res.status(404).json({ success: false, message: "User not found" });
     }
-    if (user.kyc_status !== "approved") return res.status(200).json({ success: true, enrolledCourses: []  ,message:"Please complete kyc to view Course"});
+    if (user.kyc_status !== "approved") return res.status(200).json({ success: true, enrolledCourses: [], message: "Please complete kyc to view Course" });
     if (!user.subscription) return res.status(200).json({ success: true, enrolledCourses: [] });
     const userProgress = await UserProgress.findOne({ user_id: userId });
     if (!userProgress) return res.status(200).json({ success: true, enrolledCourses: [] });
@@ -949,7 +949,7 @@ exports.getNotStartedCourses = async (req, res) => {
     if (!user) {
       return res.status(404).json({ success: false, message: "User not found" });
     }
-    if (user.kyc_status !== "approved") return res.status(200).json({ success: true, enrolledCourses: [] ,message:"Please complete kyc to view Course"});
+    if (user.kyc_status !== "approved") return res.status(200).json({ success: true, enrolledCourses: [], message: "Please complete kyc to view Course" });
     if (!user.subscription) return res.status(200).json({ success: true, enrolledCourses: [] });
 
     const userProgress = await UserProgress.findOne({ user_id: userId });
@@ -976,6 +976,42 @@ exports.getNotStartedCourses = async (req, res) => {
 
   } catch (error) {
     console.error("Error fetching not started courses:", error.message);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+};
+exports.createStudent = async (req, res) => {
+  try {
+    const { email, password, phone, name, role = 'user', photo_url } = req.body;
+    const userExists = await User.findOne({ email });
+    if (userExists) {
+      return res
+        .status(400)
+        .json({ success: false, message: "User already exists" });
+    }
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = new User({
+      email,
+      password: hashedPassword,
+      phone,
+      displayName: name,
+      role,
+      photo_url,
+      isEmailVerified: true,
+    });
+    await user.save();
+    res.status(201).json({ success: true, message: "Student created successfully", user });
+  } catch (error) {
+    console.error("Error creating student:", error.message);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+};
+
+exports.getAllStudents = async (req, res) => {
+  try {
+    const students = await User.find({ role: "user" });
+    res.status(200).json({ success: true, message: "Students fetched successfully", students });
+  } catch (error) {
+    console.error("Error fetching students:", error.message);
     res.status(500).json({ success: false, message: "Server error", error: error.message });
   }
 };
