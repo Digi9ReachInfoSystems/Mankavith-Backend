@@ -164,9 +164,9 @@ module.exports.updateSubject = async (req, res) => {
       runValidators: true, // Run model validators on update
     })
       .populate("courses")
-      .populate("notes fileUrl")
+      .populate("notes")
       .populate("mockTests")
-      .populate("lectures", "lectureName duration videoUrl");
+      .populate("lectures");
 
     if (!updatedSubject) {
       return res.status(404).json({
