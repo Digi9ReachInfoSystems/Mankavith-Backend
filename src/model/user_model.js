@@ -37,6 +37,7 @@ const userSchema = new mongoose.Schema({
       },
       message: "Invalid image URL format",
     },
+    default: "https://mankavit.blob.core.windows.net/profile/60111.jpg",
   }, // URL for photo
   role: {
     type: String,
