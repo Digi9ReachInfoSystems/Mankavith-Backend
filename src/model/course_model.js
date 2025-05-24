@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 
 // Assuming Subject and MockTest models are already defined and imported
-// const Subject = require('./subject.model.js');  // Assuming you have a Subject model
+const Subject = require('./subject_model');  // Assuming you have a Subject model
 // const MockTest = require('./mocktest.model.js');  // Assuming you have a MockTest model
 
 const courseSchema = new mongoose.Schema(
@@ -52,14 +52,17 @@ const courseSchema = new mongoose.Schema(
     no_of_videos: {
       type: Number,
       required: false,
+      default: 0,
     },
     no_of_subjects: {
       type: Number,
       required: false,
+      default: 0,
     },
     no_of_notes: {
       type: Number,
       required: false,
+      default: 0,
     },
     successRate: {
       type: Number,
@@ -149,11 +152,31 @@ courseSchema.methods.calculateAverageRating = function () {
 
 
 
-courseSchema.pre("save", function (next) {
-  this.calculateAverageRating();
-  this.no_of_subjects = this.subjects?.length || 0;
-  this.student_enrolled = this.student_enrolled?.length || 0;
-  next();
+courseSchema.pre("save", async function (next) {
+  try {
+    this.calculateAverageRating();
+    this.no_of_subjects = this.subjects?.length || 0;
+    this.student_enrolled = this.student_enrolled?.length || 0;
+
+    // Count notes across all associated subjects
+    if (this.subjects && this.subjects.length > 0) {
+      const subjectsWithNotes = await Subject.find({
+        _id: { $in: this.subjects },
+      }).select("notes");
+
+      const totalNotes = subjectsWithNotes.reduce((acc, subj) => {
+        return acc + (subj.notes?.length || 0);
+      }, 0);
+
+      this.no_of_notes = totalNotes;
+    } else {
+      this.no_of_notes = 0;
+    }
+
+    next();
+  } catch (err) {
+    next(err);
+  }
 });
 
 module.exports = mongoose.model("Course", courseSchema);
