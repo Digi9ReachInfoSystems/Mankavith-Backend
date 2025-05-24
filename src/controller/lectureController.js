@@ -24,7 +24,7 @@ exports.createLecture = async (req, res) => {
     //   return res.status(400).json({ success: false, message: "Invalid subjectRef" });
     // }
 
-    const lecture = new Lecture({ lectureName, description, duration, videoUrl });
+    const lecture = new Lecture({ lectureName, description, duration, videoUrl,thumbnail });
     const savedLecture = await lecture.save();
 
     res.status(201).json({ success: true, data: savedLecture });
