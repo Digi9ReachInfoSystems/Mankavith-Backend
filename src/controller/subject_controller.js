@@ -138,7 +138,6 @@ module.exports.updateSubject = async (req, res) => {
   try {
     const { id } = req.params;
     const updatedData = req.body;
-
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
         success: false,
@@ -161,12 +160,12 @@ module.exports.updateSubject = async (req, res) => {
 
     const updatedSubject = await Subject.findByIdAndUpdate(id, updatedData, {
       new: true, // Return the updated document
-      runValidators: true, // Run model validators on update
+      // runValidators: true, // Run model validators on update
     })
-      .populate("courses")
-      .populate("notes")
-      .populate("mockTests")
-      .populate("lectures");
+    // .populate("courses")
+    // .populate("notes")
+    // .populate("mockTests")
+    // .populate("lectures");
 
     if (!updatedSubject) {
       return res.status(404).json({
