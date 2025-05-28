@@ -1,6 +1,6 @@
 const Subject = require("../model/subject_model.js");
 const Course = require("../model/course_model.js");
-const mockTests = require("../model/mocktest.js");
+// const mockTests = require("../model/mocktest.js");
 const notes = require("../model/notes_model.js");
 const lectures = require("../model/lecturesModel.js");
 const mongoose = require("mongoose");

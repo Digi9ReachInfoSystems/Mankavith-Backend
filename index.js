@@ -64,6 +64,9 @@ const blogRoutes = require("./src/routes/blogRoutes");
 const userProgressRoutes = require("./src/routes/userProgressRoutes");
 const meetingRoutes = require("./src/routes/meetingRoutes");
 const contactSupportRoutes = require("./src/routes/supportRoutes");
+const mockTestRoutes = require("./src/routes/mockTestRoutes");
+const userAttemptRoutes = require("./src/routes/userAttemptRoutes");  
+const userRankingRoutes = require("./src/routes/userRankingRoutes");
 
 app.use("/user", userRoutes);
 app.use("/api/v1/course", courseRoutes);
@@ -99,6 +102,9 @@ app.use("/contactSupport", contactSupportRoutes);
 
 app.use("/userProgress", userProgressRoutes);   
 app.use("/meeting", meetingRoutes);
+app.use("/mockTest", mockTestRoutes);
+app.use("/userAttempt", userAttemptRoutes);
+app.use("/userRanking", userRankingRoutes);
 
 
 
