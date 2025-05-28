@@ -615,13 +615,19 @@ exports.getCourseWithProgress = async (req, res) => {
 
       course = {
         ...course.toObject(),
+        status: "not started",
+        completedPercentage: 0,
         completed: false
       }
       course.subjects = course.subjects.map(subject => ({
         ...subject,
+        status: "not started",
+        completedPercentage: 0,
         completed: false,
         lectures: subject.lectures.map(lecture => ({
           ...lecture,
+          status: "not started",
+          completedPercentage: 0,
           completed: false,
         })),
       }));
@@ -637,13 +643,19 @@ exports.getCourseWithProgress = async (req, res) => {
       if (!courseProgress) {
         course = {
           ...course.toObject(),
+          status: "not started",
+          completedPercentage: 0,
           completed: false
         }
         course.subjects = course.subjects.map(subject => ({
           ...subject,
+          status: "not started",
+          completedPercentage: 0,
           completed: false,
           lectures: subject.lectures.map(lecture => ({
             ...lecture,
+            status: "not started",
+            completedPercentage: 0,
             completed: false,
           })),
         }));
@@ -653,13 +665,19 @@ exports.getCourseWithProgress = async (req, res) => {
         if (courseProgress.status === "completed") {
           course = {
             ...course.toObject(),
+            status: courseProgress.status,
+            completedPercentage: courseProgress.completedPercentage,
             completed: true
           }
           course.subjects = course.subjects.map(subject => ({
             ...subject.toObject(),
+            status: "completed",
+            completedPercentage: 100,
             completed: true,
             lectures: subject.lectures.map(lecture => ({
               ...lecture.toObject(),
+              status: "completed",
+              completedPercentage: 100,
               completed: true,
             })),
           }));
@@ -667,6 +685,8 @@ exports.getCourseWithProgress = async (req, res) => {
         } else {
           course = {
             ...course.toObject(),
+            status: courseProgress.status,
+            completedPercentage: courseProgress.completedPercentage,
             completed: false
           }
           course.subjects = await Promise.all(course.subjects.map(async (subject) => {
@@ -674,9 +694,14 @@ exports.getCourseWithProgress = async (req, res) => {
 
               return ({
                 ...subject,
+                status: "not started",
+                completedPercentage: 0,
                 completed: false,
+                completedPercentage: 0,
                 lectures: subject.lectures.map(lecture => ({
                   ...lecture,
+                  status: "not started",
+                  completedPercentage: 0,
                   completed: false
                 }))
               })
@@ -686,11 +711,15 @@ exports.getCourseWithProgress = async (req, res) => {
               if (courseProgress.subjectProgress.find(p => (p.subject_id.toString() === subject._id.toString() && p.status === "completed"))) {
                 return ({
                   ...subject,
+                  status: "completed",
+                  completedPercentage: 100,
                   completed: true,
                   lectures: await Promise.all(subject.lectures.map(async (lecture) => {
                     if (!(courseProgress.subjectProgress.find(p => (p.subject_id.toString() === subject._id.toString())).lecturerProgress.find(p => p.lecturer_id.toString() === lecture._id.toString()))) {
                       return ({
                         ...lecture,
+                        status: "not started",
+                        completedPercentage: 0,
                         completed: false,
                       })
                     } else {
@@ -698,11 +727,15 @@ exports.getCourseWithProgress = async (req, res) => {
                       if (courseProgress.subjectProgress.find(p => (p.subject_id.toString() === subject._id.toString())).lecturerProgress.find(p => p.lecturer_id.toString() === lecture._id.toString() && p.status === "completed")) {
                         return ({
                           ...lecture,
+                          status: "completed",
+                          completedPercentage: 100,
                           completed: true,
                         })
                       } else {
                         return ({
                           ...lecture,
+                          status: "not started",
+                          completedPercentage: 0,
                           completed: false,
                         })
                       }
@@ -712,11 +745,15 @@ exports.getCourseWithProgress = async (req, res) => {
               } else {
                 return ({
                   ...subject,
+                  status: "ongoing",
+                  completedPercentage: courseProgress.subjectProgress.find(p => (p.subject_id.toString() === subject._id.toString())).completedPercentage,
                   completed: false,
                   lectures: await Promise.all(subject.lectures.map(async (lecture) => {
                     if (!(courseProgress.subjectProgress.find(p => (p.subject_id.toString() === subject._id.toString())).lecturerProgress.find(p => p.lecturer_id.toString() === lecture._id.toString()))) {
                       return ({
                         ...lecture,
+                        status: "not started",
+                        completedPercentage: 0,
                         completed: false,
                       })
                     } else {
@@ -724,11 +761,15 @@ exports.getCourseWithProgress = async (req, res) => {
                       if (courseProgress.subjectProgress.find(p => (p.subject_id.toString() === subject._id.toString())).lecturerProgress.find(p => p.lecturer_id.toString() === lecture._id.toString() && p.status === "completed")) {
                         return ({
                           ...lecture,
+                          status: "completed",
+                          completedPercentage: 100,
                           completed: true,
                         })
                       } else {
                         return ({
                           ...lecture,
+                          status: "not started",
+                          completedPercentage: 0,
                           completed: false,
                         })
                       }
