@@ -1,13 +1,14 @@
 const Feedback = require("../model/feedback");
+const Course = require("../model/course_model");
 
 // Create new feedback
 exports.createFeedback = async (req, res) => {
   try {
-    const { name, rating, review, image, userRef, courseRef, email, message } =
+    const { name, rating, review, image, userRef, courseRef, email, message, title } =
       req.body;
 
     // Basic validation
-    if (!name || !rating || !review || !image || !userRef || !courseRef) {
+    if (!rating || !review || !userRef || !courseRef || !title) {
       return res.status(400).json({
         success: false,
         message: "All fields are required",
@@ -28,10 +29,18 @@ exports.createFeedback = async (req, res) => {
       review,
       image,
       userRef,
+      title,
       courseRef,
     });
 
+
     const savedFeedback = await newFeedback.save();
+    // const course = await Course.findById(courseRef);
+    // if (!course.student_feedback) {
+    //   course.student_feedback = [];
+    // }
+    // course.student_feedback.push(savedFeedback._id);
+    // await course.save();
 
     return res.status(201).json({
       success: true,
@@ -56,7 +65,7 @@ exports.getFeedback = async (req, res) => {
 
     if (courseId) query.courseRef = courseId;
     if (userId) query.userRef = userId;
-    if (isApproved !== undefined) query.isappproved = isApproved === "true";
+    if (isApproved !== undefined) query.isappproved = isApproved === "true"|| false;
 
     const feedbacks = await Feedback.find(query)
       .populate("userRef", "name email")
@@ -193,6 +202,12 @@ exports.approveFeedback = async (req, res) => {
     )
       .populate("userRef", "name email")
       .populate("courseRef", "courseName");
+    const course = await Course.findById(updatedFeedback.courseRef);
+    if (!course.student_feedback) {
+      course.student_feedback = [];
+    }
+    course.student_feedback.push(updatedFeedback._id);
+    await course.save();
 
     if (!updatedFeedback) {
       return res.status(404).json({
