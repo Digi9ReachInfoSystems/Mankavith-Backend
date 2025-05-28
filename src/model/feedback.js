@@ -1,17 +1,18 @@
 const mongoose = require("mongoose");
 
 const feedbackSchema = new mongoose.Schema({
-  name: { type: String, required: true },
+  name: { type: String, required: false },
   rating: {
     type: Number,
     required: true,
     min: 1,
     max: 5,
   },
+  title: { type: String, required: true },
   review: { type: String, required: true },
   image: {
     type: String,
-    required: true,
+    required: false,
   },
   userRef: {
     type: mongoose.Schema.Types.ObjectId,
