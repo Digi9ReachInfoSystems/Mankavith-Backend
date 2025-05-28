@@ -243,35 +243,58 @@ exports.editMockTest = async (req, res) => {
     existingTest.isActive = updates.isActive || existingTest.isActive;
     existingTest.maxAttempts = updates.maxAttempts || existingTest.maxAttempts;
     existingTest.isPublished = updates.isPublished || existingTest.isPublished;
-    existingTest.questions = (updates.questions.length > 0 &&
-      existingTest.questions.map(question => {
-        const updatedQuestion = updates.questions.find(q => q._id.toString() === question._id.toString());
-        if (updatedQuestion) {
-          return updatedQuestion;
-        } else {
-          return question;
+    if (updates.questions) {
+      const existingQuestionsMap = new Map();
+      existingTest.questions.forEach(q => existingQuestionsMap.set(q._id.toString(), q));
+
+
+      const mergedQuestions = updates.questions.map(question => {
+        if (!question._id) {
+          return question; 
         }
-      })
-    ) || existingTest.questions;
-    console.log(existingTest);
+
+        const existingQuestion = existingQuestionsMap.get(question._id.toString());
+
+        if (existingQuestion) {
+          return {
+            ...existingQuestion.toObject(), 
+            ...question 
+          };
+        }
+        return question;
+      });
+
+      existingTest.questions = mergedQuestions;
+
+      existingTest.totalMarks = mergedQuestions.reduce(
+        (sum, question) => sum + question.marks, 0
+      );
+    }
 
     const updatedTest = await existingTest.save();
-    // Calculate total marks if questions are being updated
-    // if (updates.questions) {
-    //   updates.totalMarks = updates.questions.reduce(
-    //     (sum, question) => sum + question.marks, 0
-    //   );
-    // }
-
-    // const updatedTest = await MockTest.findByIdAndUpdate(
-    //   id,
-    //   { $set: updates },
-    //   { new: true, runValidators: true }
-    // ).populate('subject');
+   
 
     res.status(200).json({
       success: true,
       message: 'Mock test updated successfully',
+      data: updatedTest
+    });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  }
+};
+
+exports.softDeleteMockTest = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updatedTest = await MockTest.findByIdAndUpdate(id, { isDeleted: true }, { new: true });
+    res.status(200).json({
+      success: true,
+      message: 'Mock test deleted successfully',
       data: updatedTest
     });
   } catch (err) {
