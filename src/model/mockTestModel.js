@@ -34,7 +34,9 @@ const mockTestSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false },
-  maxAttempts: { type: Number, default: 1 }
+  maxAttempts: { type: Number, default: 1 },
+  isPublished: { type: Boolean, default: false },
+  isDeleted: { type: Boolean, default: false }
 });
 
 mockTestSchema.pre('save', function(next) {

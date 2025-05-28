@@ -11,10 +11,10 @@ router.post("/refreshToken", userController.refreshToken);
 router.post("/loginSendOtp", userController.loginSendOtp);
 router.post("/verifyLoginOtp", userController.verifyLoginOtp);
 router.post("/resendLoginOtp", userController.resendLoginOtp);
-router.post("/logout", authenticateJWT, userController.logout);
+router.post("/logout", userController.logout);
 router.post("/createAdmin", userController.createAdmin);
-router.get("/get/userById/:id", authenticateJWT, userController.getUserById);
-router.get("/get/users", authenticateJWT, userController.getAllUsers);
+router.get("/get/userById/:id", userController.getUserById);
+router.get("/get/users",  userController.getAllUsers);
 router.delete("/delete/userById/:id", userController.deleteUser);
 
 // Update wishlist (add/remove)
