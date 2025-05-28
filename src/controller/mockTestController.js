@@ -77,7 +77,7 @@ exports.getMockTests = async (req, res) => {
 // Get test details
 exports.getMockTest = async (req, res) => {
   try {
-    const test = await MockTest.findById(req.params.id);
+    const test = await MockTest.findById(req.params.id).populate("subject");
     
     if (!test) {
       return res.status(404).json({
@@ -100,7 +100,7 @@ exports.getMockTest = async (req, res) => {
 
 exports.getAllMockTests = async (req, res) => {
   try {
-    const tests = await MockTest.find();
+    const tests = await MockTest.find().populate("subject");
     
     res.status(200).json({
       success: true,
