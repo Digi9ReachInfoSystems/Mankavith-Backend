@@ -6,7 +6,7 @@ const MockTest = require('../model/mockTestModel');
 exports.createMockTest = async (req, res) => {
   try {
     const { title, description, duration, passingMarks, questions, subject, startDate, endDate } = req.body;
-    
+
     // Validate test window
     if (new Date(startDate) >= new Date(endDate)) {
       return res.status(400).json({
@@ -17,7 +17,7 @@ exports.createMockTest = async (req, res) => {
 
     // Calculate total marks
     const totalMarks = questions.reduce((sum, q) => sum + q.marks, 0);
-    
+
     const mockTest = new MockTest({
       title,
       description,
@@ -29,9 +29,9 @@ exports.createMockTest = async (req, res) => {
       startDate,
       endDate
     });
-    
+
     await mockTest.save();
-    
+
     res.status(201).json({
       success: true,
       data: mockTest
@@ -53,15 +53,15 @@ exports.getMockTests = async (req, res) => {
       { $group: { _id: "$mockTestId", count: { $sum: 1 } } },
       { $match: { count: { $lt: 3 } } }
     ]);
-    
+
     const attemptedTestIds = attemptedTests.map(t => t._id);
-    
+
     // Get all active tests excluding those where user has 3 attempts
     const tests = await MockTest.find({
       isActive: true,
       _id: { $nin: attemptedTestIds }
     });
-    
+
     res.status(200).json({
       success: true,
       data: tests
@@ -78,14 +78,14 @@ exports.getMockTests = async (req, res) => {
 exports.getMockTest = async (req, res) => {
   try {
     const test = await MockTest.findById(req.params.id).populate("subject");
-    
+
     if (!test) {
       return res.status(404).json({
         success: false,
         message: 'Test not found'
       });
     }
-    
+
     res.status(200).json({
       success: true,
       data: test
@@ -101,10 +101,178 @@ exports.getMockTest = async (req, res) => {
 exports.getAllMockTests = async (req, res) => {
   try {
     const tests = await MockTest.find().populate("subject");
-    
+
     res.status(200).json({
       success: true,
       data: tests
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  }
+};
+exports.togglePublishStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { publish } = req.body; // boolean
+
+    // Validate test exists
+    const test = await MockTest.findById(id);
+    if (!test) {
+      return res.status(404).json({
+        success: false,
+        message: 'Mock test not found'
+      });
+    }
+
+    // Additional validation checks before publishing
+    if (publish) {
+      if (test.questions.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Cannot publish test with no questions'
+        });
+      }
+
+
+
+      // Ensure all MCQ questions have correct answers
+      const invalidQuestions = test.questions.filter(q =>
+        q.type === 'mcq' && (q.correctAnswer === undefined || q.correctAnswer === null)
+      );
+
+      if (invalidQuestions.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: `MCQ questions must have correct answers (${invalidQuestions.length} invalid)`
+        });
+      }
+    }
+
+    // Update publish status
+    const updatedTest = await MockTest.findByIdAndUpdate(
+      id,
+      { isPublished: publish },
+      { new: true }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: `Mock test ${publish ? 'published' : 'unpublished'} successfully`,
+      data: {
+        isPublished: updatedTest.isPublished,
+        title: updatedTest.title,
+        _id: updatedTest._id
+      }
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  }
+};
+
+exports.getMockTestBysubjectId = async (req, res) => {
+  try {
+    const { subjectId } = req.params;
+    if (!subjectId) {
+      return res.status(404).json({
+        success: false,
+        message: 'subjectId is required'
+      });
+    }
+    const tests = await MockTest.find({
+      subject: subjectId,
+      isPublished: true,
+      isDeleted: false,
+      startDate: { $lte: new Date() },
+      endDate: { $gte: new Date() }
+    }).populate("subject");
+
+    res.status(200).json({
+      success: true,
+      data: tests
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  }
+};
+
+
+
+
+exports.editMockTest = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+
+    // Prevent certain fields from being updated
+    const forbiddenUpdates = ['createdAt', '_id', 'questions._id'];
+    forbiddenUpdates.forEach(field => delete updates[field]);
+
+    // Validate test exists and user has permission to edit
+    let existingTest = await MockTest.findById(id);
+    if (!existingTest) {
+      return res.status(404).json({
+        success: false,
+        message: 'Mock test not found'
+      });
+    }
+
+    // Additional permission check (example)
+    // if (existingTest.createdBy.toString() !== req.user.id) {
+    //   return res.status(403).json({
+    //     success: false,
+    //     message: 'Not authorized to edit this test'
+    //   });
+    // }
+    existingTest.title = updates.title || existingTest.title;
+    existingTest.description = updates.description || existingTest.description;
+    existingTest.subject = updates.subject || existingTest.subject;
+    existingTest.duration = updates.duration || existingTest.duration;
+    existingTest.totalMarks = updates.totalMarks || existingTest.totalMarks;
+    existingTest.passingMarks = updates.passingMarks || existingTest.passingMarks;
+    existingTest.startDate = updates.startDate || existingTest.startDate;
+    existingTest.endDate = updates.endDate || existingTest.endDate;
+    existingTest.isActive = updates.isActive || existingTest.isActive;
+    existingTest.maxAttempts = updates.maxAttempts || existingTest.maxAttempts;
+    existingTest.isPublished = updates.isPublished || existingTest.isPublished;
+    existingTest.questions = (updates.questions.length > 0 &&
+      existingTest.questions.map(question => {
+        const updatedQuestion = updates.questions.find(q => q._id.toString() === question._id.toString());
+        if (updatedQuestion) {
+          return updatedQuestion;
+        } else {
+          return question;
+        }
+      })
+    ) || existingTest.questions;
+    console.log(existingTest);
+
+    const updatedTest = await existingTest.save();
+    // Calculate total marks if questions are being updated
+    // if (updates.questions) {
+    //   updates.totalMarks = updates.questions.reduce(
+    //     (sum, question) => sum + question.marks, 0
+    //   );
+    // }
+
+    // const updatedTest = await MockTest.findByIdAndUpdate(
+    //   id,
+    //   { $set: updates },
+    //   { new: true, runValidators: true }
+    // ).populate('subject');
+
+    res.status(200).json({
+      success: true,
+      message: 'Mock test updated successfully',
+      data: updatedTest
     });
   } catch (err) {
     res.status(500).json({

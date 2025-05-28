@@ -11,5 +11,7 @@ router.post('/', mockTestController.createMockTest);
 router.get('/', mockTestController.getMockTests);
 router.get('/:id', mockTestController.getMockTest);
 router.get('/get/allMockTests', mockTestController.getAllMockTests);
-
+router.put("/publish/:id", mockTestController.togglePublishStatus);
+router.put("/update/:id", mockTestController.editMockTest);
+router.get('/get/subjects/:subjectId', mockTestController.getMockTestBysubjectId);
 module.exports = router;
