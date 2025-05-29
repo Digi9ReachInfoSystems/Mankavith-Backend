@@ -13,7 +13,7 @@ const userAttemptSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   mockTestId: { type: mongoose.Schema.Types.ObjectId, ref: 'MockTest', required: true },
   subject: { type: mongoose.Schema.Types.ObjectId, ref: 'Subject', required: true }, // Changed from courseId to subject
-  attemptNumber: { type: Number, required: true, min: 1, max: 3 },
+  attemptNumber: { type: Number, required: true, min: 1},
   startedAt: { type: Date, default: Date.now },
   submittedAt: { type: Date },
   evaluatedAt: { type: Date },
