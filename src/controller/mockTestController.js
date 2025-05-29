@@ -184,19 +184,28 @@ exports.getMockTestBysubjectId = async (req, res) => {
         message: 'subjectId is required'
       });
     }
-    const tests = await MockTest.find({
+    let tests = await MockTest.find({
       subject: subjectId,
       isPublished: true,
       isDeleted: false,
       startDate: { $lte: new Date() },
       endDate: { $gte: new Date() }
     }).populate("subject");
-
+    console.log(tests, );
+    tests=tests.map(test => {
+      return {
+        ...test._doc,
+        number_of_questions:test.questions?.length,
+        number_of_subjective_questions:test?.questions.filter(q => q.type === 'subjective')?.length||0,
+        number_of_mcq_questions:test?.questions.filter(q => q.type === 'mcq')?.length||0
+      }
+    })
     res.status(200).json({
       success: true,
       data: tests
     });
   } catch (err) {
+    console.log(err);
     res.status(500).json({
       success: false,
       message: err.message
