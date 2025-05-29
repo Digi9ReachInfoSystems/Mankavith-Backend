@@ -790,3 +790,213 @@ exports.getCourseWithProgress = async (req, res) => {
     res.status(500).json({ success: false, message: "Server error.", error: err.message });
   }
 };
+
+exports.getCourseandSubjectWithProgress = async (req, res) => {
+  try {
+    const { courseId, userId, subjectId } = req.body;
+
+    // Fetch course with nested subjects and lectures
+    let course = await Course.findById(courseId)
+      .populate({
+        path: "subjects",
+        populate: [{
+          path: "lectures",
+        },
+        {
+          path: "notes",
+        },
+        {
+          path: "mockTests",
+        }
+      ],
+      });
+
+    if (!course) {
+      return res.status(404).json({ success: false, message: "Course not found." });
+    }
+
+    // Fetch user progress for this course
+    const userProgress = await UserProgress.findOne({ user_id: userId });
+    if (!userProgress) {
+
+      course = {
+        ...course.toObject(),
+        status: "not started",
+        completedPercentage: 0,
+        completed: false
+      }
+      course.subjects = course.subjects.map(subject => ({
+        ...subject,
+        status: "not started",
+        completedPercentage: 0,
+        completed: false,
+        lectures: subject.lectures.map(lecture => ({
+          ...lecture,
+          status: "not started",
+          completedPercentage: 0,
+          completed: false,
+        })),
+      }));
+
+      return res.status(200).json({ success: true, data: course });
+    }
+
+    // Initialize progress data
+    let courseProgress = null;
+    if (userProgress) {
+      courseProgress = userProgress.courseProgress.find(p => p.course_id.toString() === courseId);
+
+      if (!courseProgress) {
+        course = {
+          ...course.toObject(),
+          status: "not started",
+          completedPercentage: 0,
+          completed: false
+        }
+        course.subjects = course.subjects.map(subject => ({
+          ...subject,
+          status: "not started",
+          completedPercentage: 0,
+          completed: false,
+          lectures: subject.lectures.map(lecture => ({
+            ...lecture,
+            status: "not started",
+            completedPercentage: 0,
+            completed: false,
+          })),
+        }));
+
+        return res.status(200).json({ success: true, data: course });
+      } else {
+        if (courseProgress.status === "completed") {
+          course = {
+            ...course.toObject(),
+            status: courseProgress.status,
+            completedPercentage: courseProgress.completedPercentage,
+            completed: true
+          }
+          course.subjects = course.subjects.map(subject => ({
+            ...subject.toObject(),
+            status: "completed",
+            completedPercentage: 100,
+            completed: true,
+            lectures: subject.lectures.map(lecture => ({
+              ...lecture.toObject(),
+              status: "completed",
+              completedPercentage: 100,
+              completed: true,
+            })),
+          }));
+          return res.status(200).json({ success: true, data: course });
+        } else {
+          course = {
+            ...course.toObject(),
+            status: courseProgress.status,
+            completedPercentage: courseProgress.completedPercentage,
+            completed: false
+          }
+          course.subjects = await Promise.all(course.subjects.map(async (subject) => {
+            if (!(courseProgress.subjectProgress.find(p => (p.subject_id.toString() === subject._id.toString())))) {
+
+              return ({
+                ...subject,
+                status: "not started",
+                completedPercentage: 0,
+                completed: false,
+                completedPercentage: 0,
+                lectures: subject.lectures.map(lecture => ({
+                  ...lecture,
+                  status: "not started",
+                  completedPercentage: 0,
+                  completed: false
+                }))
+              })
+            } else {
+
+
+              if (courseProgress.subjectProgress.find(p => (p.subject_id.toString() === subject._id.toString() && p.status === "completed"))) {
+                return ({
+                  ...subject,
+                  status: "completed",
+                  completedPercentage: 100,
+                  completed: true,
+                  lectures: await Promise.all(subject.lectures.map(async (lecture) => {
+                    if (!(courseProgress.subjectProgress.find(p => (p.subject_id.toString() === subject._id.toString())).lecturerProgress.find(p => p.lecturer_id.toString() === lecture._id.toString()))) {
+                      return ({
+                        ...lecture,
+                        status: "not started",
+                        completedPercentage: 0,
+                        completed: false,
+                      })
+                    } else {
+
+                      if (courseProgress.subjectProgress.find(p => (p.subject_id.toString() === subject._id.toString())).lecturerProgress.find(p => p.lecturer_id.toString() === lecture._id.toString() && p.status === "completed")) {
+                        return ({
+                          ...lecture,
+                          status: "completed",
+                          completedPercentage: 100,
+                          completed: true,
+                        })
+                      } else {
+                        return ({
+                          ...lecture,
+                          status: "not started",
+                          completedPercentage: 0,
+                          completed: false,
+                        })
+                      }
+                    }
+                  })),
+                })
+              } else {
+                return ({
+                  ...subject,
+                  status: "ongoing",
+                  completedPercentage: courseProgress.subjectProgress.find(p => (p.subject_id.toString() === subject._id.toString())).completedPercentage,
+                  completed: false,
+                  lectures: await Promise.all(subject.lectures.map(async (lecture) => {
+                    if (!(courseProgress.subjectProgress.find(p => (p.subject_id.toString() === subject._id.toString())).lecturerProgress.find(p => p.lecturer_id.toString() === lecture._id.toString()))) {
+                      return ({
+                        ...lecture,
+                        status: "not started",
+                        completedPercentage: 0,
+                        completed: false,
+                      })
+                    } else {
+
+                      if (courseProgress.subjectProgress.find(p => (p.subject_id.toString() === subject._id.toString())).lecturerProgress.find(p => p.lecturer_id.toString() === lecture._id.toString() && p.status === "completed")) {
+                        return ({
+                          ...lecture,
+                          status: "completed",
+                          completedPercentage: 100,
+                          completed: true,
+                        })
+                      } else {
+                        return ({
+                          ...lecture,
+                          status: "not started",
+                          completedPercentage: 0,
+                          completed: false,
+                        })
+                      }
+                    }
+                  })),
+                })
+              }
+            }
+
+          }));
+          const finalData = course.subjects.find(sub => sub._id.toString() === subjectId);
+          if (!finalData) {
+            return res.status(404).json({ success: false, message: "Subject not found in course." });
+          }
+          return res.status(200).json({ success: true, data: finalData });
+        }
+      }
+    }
+  }
+  catch (err) {
+    console.error("Error fetching course with progress:", err);
+    res.status(500).json({ success: false, message: "Server error.", error: err.message });
+  }
+};
