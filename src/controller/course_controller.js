@@ -876,12 +876,12 @@ exports.getCourseandSubjectWithProgress = async (req, res) => {
             completed: true
           }
           course.subjects = course.subjects.map(subject => ({
-            ...subject.toObject(),
+            ...subject,
             status: "completed",
             completedPercentage: 100,
             completed: true,
             lectures: subject.lectures.map(lecture => ({
-              ...lecture.toObject(),
+              ...lecture,
               status: "completed",
               completedPercentage: 100,
               completed: true,
