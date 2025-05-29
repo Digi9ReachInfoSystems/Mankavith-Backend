@@ -35,4 +35,5 @@ router.get("/getAllCourses/users/:user_id", courseController.getAllUserCourses);
 router.get("/getAllCourses/users/category/:user_id/:category", courseController.getAllUserCoursesByCategory);
 router.get("/search/CourseandCategory/:user_id/:categoryName", courseController.searchUserCourses);
 router.post("/coursebyId/withUserProgress", courseController.getCourseWithProgress);
+router.post("/subjectbyId/withUserProgress", courseController.getCourseandSubjectWithProgress);
 module.exports = router;
