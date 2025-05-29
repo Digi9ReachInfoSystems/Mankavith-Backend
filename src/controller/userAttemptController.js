@@ -358,11 +358,11 @@ exports.getAttempt = async (req, res) => {
             _id: req.params.id,
             userId: req.params.user_id
         }).populate('mockTestId');
-         const attemptObj = attempt.toObject();
+        const attemptObj = attempt.toObject();
 
         attemptObj.answers = attemptObj.answers.map(answer => {
-            
-            const isSubmitted = answer.questionId.type === 'mcq' 
+
+            const isSubmitted = answer.questionId.type === 'mcq'
                 ? answer.answerIndex !== null && answer.answerIndex !== undefined
                 : answer.answer !== null && answer.answer !== '' && answer.answer !== undefined;
 
@@ -505,3 +505,83 @@ async function recalculateTestRankings(mockTestId) {
         await rankings[i].save();
     }
 }
+
+exports.getSubmittedUsersByMockTest = async (req, res) => {
+    try {
+        const { mockTestId } = req.params;
+        const { status } = req.query;
+        let query = { mockTestId };
+        if (status) {
+            query.status = status; // Filter by status if provided
+        }
+
+        // First, get all submitted attempts for this mock test
+        let attempts = await UserAttempt.find(query)
+            .populate('userId')
+            .populate({
+                path: 'mockTestId',
+                select: 'questions' // get the questions from mock test
+            });
+
+        attempts = attempts.map(attempt => {
+            const questions = attempt.mockTestId.questions;
+            const answersWithQuestions = attempt.answers.map(answer => {
+                const question = questions.find(q => q._id.equals(answer.questionId));
+                return {
+                    ...answer.toObject(),
+                    questionDetails: question
+                };
+            });
+            return {
+                ...attempt.toObject(),
+                answers: answersWithQuestions
+            };
+        });
+
+        if (!attempts || attempts.length === 0) {
+            return res.status(404).json({ message: 'No submitted attempts found for this mock test' });
+        }
+
+        // Group attempts by user
+        const usersMap = new Map();
+
+        attempts.forEach(attempt => {
+            const userId = attempt.userId._id.toString();
+
+            if (!usersMap.has(userId)) {
+                usersMap.set(userId, {
+                    user: attempt.userId,
+                    attempts: [],
+                    bestAttempt: null,
+                    highestScore: 0
+                });
+            }
+
+            const userData = usersMap.get(userId);
+            userData.attempts.push(attempt);
+
+            // Track best attempt (highest score)
+            if (attempt.totalMarks > userData.highestScore) {
+                userData.highestScore = attempt.totalMarks;
+                userData.bestAttempt = attempt;
+            }
+        });
+
+        // Convert map to array of user objects
+        const users = Array.from(usersMap.values());
+
+        res.status(200).json({
+            success: true,
+            count: users.length,
+            data: users
+        });
+
+    } catch (error) {
+        console.error('Error fetching submitted users:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error while fetching submitted users',
+            error: error.message
+        });
+    }
+};
