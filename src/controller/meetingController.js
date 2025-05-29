@@ -269,3 +269,12 @@ exports.generateZoomSignature = async (req, res) => {
     res.status(500).json({ error: "Failed to generate Zoom signature." });
   }
 };
+
+exports.getZoomSdkAccessToken = async (req, res) => {
+  try {
+    const accessToken = await getZoomAccessToken();
+    res.json({ accessToken });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to get Zoom access token." });
+  }
+};
