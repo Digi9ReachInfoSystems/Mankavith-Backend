@@ -595,6 +595,7 @@ exports.searchUserCourses = async (req, res) => {
 exports.getCourseWithProgress = async (req, res) => {
   try {
     const { courseId, userId } = req.body;
+    console.log("Fetching course with progress for user:", userId, "and course:", courseId);
 
     // Fetch course with nested subjects and lectures
     let course = await Course.findById(courseId)
@@ -808,7 +809,7 @@ exports.getCourseandSubjectWithProgress = async (req, res) => {
         {
           path: "mockTests",
         }
-      ],
+        ],
       });
 
     if (!course) {
@@ -837,8 +838,12 @@ exports.getCourseandSubjectWithProgress = async (req, res) => {
           completed: false,
         })),
       }));
-
-      return res.status(200).json({ success: true, data: course });
+      const finalData = course.subjects.find(sub => sub._id.toString() === subjectId);
+      if (!finalData) {
+        return res.status(404).json({ success: false, message: "Subject not found in course." });
+      }
+      return res.status(200).json({ success: true, data: finalData });
+      // return res.status(200).json({ success: true, data: course });
     }
 
     // Initialize progress data
@@ -865,8 +870,12 @@ exports.getCourseandSubjectWithProgress = async (req, res) => {
             completed: false,
           })),
         }));
-
-        return res.status(200).json({ success: true, data: course });
+        const finalData = course.subjects.find(sub => sub._id.toString() === subjectId);
+        if (!finalData) {
+          return res.status(404).json({ success: false, message: "Subject not found in course." });
+        }
+        return res.status(200).json({ success: true, data: finalData });
+        // return res.status(200).json({ success: true, data: course });
       } else {
         if (courseProgress.status === "completed") {
           course = {
@@ -887,7 +896,12 @@ exports.getCourseandSubjectWithProgress = async (req, res) => {
               completed: true,
             })),
           }));
-          return res.status(200).json({ success: true, data: course });
+          const finalData = course.subjects.find(sub => sub._id.toString() === subjectId);
+          if (!finalData) {
+            return res.status(404).json({ success: false, message: "Subject not found in course." });
+          }
+          return res.status(200).json({ success: true, data: finalData });
+          // return res.status(200).json({ success: true, data: course });
         } else {
           course = {
             ...course.toObject(),
