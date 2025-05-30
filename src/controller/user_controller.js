@@ -10,12 +10,12 @@ const generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000).toString(); // Generates a 6-digit OTP
 };
 const transporter = nodemailer.createTransport({
-  host: "smtp.hostinger.com",
-  port: 465,
-  secure: true,
+  host: "smtp-relay.brevo.com",
+  port: 587,
+  // secure: true,
   auth: {
-    user: "Info@gully2global.com",
-    pass: "Shasudigi@217",
+    user: "mankavit.clatcoaching11@gmail.com",
+    pass: "ADOJ6z04yjbaL9TY",
   },
 });
 
@@ -86,7 +86,7 @@ exports.register = async (req, res) => {
     }
 
     const mailOptions = {
-      from: "Info@gully2global.com",
+      from: "mankavit.clatcoaching11@gmail.com",
       to: email,
       subject: "Email Verification OTP",
       text: `Your OTP is: ${otp}. It will expire in 1 minutes.`,
@@ -287,7 +287,7 @@ exports.resendOTP = async (req, res) => {
     await user.save();
 
     const mailOptions = {
-      from: "Info@gully2global.com",
+      from: "mankavit.clatcoaching11@gmail.com",
       to: email,
       subject: "Email Verification OTP",
       text: `Your new OTP is: ${otp}. It will expire in 10 minutes.`,
@@ -384,7 +384,7 @@ exports.loginSendOtp = async (req, res) => {
     await user.save();
 
     const mailOptions = {
-      from: "Info@gully2global.com",
+      from: "mankavit.clatcoaching11@gmail.com",
       to: email,
       subject: "Login Verification OTP",
       text: `Your login OTP is: ${loginOtp}. It will expire in 1 minutes.`,
@@ -503,7 +503,7 @@ exports.resendLoginOtp = async (req, res) => {
     await user.save();
 
     const mailOptions = {
-      from: "Info@gully2global.com",
+      from: "mankavit.clatcoaching11@gmail.com",
       to: email,
       subject: "Login Verification OTP",
       text: `Your login OTP is: ${loginOtp}. It will expire in 1 minutes.`,
