@@ -1,4 +1,5 @@
 const MockTest = require('../model/mockTestModel');
+const Subject = require('../model/subject_model');
 // const UserAttempt = require('../models/UserAttempt');
 // const UserRanking = require('../models/UserRanking');
 
@@ -30,7 +31,10 @@ exports.createMockTest = async (req, res) => {
       endDate
     });
 
-    await mockTest.save();
+    const savedTest = await mockTest.save();
+    const subjectData = await Subject.findById(subject);
+    subjectData.mockTests.push(savedTest._id);
+    await subjectData.save();
 
     res.status(201).json({
       success: true,
@@ -191,13 +195,13 @@ exports.getMockTestBysubjectId = async (req, res) => {
       startDate: { $lte: new Date() },
       endDate: { $gte: new Date() }
     }).populate("subject");
-    console.log(tests, );
-    tests=tests.map(test => {
+    console.log(tests,);
+    tests = tests.map(test => {
       return {
         ...test._doc,
-        number_of_questions:test.questions?.length,
-        number_of_subjective_questions:test?.questions.filter(q => q.type === 'subjective')?.length||0,
-        number_of_mcq_questions:test?.questions.filter(q => q.type === 'mcq')?.length||0
+        number_of_questions: test.questions?.length,
+        number_of_subjective_questions: test?.questions.filter(q => q.type === 'subjective')?.length || 0,
+        number_of_mcq_questions: test?.questions.filter(q => q.type === 'mcq')?.length || 0
       }
     })
     res.status(200).json({
@@ -259,15 +263,15 @@ exports.editMockTest = async (req, res) => {
 
       const mergedQuestions = updates.questions.map(question => {
         if (!question._id) {
-          return question; 
+          return question;
         }
 
         const existingQuestion = existingQuestionsMap.get(question._id.toString());
 
         if (existingQuestion) {
           return {
-            ...existingQuestion.toObject(), 
-            ...question 
+            ...existingQuestion.toObject(),
+            ...question
           };
         }
         return question;
@@ -281,7 +285,7 @@ exports.editMockTest = async (req, res) => {
     }
 
     const updatedTest = await existingTest.save();
-   
+
 
     res.status(200).json({
       success: true,

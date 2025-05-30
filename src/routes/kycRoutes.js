@@ -10,5 +10,6 @@ router.patch("/:id/status", kycController.updateKycStatus);
 router.delete("/:id", kycController.deleteKyc);
 
 router.get("/user/:userId", kycController.getKycByUser);
+router.put("/:id", kycController.updateKyc);
 
 module.exports = router;
