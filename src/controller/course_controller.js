@@ -91,7 +91,7 @@ exports.searchCourses = async (req, res) => {
       query.category = category;
     }
 
-    const courses = await Course.find(query)
+    const courses = await Course.find(query).populate("student_feedback")
       .populate("subjects", "subjectName")
       .populate("category", "title")
       .sort({ courseName: 1 });
@@ -128,7 +128,7 @@ exports.getAllCourses = async (req, res) => {
       query.category = category;
     }
 
-    const courses = await Course.find(query)
+    const courses = await Course.find(query).populate("student_feedback")
       .populate("subjects", "subjectName")
       .populate("category", "title");
 
@@ -163,7 +163,7 @@ exports.getCoursesByCategory = async (req, res) => {
     }
 
     // Find courses that reference this category
-    const courses = await Course.find({ category: category._id })
+    const courses = await Course.find({ category: category._id }).populate("student_feedback")
       .populate("subjects", "subjectName")
       .populate("category", "title");
 
@@ -285,7 +285,8 @@ exports.getCourseById = async (req, res) => {
           }
         ]
       })
-      .populate("category", "title");
+      .populate("category", "title")
+      .populate("student_feedback");
 
     if (!course) {
       return res.status(404).json({
