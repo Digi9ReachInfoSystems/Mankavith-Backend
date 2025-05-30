@@ -22,16 +22,35 @@ exports.createFeedback = async (req, res) => {
         message: "Rating must be between 1 and 5",
       });
     }
-
-    const newFeedback = new Feedback({
-      name,
-      rating,
-      review,
-      image,
+    const feedbackExists = await Feedback.findOne({
       userRef,
-      title,
       courseRef,
     });
+    if (feedbackExists) {
+      feedbackExists
+      feedbackExists.rating = rating;
+      feedbackExists.review = review;
+      feedbackExists.title = title;
+      feedbackExists.isappproved = false;
+      await feedbackExists.save();
+      const course = await Course.findById(courseRef);
+      if (!course.student_feedback) {
+        course.student_feedback = [];
+      }
+      course.student_feedback.pop(feedbackExists._id);
+    } else {
+      const newFeedback = new Feedback({
+        name,
+        rating,
+        review,
+        image,
+        userRef,
+        title,
+        courseRef,
+      });
+    }
+
+
 
 
     const savedFeedback = await newFeedback.save();
@@ -65,7 +84,7 @@ exports.getFeedback = async (req, res) => {
 
     if (courseId) query.courseRef = courseId;
     if (userId) query.userRef = userId;
-    if (isApproved !== undefined) query.isappproved = isApproved === "true"|| false;
+    if (isApproved !== undefined) query.isappproved = isApproved === "true" || false;
 
     const feedbacks = await Feedback.find(query)
       .populate("userRef", "name email")

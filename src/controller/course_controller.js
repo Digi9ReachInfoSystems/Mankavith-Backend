@@ -3,6 +3,7 @@ const Category = require("../model/category_model");
 const Subject = require("../model/subject_model");
 const User = require("../model/user_model");
 const UserProgress = require("../model/userProgressModel");
+const Feedback = require("../model/feedback");
 
 // Create a new course (updated for category reference)
 exports.createCourse = async (req, res) => {
@@ -645,6 +646,7 @@ exports.getCourseWithProgress = async (req, res) => {
       if (!courseProgress) {
         course = {
           ...course.toObject(),
+          viewedCertificate: courseProgress?.viewedCertificate || false,
           status: "not started",
           completedPercentage: 0,
           completed: false
@@ -667,6 +669,7 @@ exports.getCourseWithProgress = async (req, res) => {
         if (courseProgress.status === "completed") {
           course = {
             ...course.toObject(),
+             viewedCertificate: courseProgress?.viewedCertificate || false,
             status: courseProgress.status,
             completedPercentage: courseProgress.completedPercentage,
             completed: true
@@ -687,6 +690,7 @@ exports.getCourseWithProgress = async (req, res) => {
         } else {
           course = {
             ...course.toObject(),
+             viewedCertificate: courseProgress?.viewedCertificate || false,
             status: courseProgress.status,
             completedPercentage: courseProgress.completedPercentage,
             completed: false

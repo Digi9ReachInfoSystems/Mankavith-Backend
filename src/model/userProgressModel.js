@@ -15,6 +15,10 @@ const userProgressSchema = new mongoose.Schema({
             enum: ["ongoing", "completed"],
             default: "ongoing",
         },
+        viewedCertificate: {
+            type: Boolean,
+            default: false,
+        },
         completedPercentage: {
             type: Number,
             default: 0,
