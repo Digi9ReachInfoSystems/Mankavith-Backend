@@ -33,14 +33,15 @@ exports.createRecordedSession = async (req, res) => {
     });
 
     const savedSession = await newSession.save();
-
+    course.recorded_sessions.push(savedSession._id);
+    await course.save(); // Save the course to update recorded_sessions
     return res.status(201).json({
       success: true,
       message: "Recorded session created successfully",
       data: savedSession,
     });
   } catch (error) {
-    console.error("Error creating recorded session:", error.message);
+    console.error("Error creating recorded session:", error);
     return res.status(500).json({
       success: false,
       message: "Server error. Could not create recorded session.",

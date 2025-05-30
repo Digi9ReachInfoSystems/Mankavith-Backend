@@ -94,7 +94,7 @@ const courseSchema = new mongoose.Schema(
       required: true,
       min: 0,
       validate: {
-        validator: function(v) {
+        validator: function (v) {
           return v <= this.price;
         },
         message: "Discount price cannot be greater than regular price"
@@ -159,9 +159,13 @@ const courseSchema = new mongoose.Schema(
     certificate_available: {
       type: Boolean,
       default: false
-    }
+    },
+    recorded_sessions: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "RecordedSession"
+    }]
   },
-  { 
+  {
     timestamps: true,
     toJSON: { virtuals: true },
     toObject: { virtuals: true }
@@ -169,12 +173,12 @@ const courseSchema = new mongoose.Schema(
 );
 
 // Virtual for discount percentage
-courseSchema.virtual('discountPercentage').get(function() {
+courseSchema.virtual('discountPercentage').get(function () {
   return Math.round(((this.price - this.discountPrice) / this.price) * 100);
 });
 
 // Calculate average rating
-courseSchema.methods.calculateAverageRating = async function() {
+courseSchema.methods.calculateAverageRating = async function () {
   const feedbacks = await mongoose.model('Feedback').find({
     _id: { $in: this.student_feedback },
     isappproved: true
@@ -191,32 +195,32 @@ courseSchema.methods.calculateAverageRating = async function() {
 };
 
 // Update counts before saving
-courseSchema.pre("save", async function(next) {
+courseSchema.pre("save", async function (next) {
   try {
     // Calculate rating if feedback was modified
     if (this.isModified('student_feedback')) {
       await this.calculateAverageRating();
     }
-    
+
     // Update subject count
     this.no_of_subjects = this.subjects?.length || 0;
-    
+
     // Update enrolled students count
     this.student_enrolled_count = this.student_enrolled?.length || 0;
-    
+
     // Count notes across all subjects
     if (this.subjects?.length > 0) {
       const subjects = await mongoose.model('Subject').find({
         _id: { $in: this.subjects }
       }).select('notes');
-      
+
       this.no_of_notes = subjects.reduce(
         (sum, subject) => sum + (subject.notes?.length || 0), 0
       );
     } else {
       this.no_of_notes = 0;
     }
-    
+
     next();
   } catch (err) {
     next(err);
@@ -224,7 +228,7 @@ courseSchema.pre("save", async function(next) {
 });
 
 // Update course rating when feedback is modified
-courseSchema.post('findOneAndUpdate', async function(doc) {
+courseSchema.post('findOneAndUpdate', async function (doc) {
   if (doc && (doc.student_feedback || this.getUpdate()?.student_feedback)) {
     await doc.calculateAverageRating();
     await doc.save();

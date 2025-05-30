@@ -1,4 +1,5 @@
 const Kyc = require("../model/kycDetails");
+const User = require("../model/user_model");
 
 // Create KYC record
 exports.createKyc = async (req, res) => {
@@ -61,6 +62,15 @@ exports.createKyc = async (req, res) => {
     });
 
     const savedKyc = await newKyc.save();
+    const user = await User.findById(userref);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+    user.kycRef = savedKyc._id;
+    await user.save();
 
     return res.status(201).json({
       success: true,
@@ -152,7 +162,15 @@ exports.updateKycStatus = async (req, res) => {
       { status },
       { new: true, runValidators: true }
     ).populate("userref", "name email");
-
+    const user = await User.findById(updatedKyc.userref._id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+    user.kyc_status =status;
+    await user.save();
     if (!updatedKyc) {
       return res.status(404).json({
         success: false,
@@ -234,3 +252,57 @@ exports.getKycByUser = async (req, res) => {
     });
   }
 };
+exports.updateKyc=async (req, res) => {
+  try {
+    const kycId = req.params.id;
+    const {
+      first_name,
+      last_name,
+      age,
+      email,
+      mobile_number,
+      id_proof,
+      passport_photo,
+    } = req.body;
+
+    // Validate required fields
+    const kyc= await Kyc.findById(kycId);
+    if (!kyc) {
+      return res.status(404).json({
+        success: false,
+        message: "KYC record not found",
+      });
+    }
+    kyc.first_name = first_name || kyc.first_name;
+    kyc.last_name = last_name || kyc.last_name;
+    kyc.age = age || kyc.age;
+    kyc.email = email || kyc.email;
+    kyc.mobile_number = mobile_number || kyc.mobile_number;
+    kyc.id_proof = id_proof || kyc.id_proof;
+    kyc.passport_photo = passport_photo || kyc.passport_photo;
+    
+
+    const updatedKyc = await kyc.save();
+    
+
+    if (!updatedKyc) {
+      return res.status(404).json({
+        success: false,
+        message: "KYC record not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "KYC record updated successfully",
+      data: updatedKyc,
+    });
+  } catch (error) {
+    console.error("Error updating KYC:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Server error. Could not update KYC record.",
+      error: error.message,
+    });
+  }
+}
