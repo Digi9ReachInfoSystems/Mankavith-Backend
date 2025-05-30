@@ -448,3 +448,26 @@ exports.completeLecturer = async (req, res) => {
     }
 
 };
+exports.updateViewedCertificate = async (req, res) => {
+    try {
+        const { user_id, course_id } = req.body;
+
+        let userProgress = await UserProgress.findOne({ user_id: user_id });
+        if (!userProgress) {
+            return res.status(404).json({ message: "User Progress not found" });
+        }
+
+        const course = userProgress.courseProgress.find(
+            (cp) => cp.course_id.equals(course_id)
+        );
+        if (!course) {
+            return res.status(404).json({ message: "Course not found" });
+        }
+        course.viewedCertificate = true;
+       const data= await userProgress.save();
+        res.status(200).json({ message: "Certificate viewed successfully", userProgress: data });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Error viewing certificate", error: error.message });
+    }
+};

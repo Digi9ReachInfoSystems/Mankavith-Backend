@@ -9,6 +9,6 @@ router.post("/startLecture", userProgressController.startLecturer);
 router.post("/completeLecture", userProgressController.completeLecturer);
 router.post("/completeSubject",userProgressController.completeSubject);
 router.post("/completeCourse",userProgressController.completeCourse)
-
+router.put("/updateview", userProgressController.updateViewedCertificate);
 
 module.exports = router;
