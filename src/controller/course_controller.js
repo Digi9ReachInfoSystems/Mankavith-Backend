@@ -200,13 +200,85 @@ exports.updateCourse = async (req, res) => {
         });
       }
     }
+    course.courseName = updateData.courseName ?? course.courseName;
+    course.courseDisplayName = updateData.courseDisplayName ?? course.courseDisplayName;
+    course.shortDescription = updateData.shortDescription ?? course.shortDescription;
+    course.description = updateData.description ?? course.description;
+    course.duration = updateData.duration ?? course.duration;
+    course.status = updateData.status ?? course.status;
+    course.language = updateData.language ?? course.language;
+    course.certificate_available = updateData.certificate_available ?? course.certificate_available;
 
-    const updatedCourse = await Course.findByIdAndUpdate(courseId, updateData, {
-      new: true,
-      runValidators: true,
-    })
-      .populate("subjects", "subjectName")
-      .populate("category", "title");
+    course.category = updateData.category ?? course.category;
+
+    if (updateData.price != null) {
+      course.price = Number(updateData.price);
+    }
+    if (updateData.discountPrice != null) {
+      course.discountPrice = Number(updateData.discountPrice);
+    }
+    course.discountActive = updateData.discountActive ?? course.discountActive;
+
+    course.live_class = updateData.live_class ?? course.live_class;
+    course.recorded_class = updateData.recorded_class ?? course.recorded_class;
+    course.isPublished = updateData.isPublished ?? course.isPublished;
+    course.isKycRequired = updateData.isKycRequired ?? course.isKycRequired;
+
+    if (Array.isArray(updateData.course_includes)) {
+      course.course_includes = updateData.course_includes;
+    }
+
+    if (updateData.scheduled_class != null) {
+      course.scheduled_class = updateData.scheduled_class;
+    }
+
+    if (Array.isArray(updateData.subjects)) {
+      course.subjects = updateData.subjects;
+    }
+
+    if (Array.isArray(updateData.mockTests)) {
+      course.mockTests = updateData.mockTests;
+    }
+
+    if (Array.isArray(updateData.student_feedback)) {
+      course.student_feedback = updateData.student_feedback;
+    }
+
+    if (Array.isArray(updateData.student_enrolled)) {
+      course.student_enrolled = updateData.student_enrolled;
+    }
+
+    if (Array.isArray(updateData.instructors)) {
+      course.instructors = updateData.instructors;
+    }
+
+    if (Array.isArray(updateData.prerequisites)) {
+      course.prerequisites = updateData.prerequisites;
+    }
+
+    if (updateData.no_of_videos != null) {
+      course.no_of_videos = Number(updateData.no_of_videos);
+    }
+    if (updateData.successRate != null) {
+      course.successRate = Number(updateData.successRate);
+    }
+
+    if (updateData.course_rating != null) {
+      course.course_rating = Number(updateData.course_rating);
+    }
+    if (updateData.rating != null) {
+      course.rating = Number(updateData.rating);
+    }
+
+    course.image = updateData.image ?? course.image;
+
+    const updatedCourse = await course.save();
+    // const updatedCourse = await Course.findByIdAndUpdate(courseId, updateData, {
+    //   new: true,
+    //   runValidators: true,
+    // })
+    //   .populate("subjects", "subjectName")
+    //   .populate("category", "title");
 
     if (!updatedCourse) {
       return res.status(404).json({
@@ -669,7 +741,7 @@ exports.getCourseWithProgress = async (req, res) => {
         if (courseProgress.status === "completed") {
           course = {
             ...course.toObject(),
-             viewedCertificate: courseProgress?.viewedCertificate || false,
+            viewedCertificate: courseProgress?.viewedCertificate || false,
             status: courseProgress.status,
             completedPercentage: courseProgress.completedPercentage,
             completed: true
@@ -690,7 +762,7 @@ exports.getCourseWithProgress = async (req, res) => {
         } else {
           course = {
             ...course.toObject(),
-             viewedCertificate: courseProgress?.viewedCertificate || false,
+            viewedCertificate: courseProgress?.viewedCertificate || false,
             status: courseProgress.status,
             completedPercentage: courseProgress.completedPercentage,
             completed: false
