@@ -200,6 +200,13 @@ exports.updateCourse = async (req, res) => {
         });
       }
     }
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: "Course not found",
+      });
+    }
     course.courseName = updateData.courseName ?? course.courseName;
     course.courseDisplayName = updateData.courseDisplayName ?? course.courseDisplayName;
     course.shortDescription = updateData.shortDescription ?? course.shortDescription;
