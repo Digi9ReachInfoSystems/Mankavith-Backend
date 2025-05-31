@@ -9,5 +9,6 @@ router.post(
   paymentController.handleWebhook
 );
 router.get("/status/:id", paymentController.checkPaymentStatus);
-
+router.get("/getAllPayments", paymentController.getAllPayments);
+router.get("/getPaymentById/:id", paymentController.getPaymentById);
 module.exports = router;

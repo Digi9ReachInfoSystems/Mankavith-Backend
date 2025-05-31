@@ -349,3 +349,45 @@ exports.checkPaymentStatus = async (req, res) => {
       .json({ message: "Internal server error", error: error.message });
   }
 };
+exports.getAllPayments = async (req, res) => {  
+  try {
+    const payments = await Payment.find({})
+      .populate("userRef",)
+      .populate("courseRef");
+
+    if (!payments || payments.length === 0) {
+      return res.status(404).json({ message: "No payments found" });
+    }
+
+    res.status(200).json({ success: true, payments });
+  } catch (error) {
+    console.error("Error fetching all payments:", error);
+    res
+      .status(500)
+      .json({ message: "Internal server error", error: error.message });
+  }
+}
+exports.getPaymentById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({ message: "Payment ID is required" });
+    }
+
+    const payment = await Payment.findById(id)
+      .populate("userRef", "displayName email")
+      .populate("courseRef", "title");
+
+    if (!payment) {
+      return res.status(404).json({ message: "Payment not found" });
+    }
+
+    res.status(200).json({ success: true, payment });
+  } catch (error) {
+    console.error("Error fetching payment by ID:", error);
+    res
+      .status(500)
+      .json({ message: "Internal server error", error: error.message });
+  }
+};
