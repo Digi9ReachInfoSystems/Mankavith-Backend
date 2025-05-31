@@ -71,11 +71,12 @@ const userSchema = new mongoose.Schema({
   kycRef: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "KycDetails",
+    default: null,
   },
   kyc_status: {
     type: String,
     enum: ["pending", "approved", "rejected", "not-applied"],
-    default: "pending",
+    default: "not-applied",
   },
 });
 

@@ -70,6 +70,7 @@ exports.createKyc = async (req, res) => {
       });
     }
     user.kycRef = savedKyc._id;
+    user.kyc_status = "pending"; // Set initial KYC status
     await user.save();
 
     return res.status(201).json({
