@@ -234,8 +234,8 @@ exports.generateZoomSignature = async (req, res) => {
         .json({ error: "Missing meetingNumber or role in request body." });
     }
 
-    const sdkKey =process.env.ZOOM_CLIENT_ID;
-    const sdkSecret =process.env.ZOOM_CLIENT_SECRET;
+    const sdkKey = process.env.ZOOM_CLIENT_ID;
+    const sdkSecret = process.env.ZOOM_CLIENT_SECRET;
 
     if (!sdkKey || !sdkSecret) {
       return res
@@ -276,5 +276,118 @@ exports.getZoomSdkAccessToken = async (req, res) => {
     res.json({ accessToken });
   } catch (error) {
     res.status(500).json({ error: "Failed to get Zoom access token." });
+  }
+};
+
+
+const base64 = require("base-64");
+
+const zoomAccountId = process.env.ZOOM_ACCOUNT_ID;
+const zoomClientId = process.env.ZOOM_CLIENT_ID;
+const zoomClientSecret = process.env.ZOOM_CLIENT_SECRET;
+
+const getAuthHeaders = () => {
+  return {
+    Authorization: `Basic ${base64.encode(
+      `${zoomClientId}:${zoomClientSecret}`
+    )}`,
+    "Content-Type": "application/json",
+  };
+};
+
+const generateZoomAccessToken = async () => {
+  try {
+    const response = await axios.post(
+  `https://zoom.us/oauth/token?grant_type=account_credentials&account_id=${zoomAccountId}`,
+  null, // No request body needed for this POST request
+  {
+    headers: getAuthHeaders()
+  }
+);
+
+    const jsonResponse = await response.data;
+
+    return jsonResponse?.access_token;
+  } catch (error) {
+    console.log("generateZoomAccessToken Error --> ", error);
+    throw error;
+  }
+};
+
+exports.generateZoomMeeting = async (req, res) => {
+  try {
+    const zoomAccessToken = await generateZoomAccessToken();
+
+   const response = await axios.post(
+  'https://api.zoom.us/v2/users/me/meetings',
+  {
+    agenda: "Zoom Meeting for YT Demo",
+    default_password: false,
+    duration: 60,
+    password: "12345",
+    settings: {
+      allow_multiple_devices: true,
+      // alternative_hosts: "jayanthbr@digi9.co.in",
+      // alternative_hosts_email_notification: true,
+      breakout_room: {
+        enable: true,
+        rooms: [
+          {
+            name: "room1",
+            participants: [
+              "email1@gmail.com",
+              "email2@gmail.com",
+            ],
+          },
+        ],
+      },
+      calendar_type: 1,
+      contact_email: "jayanthbr@digi9.co.in",
+      contact_name: "Ajay Sharma",
+      email_notification: true,
+      encryption_type: "enhanced_encryption",
+      focus_mode: true,
+      host_video: true,
+      join_before_host: true,
+      meeting_authentication: true,
+      meeting_invitees: [
+        {
+          email: "jayanthbr@digi9.co.in",
+        },
+      ],
+      mute_upon_entry: true,
+      participant_video: true,
+      private_meeting: true,
+      waiting_room: false,
+      watermark: false,
+      continuous_meeting_chat: {
+        enable: true,
+      },
+    },
+    start_time: new Date().toLocaleDateString(),
+    timezone: "Asia/Kolkata",
+    topic: "Zoom Meeting for YT Demo",
+    type: 2,
+  },
+  {
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${zoomAccessToken}`
+    }
+  }
+);
+
+// Access response data with response.data
+
+    const jsonResponse =  response.data; 
+
+    console.log("generateZoomMeeting JsonResponse --> ", jsonResponse);
+    res.status(200).json({
+      message: "Zoom meeting created successfully",
+      data: jsonResponse,
+    });
+  } catch (error) {
+    console.log("generateZoomMeeting Error --> ", error);
+    throw error;
   }
 };
