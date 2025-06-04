@@ -16,6 +16,7 @@ exports.startCourse = async (req, res) => {
             userProgress = new UserProgress({
                 user_id, courseProgress: [{
                     course_id,
+                    viewedCertificate: false,
                     status: "ongoing",
                     startedAt: new Date(),
                     completedAt: new Date(),
