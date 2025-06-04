@@ -19,6 +19,10 @@ const userProgressSchema = new mongoose.Schema({
             type: Boolean,
             default: false,
         },
+        generatedCertificate: {
+            type: Boolean,
+            default: false,
+        },
         completedPercentage: {
             type: Number,
             default: 0,
