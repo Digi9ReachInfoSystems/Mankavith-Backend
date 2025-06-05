@@ -585,3 +585,34 @@ exports.getSubmittedUsersByMockTest = async (req, res) => {
         });
     }
 };
+
+exports.getAttemptsById = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+       
+
+        const attempts = await UserAttempt.findById(id)
+        .populate('mockTestId subject userId')
+        ;
+
+        if (!attempts) {
+            return res.status(404).json({
+                success: false,
+                message: 'Attempt not found'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            data: attempts
+        });
+    } catch (error) {
+        console.error('Error fetching attempts:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error while fetching attempts',
+            error: error.message
+        });
+    }
+}

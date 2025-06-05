@@ -13,5 +13,6 @@ router.get('/get/user/:user_id/:mockTestId', attemptController.getUserAttempts);
 // Admin routes
 router.put('/evaluate', attemptController.evaluateSubjective);
 router.get('/mocktest/:mockTestId/submitted-users', attemptController.getSubmittedUsersByMockTest);
+router.get("/get/byId/:id", attemptController.getAttemptsById);
 
 module.exports = router;
