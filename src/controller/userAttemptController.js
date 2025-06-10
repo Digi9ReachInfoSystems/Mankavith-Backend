@@ -1,6 +1,8 @@
 const UserAttempt = require('../model/userAttemptModel');
 const MockTest = require('../model/mockTestModel');
 const UserRanking = require('../model/userRankingModel');
+const User = require('../model/user_model');
+const mongoose = require('mongoose');
 
 // Start a new attempt (updated)
 // exports.startAttempt = async (req, res) => {
@@ -402,11 +404,48 @@ exports.getUserAttempts = async (req, res) => {
         const attempts = await UserAttempt.find({
             userId: req.params.user_id,
             mockTestId: req.params.mockTestId
-        }).sort({ attemptNumber: 1 });
+        }).sort({ attemptNumber: 1 })
+            .populate([
+                {
+                    path: 'mockTestId',
+                    model: 'MockTest'
+                },
+                {
+                    path: 'subject',
+                    model: 'Subject'
+                }
+            ]);
+
+        const questionIds = [];
+        attempts.forEach(attempt => {
+            attempt.answers.forEach(answer => {
+                questionIds.push(answer.questionId);
+            });
+        });
+        const answeredQuestions = await MockTest.aggregate([
+            { $match: { _id: new mongoose.Types.ObjectId(req.params.mockTestId) } },
+            { $unwind: '$questions' },
+            { $match: { 'questions._id': { $in: questionIds } } },
+            { $project: { question: '$questions' } }
+        ]);
+        const questionMap = {};
+        answeredQuestions.forEach(item => {
+            questionMap[item.question._id.toString()] = item.question;
+        });
+        const enhancedAttempts = attempts.map(attempt => {
+            return {
+                ...attempt.toObject(),
+                answers: attempt.answers.map(answer => ({
+                    ...answer.toObject(),
+                    questionDetails: questionMap[answer.questionId.toString()]
+                }))
+            };
+        });
 
         res.status(200).json({
             success: true,
-            data: attempts
+            // data: attempts,
+            data: enhancedAttempts
         });
     } catch (err) {
         res.status(500).json({
@@ -590,11 +629,11 @@ exports.getAttemptsById = async (req, res) => {
     try {
         const { id } = req.params;
 
-       
+
 
         const attempts = await UserAttempt.findById(id)
-        .populate('mockTestId subject userId')
-        ;
+            .populate('mockTestId subject userId')
+            ;
 
         if (!attempts) {
             return res.status(404).json({
@@ -602,10 +641,34 @@ exports.getAttemptsById = async (req, res) => {
                 message: 'Attempt not found'
             });
         }
+        const questionIds = [];
+
+        attempts.answers.forEach(answer => {
+            questionIds.push(answer.questionId);
+        });
+        ;
+        const answeredQuestions = await MockTest.aggregate([
+            { $match: { _id: new mongoose.Types.ObjectId(attempts.mockTestId) } },
+            { $unwind: '$questions' },
+            { $match: { 'questions._id': { $in: questionIds } } },
+            { $project: { question: '$questions' } }
+        ]);
+        const questionMap = {};
+        answeredQuestions.forEach(item => {
+            questionMap[item.question._id.toString()] = item.question;
+        });
+        const enhancedAttempts = {
+            ...attempts.toObject(),
+            answers: attempts.answers.map(answer => ({
+                ...answer.toObject(),
+                questionDetails: questionMap[answer.questionId.toString()]
+            }))
+        };
+
 
         res.status(200).json({
             success: true,
-            data: attempts
+            data: enhancedAttempts
         });
     } catch (error) {
         console.error('Error fetching attempts:', error);
@@ -615,4 +678,48 @@ exports.getAttemptsById = async (req, res) => {
             error: error.message
         });
     }
-}
+};
+exports.getUsersSubmittedMockTest = async (req, res) => {
+    try {
+        const { mockTestId } = req.params;
+
+        // Find all submitted attempts for this mock test
+        const submittedAttempts = await UserAttempt.find({
+            mockTestId: mockTestId,
+            status: { $in: ['submitted', 'evaluated']}
+        }).populate('userId'); // Adjust fields as per your User model
+
+        if (!submittedAttempts.length) {
+            return res.status(200).json({
+                success: false,
+                message: 'No submitted attempts found for this mock test',
+                count: 0,
+                data: []
+            });
+        }
+
+        // Extract unique users from the attempts
+        const usersMap = new Map();
+        submittedAttempts.forEach(attempt => {
+            if (attempt.userId && !usersMap.has(attempt.userId._id.toString())) {
+                usersMap.set(attempt.userId._id.toString(), attempt.userId);
+            }
+        });
+
+        const users = Array.from(usersMap.values());
+
+        res.status(200).json({
+            success: true,
+            count: users.length,
+            data: users
+        });
+
+    } catch (error) {
+        console.error('Error fetching submitted users:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error',
+            error: error.message
+        });
+    }
+};
