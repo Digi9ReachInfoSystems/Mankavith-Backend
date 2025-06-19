@@ -68,6 +68,7 @@ const mockTestRoutes = require("./src/routes/mockTestRoutes");
 const userAttemptRoutes = require("./src/routes/userAttemptRoutes");  
 const userRankingRoutes = require("./src/routes/userRankingRoutes");
 const pdfCertificatesRoutes = require("./src/routes/pdfCertificateRoutes");
+const socialMedialinksRoutes = require("./src/routes/socialMediaLinksRoutes");
 
 app.use("/user", userRoutes);
 app.use("/api/v1/course", courseRoutes);
@@ -107,6 +108,7 @@ app.use("/mockTest", mockTestRoutes);
 app.use("/userAttempt", userAttemptRoutes);
 app.use("/userRanking", userRankingRoutes);
 app.use("/pdfCertificates", pdfCertificatesRoutes);
+app.use("/socialMediaLinks", socialMedialinksRoutes);
 
 
 
