@@ -867,3 +867,19 @@ exports.getAttemptsByUserId = async (req, res) => {
         res.status(500).json({ success: false, message: 'Internal error' });
     }
 };
+exports.getAllAttempts = async (req, res) => {
+    try {
+        const attempts = await UserAttempt.find({$or: [{ status: 'submitted' }, { status: 'evaluated' }, { status: 'evaluating' }]})
+            .populate({
+                path: 'mockTestId',
+                populate: {
+                    path: 'subject',
+                }
+            })
+            .populate('subject');
+        res.status(200).json({ success: true, data: attempts });
+    } catch (err) {
+        console.error("Error:", err);
+        res.status(500).json({ success: false, message: 'Internal error' });
+    }
+};

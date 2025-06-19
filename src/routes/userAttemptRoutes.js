@@ -19,4 +19,5 @@ router.post("/evaluateSingleQuestion", attemptController.evaluateSingleQuestion)
 router.post("/completeEvaluation", attemptController.completeUserAttemptsEvaluation);
 router.post("/get/attemptbySubject", attemptController.getUserAttemptsBySubject);
 router.get("/get/userAllAttempts/:user_id", attemptController.getAttemptsByUserId);
+router.get("/get/getAll/userAttempts", attemptController.getAllAttempts);
 module.exports = router;
