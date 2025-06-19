@@ -23,7 +23,7 @@ const userAttemptSchema = new mongoose.Schema({
   totalMarks: { type: Number, default: 0 },
   status: {
     type: String,
-    enum: ['in-progress', 'submitted', 'evaluated'],
+    enum: ['in-progress', 'submitted','evaluating', 'evaluated'],
     default: 'in-progress'
   },
   isBestAttempt: { type: Boolean, default: false },

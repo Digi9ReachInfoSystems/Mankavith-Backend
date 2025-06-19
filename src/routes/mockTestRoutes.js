@@ -15,4 +15,7 @@ router.put("/publish/:id", mockTestController.togglePublishStatus);
 router.put("/update/:id", mockTestController.editMockTest);
 router.get('/get/subjects/:subjectId', mockTestController.getMockTestBysubjectId);
 router.delete('/delete/:id', mockTestController.softDeleteMockTest);
+router.put("/addQuestion/:mockTestId", mockTestController.addQuestionToMockTest);
+router.put("/removeQuestion/:mockTestId/:questionId", mockTestController.removeQuestionFromMockTest);
+router.patch("/editQuestion/:mockTestId/:questionId", mockTestController.editQuestionInMockTest);
 module.exports = router;

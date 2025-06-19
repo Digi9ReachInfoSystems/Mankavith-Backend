@@ -25,11 +25,11 @@ const mockTestSchema = new mongoose.Schema({
   description: { type: String },
   subject: {type:mongoose.Schema.Types.ObjectId, ref: 'Subject', required: true}, // Changed from courseId to subject
   duration: { type: Number, required: true, min: 1 }, // in minutes
-  totalMarks: { type: Number, required: true },
-  passingMarks: { type: Number, required: true },
+  totalMarks: { type: Number, required: false },
+  passingMarks: { type: Number, required: false },
   startDate: { type: Date, required: true }, // Test availability window
   endDate: { type: Date, required: true },
-  isActive: { type: Boolean, default: true },
+  isActive: { type: Boolean, default: false },
   questions: [questionSchema],
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
