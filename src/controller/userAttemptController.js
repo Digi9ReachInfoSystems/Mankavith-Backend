@@ -876,7 +876,8 @@ exports.getAllAttempts = async (req, res) => {
                     path: 'subject',
                 }
             })
-            .populate('subject');
+            .populate('subject')
+            .populate('userId');
         res.status(200).json({ success: true, data: attempts });
     } catch (err) {
         console.error("Error:", err);
