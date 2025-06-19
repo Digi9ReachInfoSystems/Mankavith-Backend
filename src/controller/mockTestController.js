@@ -15,9 +15,12 @@ exports.createMockTest = async (req, res) => {
         message: 'End date must be after start date'
       });
     }
-
+    let totalMarks=0;
     // Calculate total marks
-    const totalMarks = questions.reduce((sum, q) => sum + q.marks, 0);
+    if (questions?.length > 0) {
+      totalMarks = questions.reduce((sum, q) => sum + q.marks, 0);
+    }
+
 
     const mockTest = new MockTest({
       title,
@@ -32,15 +35,26 @@ exports.createMockTest = async (req, res) => {
     });
 
     const savedTest = await mockTest.save();
-    const subjectData = await Subject.findById(subject);
-    subjectData.mockTests.push(savedTest._id);
-    await subjectData.save();
+    // await Subject.findByIdAndUpdate(
+    //   subject,
+    //   {
+    //     $addToSet: { mockTests: savedTest._id },
+    //     $setOnInsert: { mockTests: [] } 
+    //   },
+    //   { upsert: true, new: true }
+    // );
+    await Subject.findByIdAndUpdate(
+      subject,
+      { $push: { mockTests: savedTest._id } },
+      { new: true }
+    );
 
     res.status(201).json({
       success: true,
       data: mockTest
     });
   } catch (err) {
+    console.log("Error creating mock test:", err);
     res.status(400).json({
       success: false,
       message: err.message
@@ -315,5 +329,87 @@ exports.softDeleteMockTest = async (req, res) => {
       success: false,
       message: err.message
     });
+  }
+};
+
+exports.addQuestionToMockTest = async (req, res) => {
+  try {
+    const { mockTestId } = req.params;
+    const question = req.body; // Expecting full question object
+
+    const mockTest = await MockTest.findById(mockTestId);
+    if (!mockTest) {
+      return res.status(404).json({ success: false, message: 'Mock test not found' });
+    }
+
+    mockTest.questions.push(question);
+    mockTest.totalMarks += Number(question.marks);
+    await mockTest.save();
+
+    res.status(200).json({ success: true, message: 'Question added', mockTest });
+  } catch (error) {
+    console.error('Error adding question:', error);
+    res.status(500).json({ success: false, message: 'Failed to add question' });
+  }
+};
+
+exports.removeQuestionFromMockTest = async (req, res) => {
+  try {
+    const { mockTestId, questionId } = req.params;
+
+    const mockTest = await MockTest.findById(mockTestId);
+    if (!mockTest) {
+      return res.status(404).json({ success: false, message: 'Mock test not found' });
+    }
+
+    const questionIndex = mockTest.questions.findIndex(q => q._id.toString() === questionId);
+    if (questionIndex === -1) {
+      return res.status(404).json({ success: false, message: 'Question not found' });
+    }
+
+    const removedQuestion = mockTest.questions[questionIndex];
+    mockTest.totalMarks -= removedQuestion.marks;
+
+    mockTest.questions.splice(questionIndex, 1);
+    await mockTest.save();
+
+    res.status(200).json({ success: true, message: 'Question removed', mockTest });
+  } catch (error) {
+    console.error('Error removing question:', error);
+    res.status(500).json({ success: false, message: 'Failed to remove question' });
+  }
+};
+exports.editQuestionInMockTest = async (req, res) => {
+  try {
+    const { mockTestId, questionId } = req.params;
+    const updatedData = req.body;
+
+    const mockTest = await MockTest.findById(mockTestId);
+    if (!mockTest) {
+      return res.status(404).json({ success: false, message: 'Mock test not found' });
+    }
+
+    const question = mockTest.questions.id(questionId);
+    if (!question) {
+      return res.status(404).json({ success: false, message: 'Question not found' });
+    }
+
+    // If marks are being updated, adjust total marks
+    if (updatedData.marks !== undefined && updatedData.marks !== question.marks) {
+      mockTest.totalMarks = mockTest.totalMarks - question.marks + updatedData.marks;
+    }
+
+    // Update question fields
+    Object.keys(updatedData).forEach((field) => {
+      question[field] = updatedData[field];
+    });
+
+    await mockTest.save();
+
+    res.status(200).json({ success: true, message: 'Question updated', question });
+
+  } catch (error) {
+    console.error('Error updating question:', error);
+    res.status(500).json({ success: false, message: 'Failed to update question' });
   }
 };

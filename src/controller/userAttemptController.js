@@ -686,7 +686,7 @@ exports.getUsersSubmittedMockTest = async (req, res) => {
         // Find all submitted attempts for this mock test
         const submittedAttempts = await UserAttempt.find({
             mockTestId: mockTestId,
-            status: { $in: ['submitted', 'evaluated']}
+            status: { $in: ['submitted', 'evaluated'] }
         }).populate('userId'); // Adjust fields as per your User model
 
         if (!submittedAttempts.length) {
@@ -721,5 +721,132 @@ exports.getUsersSubmittedMockTest = async (req, res) => {
             message: 'Server error',
             error: error.message
         });
+    }
+};
+
+exports.evaluateSingleQuestion = async (req, res) => {
+    try {
+        const { attemptId, questionId, marks, isCorrect } = req.body;
+
+
+        const attempt = await UserAttempt.findById(attemptId);
+        if (!attempt) {
+            return res.status(404).json({ success: false, message: 'Attempt not found' });
+        }
+        if (attempt.status === 'evaluated') {
+            return res.status(400).json({ success: false, message: 'Attempt already evaluated' });
+        }
+
+        if (attempt.status !== 'submitted' && attempt.status !== 'evaluating') {
+            return res.status(400).json({ success: false, message: 'Attempt is not ready for evaluation' });
+        }
+
+        const mockTest = await MockTest.findById(attempt.mockTestId);
+        if (!mockTest) {
+            return res.status(404).json({ success: false, message: 'MockTest not found' });
+        }
+
+        const question = mockTest.questions.id(questionId);
+        if (!question || question.type !== 'subjective') {
+            return res.status(400).json({ success: false, message: 'Invalid subjective question' });
+        }
+
+        let subjectiveScore = 0;
+        let found = false;
+
+        attempt.answers = attempt.answers.map(answer => {
+            if (answer.questionId.toString() === questionId) {
+                found = true;
+                return {
+                    ...answer.toObject(),
+                    marksAwarded: marks,
+                    isCorrect: isCorrect,
+
+                };
+            }
+            return answer;
+        });
+
+        if (!found) {
+            return res.status(404).json({ success: false, message: 'Answer not found in attempt' });
+        }
+
+
+        subjectiveScore = attempt.answers.reduce((acc, answer) => {
+            if (answer.marksAwarded && mockTest.questions.id(answer.questionId).type === 'subjective') {
+                return acc + answer.marksAwarded;
+            }
+            return acc;
+        }, 0);
+
+        attempt.subjectiveScore = subjectiveScore;
+        attempt.totalMarks = attempt.mcqScore + subjectiveScore;
+
+        // Check if all subjective questions are evaluated
+        // const totalSubjective = mockTest.questions.filter(q => q.type === 'subjective').length;
+        // const evaluatedCount = attempt.answers.filter(a => {
+        //     const q = mockTest.questions.id(a.questionId);
+        //     return q && q.type === 'subjective' && a.marksAwarded !== undefined;
+        // }).length;
+
+        // if (evaluatedCount > 0) {
+        //     attempt.status = evaluatedCount === totalSubjective ? 'evaluated' : 'evaluating';
+        // }
+        attempt.status = 'evaluating';
+        await attempt.save();
+
+        return res.status(200).json({
+            success: true,
+            message: 'Question evaluated',
+            data: attempt
+        });
+    } catch (error) {
+        console.error("Evaluate single question error:", error);
+        return res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+};
+
+exports.completeUserAttemptsEvaluation = async (req, res) => {
+    try {
+        const { attemptId } = req.body;
+
+        const attempt = await UserAttempt.findById(attemptId).populate('mockTestId');
+        if (!attempt) return res.status(404).json({ success: false, message: 'Attempt not found' });
+
+        const mockTest = await MockTest.findById(attempt.mockTestId);
+        const totalSubjective = mockTest.questions.filter(q => q.type === 'subjective').length;
+        const evaluatedCount = attempt.answers.filter(a => {
+            const q = mockTest.questions.id(a.questionId);
+            return q?.type === 'subjective' && typeof a.marksAwarded === 'number';
+        }).length;
+
+        if (evaluatedCount < totalSubjective) {
+            return res.status(400).json({ success: false, message: 'Evaluation not complete' });
+        }
+
+        attempt.status = 'evaluated';
+        attempt.evaluatedAt = new Date();
+        await attempt.save();
+
+        if (attempt.isWithinTestWindow) {
+            await updateRankings(attempt);
+        }
+
+        res.status(200).json({ success: true, message: 'Evaluation marked as complete', data: attempt });
+
+    } catch (err) {
+        console.error("Error:", err);
+        res.status(500).json({ success: false, message: 'Internal error' });
+    }
+};
+
+exports.getUserAttemptsBySubject = async (req, res) => {
+    try {
+        const { user_id, subject } = req.body;
+        const attempts = await UserAttempt.find({ userId: user_id, subject: subject, $or: [{ status: 'submitted' }, { status: 'evaluated' }] }).populate('mockTestId');
+        res.status(200).json({ success: true, data: attempts });
+    } catch (err) {
+        console.error("Error:", err);
+        res.status(500).json({ success: false, message: 'Internal error' });
     }
 };

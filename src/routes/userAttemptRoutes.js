@@ -15,5 +15,7 @@ router.put('/evaluate', attemptController.evaluateSubjective);
 router.get('/mocktest/:mockTestId/submitted-users', attemptController.getSubmittedUsersByMockTest);
 router.get("/get/byId/:id", attemptController.getAttemptsById);
 router.get("/get/submitedUser/byMockTest/:mockTestId", attemptController.getUsersSubmittedMockTest);
-
+router.post("/evaluateSingleQuestion", attemptController.evaluateSingleQuestion);
+router.post("/completeEvaluation", attemptController.completeUserAttemptsEvaluation);
+router.post("/get/attemptbySubject", attemptController.getUserAttemptsBySubject);
 module.exports = router;
