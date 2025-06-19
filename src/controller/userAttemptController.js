@@ -686,7 +686,7 @@ exports.getUsersSubmittedMockTest = async (req, res) => {
         // Find all submitted attempts for this mock test
         const submittedAttempts = await UserAttempt.find({
             mockTestId: mockTestId,
-            status: { $in: ['submitted', 'evaluated'] }
+            status: { $in: ['submitted', 'evaluated', 'evaluating'] }
         }).populate('userId'); // Adjust fields as per your User model
 
         if (!submittedAttempts.length) {
@@ -843,7 +843,24 @@ exports.completeUserAttemptsEvaluation = async (req, res) => {
 exports.getUserAttemptsBySubject = async (req, res) => {
     try {
         const { user_id, subject } = req.body;
-        const attempts = await UserAttempt.find({ userId: user_id, subject: subject, $or: [{ status: 'submitted' }, { status: 'evaluated' }] }).populate('mockTestId');
+        const attempts = await UserAttempt.find({ userId: user_id, subject: subject, $or: [{ status: 'submitted' }, { status: 'evaluated' }, { status: 'evaluating' }] }).populate('mockTestId');
+        res.status(200).json({ success: true, data: attempts });
+    } catch (err) {
+        console.error("Error:", err);
+        res.status(500).json({ success: false, message: 'Internal error' });
+    }
+};
+exports.getAttemptsByUserId = async (req, res) => {
+    try {
+        const { user_id } = req.params;
+        const attempts = await UserAttempt.find({ userId: user_id, $or: [{ status: 'submitted' }, { status: 'evaluated' }, { status: 'evaluating' }] })
+            .populate({
+                path: 'mockTestId',
+                populate: {
+                    path: 'subject',
+                }
+            })
+            .populate('subject');
         res.status(200).json({ success: true, data: attempts });
     } catch (err) {
         console.error("Error:", err);

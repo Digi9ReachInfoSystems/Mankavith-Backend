@@ -18,4 +18,5 @@ router.get("/get/submitedUser/byMockTest/:mockTestId", attemptController.getUser
 router.post("/evaluateSingleQuestion", attemptController.evaluateSingleQuestion);
 router.post("/completeEvaluation", attemptController.completeUserAttemptsEvaluation);
 router.post("/get/attemptbySubject", attemptController.getUserAttemptsBySubject);
+router.get("/get/userAllAttempts/:user_id", attemptController.getAttemptsByUserId);
 module.exports = router;
