@@ -14,7 +14,7 @@ exports.createKyc = async (req, res) => {
       passport_photo,
       userref,
     } = req.body;
-
+console.log("req.body",req.body);
     // Validate required fields
     if (
       !first_name ||

@@ -189,8 +189,8 @@ exports.getCertificatesByUser = async (req, res) => {
     const userId = req.params.userId;
 
     const certificates = await Certificate.find({ user_ref: userId })
-      .populate("course_ref", "courseName")
-      .populate("user_ref", "name email")
+      .populate("course_ref", )
+      .populate("user_ref", )
       .sort({ createdAt: -1 });
 
     return res.status(200).json({
@@ -214,8 +214,8 @@ exports.getCertificatesByCourse = async (req, res) => {
     const courseId = req.params.courseId;
 
     const certificates = await Certificate.find({ course_ref: courseId })
-      .populate("course_ref", "courseName")
-      .populate("user_ref", "name email")
+      .populate("course_ref", )
+      .populate("user_ref",)
       .sort({ createdAt: -1 });
 
     return res.status(200).json({

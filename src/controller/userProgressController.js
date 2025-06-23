@@ -2,6 +2,9 @@ const UserProgress = require("../model/userProgressModel");
 const CourseProgress = require("../model/courseProgressModel");
 const Course = require("../model/course_model");
 const Subject = require("../model/subject_model");
+const { generateCertificate } = require("../utils/certificateGenerationService");
+const User = require("../model/user_model");
+const Certificate = require("../model/certificatesModel");
 
 
 exports.startCourse = async (req, res) => {
@@ -16,6 +19,7 @@ exports.startCourse = async (req, res) => {
             userProgress = new UserProgress({
                 user_id, courseProgress: [{
                     course_id,
+                    viewedCertificate: false,
                     status: "ongoing",
                     startedAt: new Date(),
                     completedAt: new Date(),
@@ -352,6 +356,14 @@ exports.completeSubject = async (req, res) => {
 exports.completeLecturer = async (req, res) => {
     try {
         const { user_id, lecturer_id, subject_id, course_id } = req.body;
+        const userData = await User.findById(user_id);
+        if (!userData) {
+            return res.status(404).json({ message: "User not found" });
+        } 
+        const courseData = await Course.findById(course_id);
+        if (!courseData) {
+            return res.status(404).json({ message: "Course not found" });   
+        }
 
         let userProgress = await UserProgress.findOne({ user_id: user_id });
         let courseProgress = await CourseProgress.findOne({ course_id: course_id });
@@ -409,6 +421,17 @@ exports.completeLecturer = async (req, res) => {
         course.status = Number((totalCompletedSubjects / totalSubjects) * 100).toFixed(2) == 100 ? "completed" : "ongoing";
         course.completedAt = Number((totalCompletedSubjects / totalSubjects) * 100).toFixed(2) == 100 ? new Date() : null;
         course.completedPercentage = totalSubjects == 0 ? 0.0 : Number((totalCompletedSubjects / totalSubjects) * 100).toFixed(2);
+         if( course.completedPercentage == 100&&(!course.generatedCertificate)){
+            // logic to generate certificate
+            const urls= await generateCertificate(userData.displayName, courseData.courseDisplayName);
+            course.generatedCertificate = true;
+            const certificate = new Certificate({
+                user_ref: user_id,
+                course_ref: course_id,
+                certificate_url: urls.pdfUrl,
+            });
+            await certificate.save();
+        }
         await userProgress.save();
 
         const user = await courseProgress.progress.find(
