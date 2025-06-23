@@ -8,6 +8,7 @@ const LectureSchema = new mongoose.Schema(
     },
     description: {
       type: String,
+      required: false,
     },
     duration: {
       type: String,

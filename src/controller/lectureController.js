@@ -11,8 +11,11 @@ exports.createLecture = async (req, res) => {
     const { lectureName, description, duration, videoUrl,thumbnail } = req.body;
 
     // Validate required fields
-    if (!lectureName || !duration || !videoUrl) {
-      return res.status(400).json({ success: false, message: "lectureName, duration and videoUrl are required" });
+    // if (!lectureName || !duration || !videoUrl) {
+    //   return res.status(400).json({ success: false, message: "lectureName, duration and videoUrl are required" });
+    // }
+    if(!lectureName){
+      return res.status(400).json({ success: false, message: "lectureName is required" });
     }
 
     // Optional: Validate courseRef and subjectRef

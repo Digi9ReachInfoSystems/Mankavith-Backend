@@ -17,7 +17,7 @@ const noteSchema = new mongoose.Schema({
   },
   fileUrl: {
     type: String,
-    required: true,
+    required: false,
     validate: {
       validator: function (v) {
         return /^(ftp|http|https):\/\/[^ "]+$/.test(v);  // Validate URL format
@@ -28,7 +28,7 @@ const noteSchema = new mongoose.Schema({
   subjects: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Subject',  // Reference to the Subject model
-    required: true,
+    required: false,
   }],
 }, { timestamps: true });
 
