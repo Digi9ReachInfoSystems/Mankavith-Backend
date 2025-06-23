@@ -11,7 +11,7 @@ const courseSchema = new mongoose.Schema(
     category: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Category",
-      required: true
+      required: false
     },
     scheduled_class: {
       type: Map,
@@ -29,7 +29,7 @@ const courseSchema = new mongoose.Schema(
     },
     courseDisplayName: {
       type: String,
-      required: true,
+      required: false,
       trim: true
     },
     shortDescription: {
@@ -43,7 +43,7 @@ const courseSchema = new mongoose.Schema(
     },
     price: {
       type: Number,
-      required: true,
+      required: false,
       min: 0
     },
     duration: {
@@ -76,7 +76,7 @@ const courseSchema = new mongoose.Schema(
     },
     course_includes: [{
       type: String,
-      trim: true
+      trim: false
     }],
     course_rating: {
       type: Number,
@@ -87,11 +87,12 @@ const courseSchema = new mongoose.Schema(
     },
     student_feedback: [{
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Feedback"
+      ref: "Feedback",
+      required: false
     }],
     discountPrice: {
       type: Number,
-      required: true,
+      required: false,
       min: 0,
       validate: {
         validator: function (v) {
@@ -125,14 +126,16 @@ const courseSchema = new mongoose.Schema(
     subjects: [{
       type: mongoose.Schema.Types.ObjectId,
       ref: "Subject",
+      required: false,
     }],
     mockTests: [{
       type: mongoose.Schema.Types.ObjectId,
       ref: "MockTest",
+      required: false
     }],
     image: {
       type: String,
-      required: true,
+      required: false,
       validate: {
         validator: v => /^(http|https):\/\/[^ "]+$/.test(v),
         message: "Invalid image URL format"

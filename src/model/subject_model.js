@@ -14,43 +14,48 @@ const subjectSchema = new mongoose.Schema(
     },
     vimeoShowcaseID: {
       type: String, // The Vimeo Showcase ID to be used
-      required: true,
+      required: false,
     },
     subjectDisplayName: {
       type: String,
-      required: true,
+      required: false,
     },
     description: {
       type: String,
-      required: true,
+      required: false,
     },
     lectures: [
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Lecture",
+        required: false,
       },
     ],
     notes: [
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Note",
+        required: false,
       },
     ],
     mockTests: [
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "MockTest", // Reference to MockTest model
+        required: false
       },
     ],
     courses: [
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Course", // Reference to Course model
+        required: false
       },
     ],
     image: {
       type: String, // URL of the subject image
-      required: true,
+     
+      required: false
     },
   },
   { timestamps: true }

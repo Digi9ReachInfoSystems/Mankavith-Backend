@@ -13,16 +13,25 @@ const mongoose = require("mongoose");
 // @access  Private/Admin
 module.exports.createSubject = async (req, res) => {
   try {
+    // extract only subjectName for the required check
+    const { subjectName } = req.body;
+    if (!subjectName || typeof subjectName !== 'string' || !subjectName.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "subjectName is required",
+      });
+    }
+
+    // now pull in all other fields as optional, with defaults where appropriate
     const {
-      subjectName,
-      vimeoShowcaseID,
-      subjectDisplayName,
-      description,
-      notes,
-      mockTests,
-      courses,
-      image,
-      lectures
+      vimeoShowcaseID = null,
+      subjectDisplayName = '',
+      description = '',
+      notes = [],
+      mockTests = [],
+      courses = [],
+      image = null,
+      lectures = [],
     } = req.body;
 
     // Check if subject already exists
@@ -34,21 +43,20 @@ module.exports.createSubject = async (req, res) => {
       });
     }
 
-    // Validate courses if provided
-
     const newSubject = new Subject({
       subjectName,
       vimeoShowcaseID,
       subjectDisplayName,
       description,
-      notes: notes || [],
-      mockTests: mockTests || [],
-      courses: courses || [],
+      notes,
+      mockTests,
+      courses,
       image,
-      lectures: lectures || [],
+      lectures,
     });
 
     const savedSubject = await newSubject.save();
+
     return res.status(201).json({
       success: true,
       message: "Subject created successfully",
@@ -63,6 +71,7 @@ module.exports.createSubject = async (req, res) => {
     });
   }
 };
+
 
 // @desc    Get all subjects
 // @route   GET /api/subjects
