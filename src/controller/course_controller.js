@@ -366,7 +366,8 @@ exports.getCourseById = async (req, res) => {
         ]
       })
       .populate("category", "title")
-      .populate("student_feedback");
+      .populate("student_feedback")
+      .populate("recorded_sessions")
 
     if (!course) {
       return res.status(404).json({

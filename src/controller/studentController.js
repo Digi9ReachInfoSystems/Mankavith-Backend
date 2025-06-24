@@ -2,10 +2,11 @@ const Student = require("../model/studentModel");
 const User = require("../model/user_model");
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
+const KycDetails = require("../model/kycDetails");
 
 exports.createStudent = async (req, res) => {
     try {
-        const { email, password, phone, name, role = 'user', photo_url } = req.body;
+        const { email, password, phone, name, role = 'user', photo_url, first_name, last_name, age, id_proof, passport_photo } = req.body;
         const userExists = await User.findOne({ email });
         if (userExists) {
             return res
@@ -16,20 +17,37 @@ exports.createStudent = async (req, res) => {
         const user = new User({
             email,
             password: hashedPassword,
-            phone,
+            phone: phone.substring(3),
             displayName: name,
             role,
             photo_url,
             isEmailVerified: true,
         });
-        await user.save();
-        const student = new Student({
-            userRef: user._id,
+        const savedStudent = await user.save();
+        
+       
+
+        const kycDetails = new KycDetails({
+            userref: savedStudent._id,
+            first_name,
+            last_name,
+            email,
+            age,
+            mobile_number: phone,
+            id_proof,
+            passport_photo,
+            status: "approved"
         })
-        await student.save();
+        const savedKyc = await kycDetails.save();
+        console.log("savedKyc", savedKyc);
+        const userEdit = await User.findById(savedStudent._id);
+        userEdit.kycDetails = kycDetails._id;
+        userEdit.kyc_status = "approved";
+        await userEdit.save();
+
         res
             .status(200)
-            .json({ success: true, message: "Student created successfully", user, student });
+            .json({ success: true, message: "Student created successfully", user: userEdit, kycDetails: savedKyc });
 
     } catch (error) {
         console.error("Error creating student:", error.message);
