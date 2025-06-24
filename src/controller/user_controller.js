@@ -828,7 +828,7 @@ exports.getAllEnrolledCourses = async (req, res) => {
         .status(404)
         .json({ success: false, message: "User not found" });
     }
-    if (user.kyc_status !== "approved") return res.status(200).json({ success: true, enrolledCourses: [], message: "Please complete kyc to view Course" });
+    // if (user.kyc_status !== "approved") return res.status(200).json({ success: true, enrolledCourses: [], message: "Please complete kyc to view Course" });
     if (!user.subscription) return res.status(200).json({ success: true, enrolledCourses: [] });
     const subscribedCourses = user.subscription;
     let enrolledCourses = user.subscription.map(sub => sub.course_enrolled);
@@ -842,12 +842,16 @@ exports.getAllEnrolledCourses = async (req, res) => {
           ...plainCourse,
           course_status: courseProgress.status,
           completePercentage: courseProgress.completedPercentage,
+          kycStatus: course.isKycRequired ? (user.kyc_status === "approved" ? true : false) : true,
+          userKycStatus: user.kyc_status
         })
       } else {
         return ({
           ...plainCourse,
           course_status: "Not started",
           completePercentage: 0,
+          kycStatus: course.isKycRequired ? (user.kyc_status === "approved" ? true : false) : true,
+          userKycStatus: user.kyc_status
         })
       }
     }));
@@ -887,6 +891,8 @@ exports.getOngoingCourses = async (req, res) => {
           ...plainCourse,
           course_status: progress.status,
           completePercentage: progress.completedPercentage,
+          kycStatus: course.isKycRequired ? (user.kyc_status === "approved" ? true : false) : true,
+          userKycStatus: user.kyc_status
         };
       }
       return null;
@@ -927,6 +933,8 @@ exports.getCompletedCourses = async (req, res) => {
           ...plainCourse,
           course_status: progress.status,
           completePercentage: progress.completedPercentage,
+          kycStatus: course.isKycRequired ? (user.kyc_status === "approved" ? true : false) : true,
+          userKycStatus: user.kyc_status
         };
       }
       return null;
@@ -1069,7 +1077,7 @@ exports.addCourseSubscriptionToStudent = async (req, res) => {
       }
     }
     await user.save();
-    res.status(200).json({ success: true, message: "Courses added to student successfully" ,user:user});
+    res.status(200).json({ success: true, message: "Courses added to student successfully", user: user });
   } catch (error) {
     console.error("Error adding courses to student:", error.message);
     res.status(500).json({ success: false, message: "Server error", error: error.message });
