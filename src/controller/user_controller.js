@@ -6,6 +6,7 @@ const Course = require("../model/course_model");
 const mongoose = require("mongoose");
 const Student = require("../model/studentModel");
 const UserProgress = require("../model/userProgressModel");
+const KycDetails = require("../model/kycDetails");
 const generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000).toString(); // Generates a 6-digit OTP
 };
@@ -585,7 +586,7 @@ exports.getUserById = async (req, res) => {
   try {
     const { id } = req.params;
     const user = await User.findById(id)
-    .populate("subscription.course_enrolled");
+      .populate("subscription.course_enrolled");
     if (!user) {
       return res
         .status(404)
@@ -832,7 +833,7 @@ exports.getAllEnrolledCourses = async (req, res) => {
     const subscribedCourses = user.subscription;
     let enrolledCourses = user.subscription.map(sub => sub.course_enrolled);
     const userProgress = await UserProgress.findOne({ user_id: userId });
-    if(!userProgress) return res.status(200).json({ success: true, enrolledCourses});
+    if (!userProgress) return res.status(200).json({ success: true, enrolledCourses });
     enrolledCourses = await Promise.all(enrolledCourses.map(course => {
       const plainCourse = course.toObject();
       const courseProgress = userProgress.courseProgress.find((progress) => progress.course_id.equals(course._id));
@@ -983,7 +984,7 @@ exports.getNotStartedCourses = async (req, res) => {
 };
 exports.createStudent = async (req, res) => {
   try {
-    const { email, password, phone, name, role = 'user', photo_url } = req.body;
+    const { email, password, phone, name, role = 'user', photo_url, first_name, last_name, age, id_proof, passport_photo } = req.body;
     const userExists = await User.findOne({ email });
     if (userExists) {
       return res
@@ -994,14 +995,34 @@ exports.createStudent = async (req, res) => {
     const user = new User({
       email,
       password: hashedPassword,
-      phone,
+      phone: phone.substring(3),
       displayName: name,
       role,
       photo_url,
       isEmailVerified: true,
     });
-    await user.save();
-    res.status(201).json({ success: true, message: "Student created successfully", user });
+    const savedStudent = await user.save();
+
+    const kycDetails = new KycDetails({
+      userref: savedStudent._id,
+      first_name,
+      last_name,
+      email,
+      age,
+      mobile_number: phone,
+      id_proof,
+      passport_photo,
+      status: "approved"
+    })
+    const savedKyc = await kycDetails.save();
+    const userEdit = await User.findById(savedStudent._id);
+    userEdit.kycRef = kycDetails._id;
+    userEdit.kyc_status = "approved";
+    await userEdit.save();
+
+    res
+      .status(200)
+      .json({ success: true, message: "Student created successfully", user: userEdit, kycDetails: savedKyc });
   } catch (error) {
     console.error("Error creating student:", error.message);
     res.status(500).json({ success: false, message: "Server error", error: error.message });
@@ -1014,6 +1035,43 @@ exports.getAllStudents = async (req, res) => {
     res.status(200).json({ success: true, message: "Students fetched successfully", students });
   } catch (error) {
     console.error("Error fetching students:", error.message);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+};
+exports.addCourseSubscriptionToStudent = async (req, res) => {
+  try {
+    const { userId, courseIds } = req.body;
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+    if (!user.subscription) {
+      user.subscription = []; // Initialize if undefined
+    }
+    for (const courseId of courseIds) {
+      const course = await Course.findById(courseId);
+      if (!course) {
+        return res.status(404).json({ success: false, message: "Course not found" });
+      }
+      if (!course.student_enrolled) course.student_enrolled = [];
+      if (!course.student_enrolled.includes(user._id)) {
+        course.student_enrolled.push(user._id);
+      }
+      await course.save();
+      const found = user.subscription.find(sub => sub.course_enrolled.equals(course._id));
+      if (!found) {
+        user.subscription.push({
+          payment_id: null,
+          payment_Status: "success",
+          is_subscription_active: true,
+          course_enrolled: course._id
+        });
+      }
+    }
+    await user.save();
+    res.status(200).json({ success: true, message: "Courses added to student successfully" ,user:user});
+  } catch (error) {
+    console.error("Error adding courses to student:", error.message);
     res.status(500).json({ success: false, message: "Server error", error: error.message });
   }
 };

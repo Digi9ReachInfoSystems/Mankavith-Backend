@@ -20,4 +20,5 @@ router.post("/completeEvaluation", attemptController.completeUserAttemptsEvaluat
 router.post("/get/attemptbySubject", attemptController.getUserAttemptsBySubject);
 router.get("/get/userAllAttempts/:user_id", attemptController.getAttemptsByUserId);
 router.get("/get/getAll/userAttempts", attemptController.getAllAttempts);
+router.delete("/delete/attempts", attemptController.deleteUserAttempt);
 module.exports = router;

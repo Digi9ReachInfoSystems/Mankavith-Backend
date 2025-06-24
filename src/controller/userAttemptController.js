@@ -483,25 +483,28 @@ async function updateRankings(attempt) {
         },
         { $set: { isBestAttempt: false } }
     );
+    if (bestAttempt) {
 
-    bestAttempt.isBestAttempt = true;
-    await bestAttempt.save();
+        bestAttempt.isBestAttempt = true;
+        await bestAttempt.save();
 
-    // Update or create ranking
-    const ranking = await UserRanking.findOneAndUpdate(
-        {
-            userId: attempt.userId,
-            mockTestId: attempt.mockTestId,
-            subject: attempt.subject
-        },
-        {
-            bestAttemptId: bestAttempt._id,
-            bestScore: bestAttempt.totalMarks,
-            attemptsCount: attempts.length,
-            lastUpdated: new Date()
-        },
-        { upsert: true, new: true }
-    );
+
+        // Update or create ranking
+        const ranking = await UserRanking.findOneAndUpdate(
+            {
+                userId: attempt.userId,
+                mockTestId: attempt.mockTestId,
+                subject: attempt.subject
+            },
+            {
+                bestAttemptId: bestAttempt._id,
+                bestScore: bestAttempt.totalMarks,
+                attemptsCount: attempts.length,
+                lastUpdated: new Date()
+            },
+            { upsert: true, new: true }
+        );
+    }
 
     // Recalculate all rankings for this test and course
     await recalculateTestRankings(attempt.mockTestId, attempt.subject);
@@ -869,7 +872,7 @@ exports.getAttemptsByUserId = async (req, res) => {
 };
 exports.getAllAttempts = async (req, res) => {
     try {
-        const attempts = await UserAttempt.find({$or: [{ status: 'submitted' }, { status: 'evaluated' }, { status: 'evaluating' }]})
+        const attempts = await UserAttempt.find({ $or: [{ status: 'submitted' }, { status: 'evaluated' }, { status: 'evaluating' }] })
             .populate({
                 path: 'mockTestId',
                 populate: {
@@ -879,6 +882,26 @@ exports.getAllAttempts = async (req, res) => {
             .populate('subject')
             .populate('userId');
         res.status(200).json({ success: true, data: attempts });
+    } catch (err) {
+        console.error("Error:", err);
+        res.status(500).json({ success: false, message: 'Internal error' });
+    }
+};
+
+exports.deleteUserAttempt = async (req, res) => {
+    try {
+        const { attemptId } = req.body;
+        const attempt = await UserAttempt.findByIdAndDelete(attemptId);
+        const userRanking = await UserRanking.findOneAndDelete({ userId: attempt.userId, subject: attempt.subject,bestAttemptId: attempt._id });
+        const userAttempts = await UserAttempt.find({ userId: attempt.userId, attemptNumber: { $gt: attempt.attemptNumber }, subject: attempt.subject, });
+        for (let i = 0; i < userAttempts.length; i++) {
+            userAttempts[i].attemptNumber -= 1;
+            await userAttempts[i].save();
+        }
+
+        if (!attempt) return res.status(404).json({ success: false, message: 'Attempt not found' });
+        const result = await updateRankings(attempt);
+        res.status(200).json({ success: true, message: 'Attempt deleted successfully', data: attempt });
     } catch (err) {
         console.error("Error:", err);
         res.status(500).json({ success: false, message: 'Internal error' });
