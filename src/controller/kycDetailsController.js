@@ -14,7 +14,7 @@ exports.createKyc = async (req, res) => {
       passport_photo,
       userref,
     } = req.body;
-console.log("req.body",req.body);
+    console.log("req.body", req.body);
     // Validate required fields
     if (
       !first_name ||
@@ -35,9 +35,29 @@ console.log("req.body",req.body);
     // Check if KYC already exists for this user
     const existingKyc = await Kyc.findOne({ userref });
     if (existingKyc) {
-      return res.status(400).json({
-        success: false,
-        message: "KYC record already exists for this user",
+      existingKyc.first_name = first_name;
+      existingKyc.last_name = last_name;
+      existingKyc.age = age;
+      existingKyc.email = email;
+      existingKyc.mobile_number = mobile_number;
+      existingKyc.id_proof = id_proof;
+      existingKyc.passport_photo = passport_photo;
+      const updatedKyc = await existingKyc.save();
+      const user = await User.findById(userref);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: "User not found",
+        });
+      }
+      user.kycRef = existingKyc._id;
+      user.kyc_status = "pending"; // Set initial KYC status
+      await user.save();
+      return res.status(200).json({
+        success: true,
+        message: "KYC record updated successfully",
+        data: updatedKyc,
+        user: user,
       });
     }
 
@@ -170,7 +190,7 @@ exports.updateKycStatus = async (req, res) => {
         message: "User not found",
       });
     }
-    user.kyc_status =status;
+    user.kyc_status = status;
     await user.save();
     if (!updatedKyc) {
       return res.status(404).json({
@@ -253,7 +273,7 @@ exports.getKycByUser = async (req, res) => {
     });
   }
 };
-exports.updateKyc=async (req, res) => {
+exports.updateKyc = async (req, res) => {
   try {
     const kycId = req.params.id;
     const {
@@ -267,7 +287,7 @@ exports.updateKyc=async (req, res) => {
     } = req.body;
 
     // Validate required fields
-    const kyc= await Kyc.findById(kycId);
+    const kyc = await Kyc.findById(kycId);
     if (!kyc) {
       return res.status(404).json({
         success: false,
@@ -281,10 +301,10 @@ exports.updateKyc=async (req, res) => {
     kyc.mobile_number = mobile_number || kyc.mobile_number;
     kyc.id_proof = id_proof || kyc.id_proof;
     kyc.passport_photo = passport_photo || kyc.passport_photo;
-    
+
 
     const updatedKyc = await kyc.save();
-    
+
 
     if (!updatedKyc) {
       return res.status(404).json({

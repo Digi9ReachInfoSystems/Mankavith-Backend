@@ -5,7 +5,9 @@ const Student = require("../model/studentModel");
 const mongoose = require("mongoose");
 const jwt = require("jsonwebtoken");
 const KJUR = require("jsrsasign");
-
+const Course = require("../model/course_model");
+const User = require("../model/user_model");
+const { inNumberArray, isBetween, isRequiredAllOrNone, validateRequest } = require("../utils/validations");
 /* -------------------------------------------------------------------------- */
 /*                               Zoom token helper                            */
 /* -------------------------------------------------------------------------- */
@@ -143,10 +145,12 @@ exports.getAllmeetings = async (req, res) => {
     if (from || to) filter.meeting_time = {};
     if (from) filter.meeting_time.$gte = new Date(from);
     if (to) filter.meeting_time.$lte = new Date(to);
+    console.log("filter", filter);
 
     const meetings = await Meeting.find(filter)
       .sort({ meeting_time: 1 }) // ascending
-      .populate("course_Ref", "name") // return only course name
+      .populate("course_Ref") // return only course name
+      .populate("students") // return each student’s userRef
       .lean();
 
     res.json(meetings);
@@ -298,12 +302,12 @@ const getAuthHeaders = () => {
 const generateZoomAccessToken = async () => {
   try {
     const response = await axios.post(
-  `https://zoom.us/oauth/token?grant_type=account_credentials&account_id=${zoomAccountId}`,
-  null, // No request body needed for this POST request
-  {
-    headers: getAuthHeaders()
-  }
-);
+      `https://zoom.us/oauth/token?grant_type=account_credentials&account_id=${zoomAccountId}`,
+      null, // No request body needed for this POST request
+      {
+        headers: getAuthHeaders()
+      }
+    );
 
     const jsonResponse = await response.data;
 
@@ -318,68 +322,68 @@ exports.generateZoomMeeting = async (req, res) => {
   try {
     const zoomAccessToken = await generateZoomAccessToken();
 
-   const response = await axios.post(
-  'https://api.zoom.us/v2/users/me/meetings',
-  {
-    agenda: "Zoom Meeting for YT Demo",
-    default_password: false,
-    duration: 60,
-    password: "12345",
-    settings: {
-      allow_multiple_devices: true,
-      // alternative_hosts: "jayanthbr@digi9.co.in",
-      // alternative_hosts_email_notification: true,
-      breakout_room: {
-        enable: true,
-        rooms: [
-          {
-            name: "room1",
-            participants: [
-              "email1@gmail.com",
-              "email2@gmail.com",
+    const response = await axios.post(
+      'https://api.zoom.us/v2/users/me/meetings',
+      {
+        agenda: "Zoom Meeting for YT Demo",
+        default_password: false,
+        duration: 60,
+        password: "12345",
+        settings: {
+          allow_multiple_devices: true,
+          // alternative_hosts: "jayanthbr@digi9.co.in",
+          // alternative_hosts_email_notification: true,
+          breakout_room: {
+            enable: true,
+            rooms: [
+              {
+                name: "room1",
+                participants: [
+                  "email1@gmail.com",
+                  "email2@gmail.com",
+                ],
+              },
             ],
           },
-        ],
-      },
-      calendar_type: 1,
-      contact_email: "jayanthbr@digi9.co.in",
-      contact_name: "Ajay Sharma",
-      email_notification: true,
-      encryption_type: "enhanced_encryption",
-      focus_mode: true,
-      host_video: true,
-      join_before_host: true,
-      meeting_authentication: true,
-      meeting_invitees: [
-        {
-          email: "jayanthbr@digi9.co.in",
+          calendar_type: 1,
+          contact_email: "jayanthbr@digi9.co.in",
+          contact_name: "Ajay Sharma",
+          email_notification: true,
+          encryption_type: "enhanced_encryption",
+          focus_mode: true,
+          host_video: true,
+          join_before_host: true,
+          meeting_authentication: true,
+          meeting_invitees: [
+            {
+              email: "jayanthbr@digi9.co.in",
+            },
+          ],
+          mute_upon_entry: true,
+          participant_video: true,
+          private_meeting: true,
+          waiting_room: false,
+          watermark: false,
+          continuous_meeting_chat: {
+            enable: true,
+          },
         },
-      ],
-      mute_upon_entry: true,
-      participant_video: true,
-      private_meeting: true,
-      waiting_room: false,
-      watermark: false,
-      continuous_meeting_chat: {
-        enable: true,
+        start_time: new Date().toLocaleDateString(),
+        timezone: "Asia/Kolkata",
+        topic: "Zoom Meeting for YT Demo",
+        type: 2,
       },
-    },
-    start_time: new Date().toLocaleDateString(),
-    timezone: "Asia/Kolkata",
-    topic: "Zoom Meeting for YT Demo",
-    type: 2,
-  },
-  {
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${zoomAccessToken}`
-    }
-  }
-);
+      {
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${zoomAccessToken}`
+        }
+      }
+    );
 
-// Access response data with response.data
+    // Access response data with response.data
 
-    const jsonResponse =  response.data; 
+    const jsonResponse = response.data;
 
     console.log("generateZoomMeeting JsonResponse --> ", jsonResponse);
     res.status(200).json({
@@ -391,3 +395,149 @@ exports.generateZoomMeeting = async (req, res) => {
     throw error;
   }
 };
+
+exports.getUpcomingAndOngoingMeetings = async (req, res) => {
+  try {
+    const { courseIds, studentId } = req.body;
+    const now = new Date();
+    const fiveMinutesLater = new Date(now.getTime() + 5 * 60000);
+
+
+    // First get all meetings for these courses that might be relevant
+    const meetings = await Meeting.find({
+      course_Ref: { $in: courseIds },
+      students: { $in: [studentId] },
+      $or: [
+        // Meetings starting in next 5 minutes
+        {
+          meeting_time: {
+            $gte: now,
+            $lte: fiveMinutesLater
+          }
+        },
+        // Meetings that have started but might still be ongoing
+        {
+          meeting_time: { $lte: now }
+        }
+      ]
+    }).populate("course_Ref students");
+    // console.log("getUpcomingAndOngoingMeetings Meetings --> ", meetings);
+
+    // Then filter in JavaScript to find ongoing meetings
+    const results = meetings.filter(meeting => {
+      // Parse duration (ensure it's a number)
+      const durationMinutes = Number(meeting.meeting_duration) || 0;
+      const endTime = new Date(meeting.meeting_time.getTime() + durationMinutes * 60000);
+
+      return (
+        // Either starting in next 5 minutes
+        (meeting.meeting_time >= now && meeting.meeting_time <= fiveMinutesLater) ||
+        // Or started but not ended
+        (meeting.meeting_time <= now && endTime >= now)
+      );
+    });
+
+    res.status(200).json({
+      message: "Upcoming and ongoing meetings fetched successfully",
+      data: results,
+    });
+
+  } catch (error) {
+    console.error("getUpcomingAndOngoingMeetings Error --> ", error);
+    res.status(500).json({
+      message: "Error fetching meetings",
+      error: error.message
+    });
+  }
+}
+
+exports.getALLUpcomingMeetings = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const user = await User.findById(userId);
+
+    let courseId = await Promise.all(user.subscription.map(async (subscription) => {
+      const course = await Course.findById(subscription.course_enrolled);
+      if (course.isKycRequired) {
+        if (user.kyc_status != "rejected" && user.kyc_status != "not-applied") {
+          return course._id
+        } else {
+          return null
+        }
+      } else {
+        return course._id
+      }
+
+    }))
+
+    courseId = courseId.filter((course) => course !== null);
+    const meetings = await Meeting.find(
+      {
+        course_Ref: { $in: courseId },
+        meeting_time: {
+          $gte: new Date(),
+        },
+      }
+    ).populate("course_Ref students");
+    res.status(200).json({
+      message: "All upcoming meetings fetched successfully",
+      data: meetings,
+    });
+  } catch (error) {
+    console.error("getALLUpcomingMeetings Error --> ", error);
+    res.status(500).json({
+      message: "Error fetching meetings",
+      error: error.message
+    });
+  }
+};
+
+exports.generateMeetingSugnature = async (req, res) => {
+  try {
+    const requestBody = coerceRequestBody(req.body)
+    const validationErrors = validateRequest(requestBody, propValidations, schemaValidations)
+
+    if (validationErrors.length > 0) {
+      return res.status(400).json({ errors: validationErrors })
+    }
+
+    const { meetingNumber, role, expirationSeconds, videoWebRtcMode } = requestBody
+    const iat = Math.floor(Date.now() / 1000)
+    const exp = expirationSeconds ? iat + expirationSeconds : iat + 60 * 60 * 2
+    const oHeader = { alg: 'HS256', typ: 'JWT' }
+
+    const oPayload = {
+      appKey: process.env.ZOOM_MEETING_SDK_KEY,
+      sdkKey: process.env.ZOOM_MEETING_SDK_KEY,
+      mn: meetingNumber,
+      role,
+      iat,
+      exp,
+      tokenExp: exp,
+      video_webrtc_mode: videoWebRtcMode
+    }
+
+    const sHeader = JSON.stringify(oHeader)
+    const sPayload = JSON.stringify(oPayload)
+    const sdkJWT = KJUR.jws.JWS.sign('HS256', sHeader, sPayload, process.env.ZOOM_MEETING_SDK_SECRET)
+    return res.json({ signature: sdkJWT, sdkKey: process.env.ZOOM_MEETING_SDK_KEY })
+
+  } catch (error) {
+    res.status(500).json({ success: false, error: "Failed to generate Zoom signature.".error });
+  }
+};
+const propValidations = {
+  role: inNumberArray([0, 1]),
+  expirationSeconds: isBetween(1800, 172800),
+  videoWebRtcMode: inNumberArray([0, 1])
+}
+
+const schemaValidations = [isRequiredAllOrNone(['meetingNumber', 'role'])]
+
+const coerceRequestBody = (body) => ({
+  ...body,
+  ...['role', 'expirationSeconds', 'videoWebRtcMode'].reduce(
+    (acc, cur) => ({ ...acc, [cur]: typeof body[cur] === 'string' ? parseInt(body[cur]) : body[cur] }),
+    {}
+  )
+})

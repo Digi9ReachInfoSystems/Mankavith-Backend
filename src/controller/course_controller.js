@@ -131,7 +131,8 @@ exports.getAllCourses = async (req, res) => {
 
     const courses = await Course.find(query).populate("student_feedback")
       .populate("subjects", "subjectName")
-      .populate("category", "title");
+      .populate("category", "title")
+      .populate("student_enrolled");
 
     return res.status(200).json({
       success: true,
