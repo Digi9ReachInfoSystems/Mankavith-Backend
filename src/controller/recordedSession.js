@@ -114,7 +114,8 @@ exports.getRecordedSessionById = async (req, res) => {
 exports.updateRecordedSession = async (req, res) => {
   try {
     const sessionId = req.params.id;
-    const { title, description, videoUrl, duration } = req.body;
+    const { title, description, videoUrl, duration, course_ref } = req.body;
+    console.log(req.body);
 
     // Validate at least one field is provided
     if (!title && !description && !videoUrl && !duration) {
@@ -130,6 +131,31 @@ exports.updateRecordedSession = async (req, res) => {
     if (description) updateData.description = description;
     if (videoUrl) updateData.videoUrl = videoUrl;
     if (duration) updateData.duration = duration;
+
+    const recordedSession = await RecordedSession.findById(sessionId);
+    if (!recordedSession) {
+      return res.status(404).json({
+        success: false,
+        message: "Recorded session not found",
+      });
+    }
+    console.log("recordedSession", recordedSession);
+    await Promise.all(recordedSession.course_ref.map(async (courseId) => {
+      const course = await Course.findById(courseId);
+      course.recorded_sessions.pull(sessionId);
+      await course.save();
+    }))
+
+    if (course_ref.length > 0) {
+      console.log("course_ref", course_ref);
+      course_ref.map(async (course_ref) => {
+
+        const course = await Course.findById(course_ref);
+        course.recorded_sessions.push(sessionId);
+        await course.save();
+      })
+      updateData.course_ref = course_ref;
+    }
 
     const updatedSession = await RecordedSession.findByIdAndUpdate(
       sessionId,
@@ -163,6 +189,20 @@ exports.updateRecordedSession = async (req, res) => {
 exports.deleteRecordedSession = async (req, res) => {
   try {
     const sessionId = req.params.id;
+    const session = await RecordedSession.findById(sessionId);
+
+    if (!session) {
+      return res.status(404).json({
+        success: false,
+        message: "Recorded session not found",
+      });
+    }
+
+    await Promise.all(session.course_ref.map(async (courseId) => {
+      const course = await Course.findById(courseId);
+      course.recorded_sessions.pull(sessionId);
+      await course.save();
+    }))
 
     const deletedSession = await RecordedSession.findByIdAndDelete(sessionId);
 
