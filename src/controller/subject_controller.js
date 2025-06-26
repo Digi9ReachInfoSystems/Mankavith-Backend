@@ -4,6 +4,7 @@ const Course = require("../model/course_model.js");
 const notes = require("../model/notes_model.js");
 const lectures = require("../model/lecturesModel.js");
 const mongoose = require("mongoose");
+const { applyTimestamps } = require("../model/courseProgressModel.js");
 
 
 
@@ -114,11 +115,27 @@ module.exports.getSubjectById = async (req, res) => {
       });
     }
 
-    const subject = await Subject.findById(id)
+    let subject = await Subject.findById(id)
       .populate("courses")
       .populate("notes")
       .populate("lectures", "lectureName duration videoUrl description")
       .populate("mockTests");
+
+    const mockTests = subject.mockTests.map(test => {
+      
+      const number_of_questions = test.questions?.length;
+      const number_of_subjective_questions = test?.questions.filter(q => q.type === 'subjective')?.length || 0;
+      const number_of_mcq_questions = test?.questions.filter(q => q.type === 'mcq')?.length || 0;
+  //  console.log("test",test  );
+      return ({
+          ...test._doc,
+        number_of_questions,
+        number_of_subjective_questions,
+        number_of_mcq_questions
+      });
+    })
+    const temp={...subject._doc};  
+    temp.mockTests = mockTests;
 
     if (!subject) {
       return res.status(404).json({
@@ -129,8 +146,8 @@ module.exports.getSubjectById = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      data: subject,
-    });
+      data: temp,
+        });
   } catch (error) {
     console.error("Error fetching subject:", error);
     return res.status(500).json({
