@@ -1,11 +1,11 @@
 const mongoose = require("mongoose");
 
 const recordedSessionSchema = new mongoose.Schema({
-  course_ref: {
+  course_ref:[ {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Course",
     required: true,
-  },
+  }],
   title: {
     type: String,
     required: true,
