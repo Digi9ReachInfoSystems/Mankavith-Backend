@@ -4,7 +4,9 @@ const Subject = require("../model/subject_model");
 const User = require("../model/user_model");
 const UserProgress = require("../model/userProgressModel");
 const Feedback = require("../model/feedback");
-
+const RecordedSession = require("../model/recorded_sessionModel");
+const CourseProgress = require("../model/courseProgressModel");
+const Meeting = require("../model/meetingsModel");
 // Create a new course (updated for category reference)
 exports.createCourse = async (req, res) => {
   try {
@@ -92,9 +94,13 @@ exports.searchCourses = async (req, res) => {
       query.category = category;
     }
 
-    const courses = await Course.find(query).populate("student_feedback")
-      .populate("subjects", "subjectName")
-      .populate("category", "title")
+    const courses = await Course.find(query)
+      .populate("subjects",)
+      .populate("category",)
+      .populate("student_feedback")
+      .populate("student_enrolled")
+      .populate("mockTests")
+      .populate("recorded_sessions")
       .sort({ courseName: 1 });
 
     return res.status(200).json({
@@ -129,10 +135,31 @@ exports.getAllCourses = async (req, res) => {
       query.category = category;
     }
 
-    const courses = await Course.find(query).populate("student_feedback")
-      .populate("subjects", "subjectName")
-      .populate("category", "title")
-      .populate("student_enrolled");
+    const courses = await Course.find(query)
+      .populate({
+        path: "subjects",
+        select: "subjectName image description lectures notes",
+        populate: [
+          {
+            path: "lectures",
+            // select: "_id"
+          },
+          {
+            path: "notes",
+            // select: "_id"
+          },
+          {
+            path: "mockTests",
+            // select: "_id"
+          }
+
+        ]
+      })
+      .populate("category",)
+      .populate("student_feedback")
+      .populate("student_enrolled")
+      .populate("mockTests")
+      .populate("recorded_sessions")
 
     return res.status(200).json({
       success: true,
@@ -165,9 +192,13 @@ exports.getCoursesByCategory = async (req, res) => {
     }
 
     // Find courses that reference this category
-    const courses = await Course.find({ category: category._id }).populate("student_feedback")
-      .populate("subjects", "subjectName")
-      .populate("category", "title");
+    const courses = await Course.find({ category: category._id })
+      .populate("subjects",)
+      .populate("category",)
+      .populate("student_feedback")
+      .populate("student_enrolled")
+      .populate("mockTests")
+      .populate("recorded_sessions")
 
     return res.status(200).json({
       success: true,
@@ -366,7 +397,7 @@ exports.getCourseById = async (req, res) => {
           }
         ]
       })
-      .populate("category", "title")
+      .populate("category")
       .populate("student_feedback")
       .populate("recorded_sessions")
 
@@ -421,6 +452,43 @@ exports.getCourseById = async (req, res) => {
 exports.deleteCourse = async (req, res) => {
   try {
     const courseId = req.params.id;
+    const course = await Course.findById(courseId);
+
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: "Course not found",
+      });
+    }
+    await Promise.all(
+      course.subjects.map(async (subjectId) => {
+        const subject = await Subject.findById(subjectId);
+        subject.courses.pull(courseId);
+        await subject.save();
+
+      }))
+    await Promise.all(
+      course.recorded_sessions.map(async (sessionId) => {
+        const session = await RecordedSession.findById(sessionId);
+        session.courses.pull(courseId);
+        await session.save();
+      })
+    )
+    await Promise.all(
+      course.student_feedback.map(async (feedbackId) => {
+        const feedback = await Feedback.findByIdAndDelete(feedbackId);
+      })
+    )
+    const courseProgress = await CourseProgress.findOneAndDelete({ course_id: courseId });
+
+    const meeting = await Meeting.findOneAndDelete({ course_Ref: courseId });
+    await Promise.all(
+      course.students.map(async (studentId) => {
+        const student = await User.findById(studentId);
+        student.subscription = student.subscription.filter(sub => !sub.course_enrolled.equals(courseId));
+        await student.save();
+      })
+    )
 
     const deletedCourse = await Course.findByIdAndDelete(courseId);
 
