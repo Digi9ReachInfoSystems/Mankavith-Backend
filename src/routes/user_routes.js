@@ -33,6 +33,7 @@ router.get("/get/notStartedEnrolledCourses/:userId", userController.getNotStarte
 router.post("/createStudent", userController.createStudent);
 router.get("/get/all/students", userController.getAllStudents);
 router.put("/addCourseToStudent", userController.addCourseSubscriptionToStudent);
+router.delete("/deleteUser/:id", userController.deleteUserById);
 module.exports = router;
 
 module.exports = router;

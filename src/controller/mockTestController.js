@@ -2,6 +2,8 @@ const MockTest = require('../model/mockTestModel');
 const Subject = require('../model/subject_model');
 // const UserAttempt = require('../models/UserAttempt');
 // const UserRanking = require('../models/UserRanking');
+const User = require('../model/user_model');
+const Course = require('../model/course_model');
 
 // Admin: Create a new mock test
 exports.createMockTest = async (req, res) => {
@@ -15,7 +17,7 @@ exports.createMockTest = async (req, res) => {
         message: 'End date must be after start date'
       });
     }
-    let totalMarks=0;
+    let totalMarks = 0;
     // Calculate total marks
     if (questions?.length > 0) {
       totalMarks = questions.reduce((sum, q) => sum + q.marks, 0);
@@ -106,7 +108,12 @@ exports.getMockTest = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      data: test
+      data: {
+        ...test._doc,
+        number_of_questions: test.questions?.length,
+        number_of_subjective_questions: test?.questions.filter(q => q.type === 'subjective')?.length || 0,
+        number_of_mcq_questions: test?.questions.filter(q => q.type === 'mcq')?.length || 0
+      }
     });
   } catch (err) {
     res.status(500).json({
@@ -413,3 +420,52 @@ exports.editQuestionInMockTest = async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to update question' });
   }
 };
+
+exports.getAllUpcomingMockTests = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const user = await User.findById(userId);
+    let courseIds = await Promise.all(user.subscription.map(async (subscription) => {
+      const course = await Course.findById(subscription.course_enrolled);
+      if (course.isKycRequired) {
+        if (user.kyc_status != "rejected" && user.kyc_status != "not-applied") {
+          return course._id
+        } else {
+          return null
+        }
+      } else {
+        return course._id
+      }
+
+    }))
+
+    courseIds = courseIds.filter((course) => course !== null);
+    const subjectIds = [];
+
+    await Promise.all(
+      courseIds.map(async (courseId) => {
+        const course = await Course.findById(courseId);
+        if (course?.subjects) {
+          course.subjects.forEach(subject => {
+            const idStr = subject.toString();
+            if (!subjectIds.includes(idStr)) {
+              subjectIds.push(idStr);
+            }
+          });
+        }
+      })
+    );
+    const tests = await MockTest.find({ subject: { $in: subjectIds }, startDate: { $gte: new Date() }, isPublished: true }).populate("subject");
+    res.status(200).json({
+      success: true,
+      message: "upcoming mock tests fetched successfully",
+      data: tests
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+
+      message: err.message
+    });
+  }
+}

@@ -7,6 +7,14 @@ const mongoose = require("mongoose");
 const Student = require("../model/studentModel");
 const UserProgress = require("../model/userProgressModel");
 const KycDetails = require("../model/kycDetails");
+const Support = require("../model/supportModel");
+const CourseProgress = require("../model/courseProgressModel");
+const UserAttempt = require('../model/userAttemptModel');
+const MockTest = require('../model/mockTestModel');
+const UserRanking = require('../model/userRankingModel');
+const Payments = require('../model/paymentModel');
+const Certificate = require('../model/certificatesModel');
+const Feedback = require('../model/feedback');
 const generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000).toString(); // Generates a 6-digit OTP
 };
@@ -1083,3 +1091,155 @@ exports.addCourseSubscriptionToStudent = async (req, res) => {
     res.status(500).json({ success: false, message: "Server error", error: error.message });
   }
 };
+exports.deleteUserById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+    user.subscription.forEach(async (sub) => {
+      const course = await Course.findById(sub.course_enrolled);
+      const courseProgress = await CourseProgress.findOne({ course_id: sub.course_enrolled });
+      courseProgress.progress.filter((progress) => !progress.user_id.equals(id));
+      await courseProgress.save();
+      if (course) {
+
+        course.student_enrolled = course.student_enrolled.filter(
+          (studentId) => !studentId.equals(id)
+        );
+        await course.save();
+      }
+    })
+    const attempts = await UserAttempt.find({ userId: user._id });
+    const deletedKyc = await KycDetails.findOneAndDelete({ userref: user._id });
+    const deletedSupport = await Support.find({ userRef: user._id });
+    deletedSupport.forEach(async (support) => {
+      await Support.findByIdAndDelete(support._id);
+    })
+    const userProgress = await UserProgress.findOneAndDelete({ user_id: user._id });
+    const payments = await Payments.find({ userRef: user._id });
+    payments.forEach(async (payment) => {
+      await Payments.findByIdAndDelete(payment._id);
+    })
+    const certificates = await Certificate.find({ user_ref: user._id });
+    certificates.forEach(async (certificate) => {
+      await Certificate.findByIdAndDelete(certificate._id);
+    })
+    attempts.forEach(async (attemptID) => {
+      const attempt = await UserAttempt.findByIdAndDelete(attemptID._id);
+      const userRanking = await UserRanking.findOneAndDelete({ userId: attempt.userId, subject: attempt.subject, bestAttemptId: attempt._id });
+      const userAttempts = await UserAttempt.find({ userId: attempt.userId, attemptNumber: { $gt: attempt.attemptNumber }, subject: attempt.subject, });
+      for (let i = 0; i < userAttempts.length; i++) {
+        userAttempts[i].attemptNumber -= 1;
+        await userAttempts[i].save();
+      }
+      const result = await updateRankings(attempt);
+
+    })
+    const feedbacks = await Feedback.find({ userRef: user._id });
+    feedbacks.forEach(async (feedback) => {
+      const course = await Course.findById(feedback.courseRef);
+      if (course) {
+        course.student_feedback = course.student_feedback.filter(
+          (feedbackId) => !feedbackId.equals(feedback._id)
+        );
+        await course.save();
+      }
+      await Feedback.findByIdAndDelete(feedback._id);
+
+    })
+    const deletedUser = await User.findByIdAndDelete(user._id);
+    res.status(200).json({
+      success: true,
+      message: "User deleted successfully",
+      user: deletedUser,
+      kyc: deletedKyc,
+      Support: deletedSupport,
+      UserProgress: userProgress,
+      attempts,
+      Payments: payments,
+      Certificates: certificates,
+      Feedbacks: feedbacks,
+
+    });
+  } catch (error) {
+    console.error("Error deleting user:", error.message);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+
+}
+async function updateRankings(attempt) {
+  // Get all evaluated attempts for this user, test, and course
+  const attempts = await UserAttempt.find({
+    userId: attempt.userId,
+    mockTestId: attempt.mockTestId,
+    courseId: attempt.courseId,
+    status: 'evaluated',
+    isWithinTestWindow: true
+  });
+
+  // Find best attempt (highest score, earliest submission for ties)
+  let bestAttempt = attempts.reduce((best, current) => {
+    if (current.totalMarks > best.totalMarks) return current;
+    if (current.totalMarks === best.totalMarks &&
+      current.submittedAt < best.submittedAt) return current;
+    return best;
+  }, attempts[0]);
+
+  // Update all attempts to mark which is best
+  await UserAttempt.updateMany(
+    {
+      userId: attempt.userId,
+      mockTestId: attempt.mockTestId,
+      courseId: attempt.courseId
+    },
+    { $set: { isBestAttempt: false } }
+  );
+  if (bestAttempt) {
+
+    bestAttempt.isBestAttempt = true;
+    await bestAttempt.save();
+
+
+    // Update or create ranking
+    const ranking = await UserRanking.findOneAndUpdate(
+      {
+        userId: attempt.userId,
+        mockTestId: attempt.mockTestId,
+        subject: attempt.subject
+      },
+      {
+        bestAttemptId: bestAttempt._id,
+        bestScore: bestAttempt.totalMarks,
+        attemptsCount: attempts.length,
+        lastUpdated: new Date()
+      },
+      { upsert: true, new: true }
+    );
+  }
+
+  // Recalculate all rankings for this test and course
+  await recalculateTestRankings(attempt.mockTestId, attempt.subject);
+}
+
+async function recalculateTestRankings(mockTestId, subject) {
+  const rankings = await UserRanking.find({
+    mockTestId,
+    subject
+  }).sort({ bestScore: -1, lastUpdated: 1 });
+
+  let currentRank = 1;
+  for (let i = 0; i < rankings.length; i++) {
+    // Same rank for same scores
+    if (i > 0 && rankings[i].bestScore === rankings[i - 1].bestScore) {
+      rankings[i].rank = rankings[i - 1].rank;
+    } else {
+      rankings[i].rank = currentRank;
+    }
+    currentRank++;
+
+    await rankings[i].save();
+  }
+}
+
