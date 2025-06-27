@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const authenticateJWT = require("../middleware/authenticator");
 const userController = require("../controller/user_controller");
+const allowedRoles = require("../middleware/roleMiddleware");
 
 router.post("/register", userController.register);
 router.post("/login", userController.login);
@@ -34,6 +35,8 @@ router.post("/createStudent", userController.createStudent);
 router.get("/get/all/students", userController.getAllStudents);
 router.put("/addCourseToStudent", userController.addCourseSubscriptionToStudent);
 router.delete("/deleteUser/:id", userController.deleteUserById);
+router.post("/verifyRoles",authenticateJWT,allowedRoles(["admin", "user"]), userController.verifyUserRoles);
+router.put("/removeCourseFromStudent", userController.removeCourseSubscriptionToStudent);
 module.exports = router;
 
 module.exports = router;
