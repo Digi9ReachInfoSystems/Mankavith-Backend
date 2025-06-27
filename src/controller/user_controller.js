@@ -165,13 +165,13 @@ exports.login = async (req, res) => {
     const expiryDate = new Date(expiryTime);
 
     const accessToken = jwt.sign(
-      { username: user.email },
+      { username: user.email, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: "1h" }
     );
     user.accessToken = accessToken;
     const refreshToken = jwt.sign(
-      { username: user.email },
+      { username: user.email, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
@@ -233,12 +233,12 @@ exports.verifyOTP = async (req, res) => {
     user.otp = undefined;
     user.otpExpiration = undefined;
     const accessToken = jwt.sign(
-      { username: user.email },
+      { username: user.email, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: "1h" }
     );
     const refreshToken = jwt.sign(
-      { username: user.email },
+      { username: user.email, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
@@ -357,7 +357,7 @@ exports.refreshToken = async (req, res) => {
       }
 
       const newAccessToken = jwt.sign(
-        { username: user.email },
+        { username: user.email, role: user.role },
         process.env.JWT_SECRET,
         { expiresIn: "1h" }
       );
@@ -462,12 +462,12 @@ exports.verifyLoginOtp = async (req, res) => {
     const expiryTime = Date.now() + 3600 * 1000;
     const expiryDate = new Date(expiryTime);
     const accessToken = jwt.sign(
-      { username: user.email },
+      { username: user.email, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: "1h" }
     );
     const refreshToken = jwt.sign(
-      { username: user.email },
+      { username: user.email, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
@@ -1012,7 +1012,7 @@ exports.getNotStartedCourses = async (req, res) => {
 };
 exports.createStudent = async (req, res) => {
   try {
-    const { email, password, phone, name, role = 'user', photo_url, first_name, last_name, age, id_proof, passport_photo } = req.body;
+    const { email, password, phone, name, role = 'user', photo_url, first_name, last_name, age, id_proof, passport_photo, courseIds } = req.body;
     const userExists = await User.findOne({ email });
     if (userExists) {
       return res
@@ -1046,7 +1046,31 @@ exports.createStudent = async (req, res) => {
     const userEdit = await User.findById(savedStudent._id);
     userEdit.kycRef = kycDetails._id;
     userEdit.kyc_status = "approved";
+    if (!userEdit.subscription) {
+      userEdit.subscription = []; // Initialize if undefined
+    }
+    for (const courseId of courseIds) {
+      const course = await Course.findById(courseId);
+      if (!course) {
+        return res.status(404).json({ success: false, message: "Course not found" });
+      }
+      if (!course.student_enrolled) course.student_enrolled = [];
+      if (!course.student_enrolled.includes(userEdit._id)) {
+        course.student_enrolled.push(userEdit._id);
+      }
+      await course.save();
+      const found = user.subscription.find(sub => sub.course_enrolled.equals(course._id));
+      if (!found) {
+        userEdit.subscription.push({
+          payment_id: null,
+          payment_Status: "success",
+          is_subscription_active: true,
+          course_enrolled: course._id
+        });
+      }
+    }
     await userEdit.save();
+
 
     res
       .status(200)
@@ -1255,3 +1279,52 @@ async function recalculateTestRankings(mockTestId, subject) {
   }
 }
 
+
+exports.verifyUserRoles = async (req, res, next) => {
+  try {
+    const { role, userId } = req.body
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    } else {
+      return res.status(200).json({ success: true, role: user.role, message: 'Access granted' });
+    }
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+exports.removeCourseSubscriptionToStudent = async (req, res) => {
+  try {
+    const { userId, courseIds } = req.body;
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+    if (!user.subscription) {
+      user.subscription = []; // Initialize if undefined
+    }
+    for (const courseId of courseIds) {
+      const course = await Course.findById(courseId);
+      if (!course) {
+        return res.status(404).json({ success: false, message: "Course not found" });
+      }
+      if (!course.student_enrolled) course.student_enrolled = [];
+      if (course.student_enrolled.includes(user._id)) {
+        course.student_enrolled.pull(user._id);
+      }
+      await course.save();
+      const found = user.subscription.find(sub => sub.course_enrolled.equals(course._id));
+      if (found) {
+        user.subscription = user.subscription.filter(sub => !sub.course_enrolled.equals(course._id));
+      }
+    }
+    await user.save();
+    res.status(200).json({ success: true, message: "Courses added to student successfully", user: user });
+  } catch (error) {
+    console.error("Error adding courses to student:", error.message);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+};
