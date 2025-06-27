@@ -78,6 +78,10 @@ const userSchema = new mongoose.Schema({
     enum: ["pending", "approved", "rejected", "not-applied"],
     default: "not-applied",
   },
+  deviceId: {
+  type: String,
+  default: null,
+}
 });
 
 // Create and export the User model
