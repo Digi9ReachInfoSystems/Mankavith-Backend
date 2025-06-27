@@ -124,7 +124,7 @@ exports.register = async (req, res) => {
   }
 };
 exports.login = async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, deviceId } = req.body;
   console.log(email, password);
   try {
     if (email == undefined || email == "" || email == null) {
@@ -156,6 +156,11 @@ exports.login = async (req, res) => {
         .status(401)
         .json({ success: false, message: "Invalid credentials" });
     }
+    if (user.deviceId && user.deviceId !== deviceId) {
+      return res.status(403).json({ success: false, message: "Already logged in on another device" });
+    }
+
+    user.deviceId = deviceId;
     const expiryTime = Date.now() + 3600 * 1000;
     const expiryDate = new Date(expiryTime);
 
@@ -342,6 +347,9 @@ exports.refreshToken = async (req, res) => {
     }
     jwt.verify(refreshToken, process.env.JWT_SECRET, (err, decoded) => {
       if (err) {
+        user.deviceId = null;
+        user.refreshToken = null;
+        user.save();
         return res.status(403).json({
           success: false,
           message: "Refresh token is expired or invalid",
@@ -422,7 +430,7 @@ exports.loginSendOtp = async (req, res) => {
 };
 
 exports.verifyLoginOtp = async (req, res) => {
-  const { email, loginOtp } = req.body;
+  const { email, loginOtp, deviceId } = req.body;
   try {
     const validMail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
     if (!validMail) {
@@ -447,6 +455,9 @@ exports.verifyLoginOtp = async (req, res) => {
       return res
         .status(401)
         .json({ success: false, message: "OTP has expired" });
+    }
+    if (user.deviceId && user.deviceId !== deviceId) {
+      return res.status(403).json({ success: false, message: "Already logged in on another device" });
     }
     const expiryTime = Date.now() + 3600 * 1000;
     const expiryDate = new Date(expiryTime);
@@ -555,6 +566,7 @@ exports.logout = async (req, res) => {
         message: "Account with this email does not exist",
       });
     }
+    user.deviceId = undefined;
     user.refreshToken = undefined;
     user.accessToken = undefined;
     await user.save();
