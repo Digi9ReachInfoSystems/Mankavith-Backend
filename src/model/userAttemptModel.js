@@ -6,6 +6,11 @@ const answerSchema = new mongoose.Schema({
   answerIndex: { type: Number }, // For MCQ, store the selected option index
   isCorrect: { type: Boolean, default: false },
   marksAwarded: { type: Number, default: 0 },
+  status: {
+    type: String,
+    enum: ['answered', 'not-answered', 'marked-for-review', 'unattempted'],
+    default: 'unattempted'
+  },
   evaluatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
 }, { _id: false });
 
@@ -13,7 +18,7 @@ const userAttemptSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   mockTestId: { type: mongoose.Schema.Types.ObjectId, ref: 'MockTest', required: true },
   subject: { type: mongoose.Schema.Types.ObjectId, ref: 'Subject', required: true }, // Changed from courseId to subject
-  attemptNumber: { type: Number, required: true, min: 1},
+  attemptNumber: { type: Number, required: true, min: 1 },
   startedAt: { type: Date, default: Date.now },
   submittedAt: { type: Date },
   evaluatedAt: { type: Date },
@@ -23,7 +28,7 @@ const userAttemptSchema = new mongoose.Schema({
   totalMarks: { type: Number, default: 0 },
   status: {
     type: String,
-    enum: ['in-progress', 'submitted','evaluating', 'evaluated'],
+    enum: ['in-progress', 'submitted', 'evaluating', 'evaluated'],
     default: 'in-progress'
   },
   isBestAttempt: { type: Boolean, default: false },
