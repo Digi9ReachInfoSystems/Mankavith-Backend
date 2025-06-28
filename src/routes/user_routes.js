@@ -37,6 +37,9 @@ router.put("/addCourseToStudent", userController.addCourseSubscriptionToStudent)
 router.delete("/deleteUser/:id", userController.deleteUserById);
 router.post("/verifyRoles",authenticateJWT,allowedRoles(["admin", "user"]), userController.verifyUserRoles);
 router.put("/removeCourseFromStudent", userController.removeCourseSubscriptionToStudent);
+router.post("/sendPhoneOtp", userController.phoneOtpGenerate);
+router.post("/verifyPhoneOtp", userController.phoneOtpVerify);
+router.post("/resendPhoneOtp", userController.resendPhoneotp);
 module.exports = router;
 
 module.exports = router;
