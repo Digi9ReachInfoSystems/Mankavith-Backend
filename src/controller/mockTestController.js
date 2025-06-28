@@ -469,3 +469,20 @@ exports.getAllUpcomingMockTests = async (req, res) => {
     });
   }
 }
+
+exports.rearrangeQuestions = async (req, res) => {
+  try {
+    const { mockTestId } = req.params;
+    const { questions } = req.body;
+    const mockTest = await MockTest.findById(mockTestId);
+    if (!mockTest) {
+      return res.status(404).json({ success: false, message: 'Mock test not found' });
+    }
+    mockTest.questions = questions;
+    await mockTest.save();
+    res.status(200).json({ success: true, message: 'Questions rearranged', mockTest });
+  } catch (error) {
+    console.error('Error rearranging questions:', error);
+    res.status(500).json({ success: false, message: 'Failed to rearrange questions' });
+  }
+};
