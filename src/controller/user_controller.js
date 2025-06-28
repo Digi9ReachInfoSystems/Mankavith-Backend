@@ -15,6 +15,7 @@ const UserRanking = require('../model/userRankingModel');
 const Payments = require('../model/paymentModel');
 const Certificate = require('../model/certificatesModel');
 const Feedback = require('../model/feedback');
+const axios = require("axios");
 const generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000).toString(); // Generates a 6-digit OTP
 };
@@ -94,26 +95,45 @@ exports.register = async (req, res) => {
       await student.save();
     }
 
-    const mailOptions = {
-      from: "mankavit.clatcoaching11@gmail.com",
-      to: email,
-      subject: "Email Verification OTP",
-      text: `Your OTP is: ${otp}. It will expire in 1 minutes.`,
-    };
+    //mail otp on signup
 
-    transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        console.error("Error sending email:", error);
-        return res
-          .status(500)
-          .json({ success: false, message: "Error sending OTP" });
-      }
-      res.status(201).json({
-        success: true,
-        message:
-          "User registered successfully. OTP has been sent to your email.",
-      });
-    });
+    // const mailOptions = {
+    //   from: "mankavit.clatcoaching11@gmail.com",
+    //   to: email,
+    //   subject: "Email Verification OTP",
+    //   text: `Your OTP is: ${otp}. It will expire in 1 minutes.`,
+    // };
+
+    // transporter.sendMail(mailOptions, (error, info) => {
+    //   if (error) {
+    //     console.error("Error sending email:", error);
+    //     return res
+    //       .status(500)
+    //       .json({ success: false, message: "Error sending OTP" });
+    //   }
+    //   res.status(201).json({
+    //     success: true,
+    //     message:
+    //       "User registered successfully. OTP has been sent to your email.",
+    //   });
+    // });
+
+    const user = await User.findOne({ email });
+    const otpPhone = Math.floor(100000 + Math.random() * 900000);
+    const response = await axios.post('https://control.msg91.com/api/v5/otp', {
+      otp_expiry: 1,
+      template_id: "6835b4f2d6fc053de8172342",
+      mobile: `91${user.phone}`,
+      authkey: process.env.MSG91_AUTH_KEY,
+      otp: otpPhone,
+      realTimeResponse: 1
+    })
+    if (response.data.type == "success") {
+      res.status(200).json({ success: true, message: "User registered successfully. OTP has been sent to your Phone.", user: savedUser, data: response.data });
+    }
+    if (response.data.type == "error") {
+      return res.status(400).json({ success: false, message: response.data.message, data: response.data });
+    }
   } catch (error) {
     console.error("error", error);
     res.status(500).json({
@@ -1325,6 +1345,116 @@ exports.removeCourseSubscriptionToStudent = async (req, res) => {
     res.status(200).json({ success: true, message: "Courses added to student successfully", user: user });
   } catch (error) {
     console.error("Error adding courses to student:", error.message);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+};
+
+exports.phoneOtpGenerate = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+    const otp = Math.floor(100000 + Math.random() * 900000);
+    const response = await axios.post('https://control.msg91.com/api/v5/otp', {
+      otp_expiry: 1,
+      template_id: "6835b4f2d6fc053de8172342",
+      mobile: `91${user.phone}`,
+      authkey: process.env.MSG91_AUTH_KEY,
+      otp: otp,
+      realTimeResponse: 1
+    })
+    if (response.data.type == "success") {
+      res.status(200).json({ success: true, message: "OTP sent successfully", data: response.data });
+    }
+    if (response.data.type == "error") {
+      return res.status(400).json({ success: false, message: response.data.message, data: response.data });
+    }
+    // await User.updateOne({ email }, { $set: { otp: otp, otpExpiration: new Date(Date.now() + 60000) } });
+
+  } catch (error) {
+    console.error("Error generating OTP:", error.message);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+};
+
+exports.phoneOtpVerify = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    const user = await User.findOne({ email });
+    const response = await axios.get(
+      `https://control.msg91.com/api/v5/otp/verify?mobile=91${user.phone}&otp=${otp}`,
+      {
+        headers: {
+          authkey: process.env.MSG91_AUTH_KEY,
+        },
+      }
+    );
+    if (response.data.type == "success") {
+      user.isEmailVerified = true;
+      user.otp = undefined;
+      user.otpExpiration = undefined;
+      const accessToken = jwt.sign(
+        { username: user.email, role: user.role },
+        process.env.JWT_SECRET,
+        { expiresIn: "1h" }
+      );
+      const refreshToken = jwt.sign(
+        { username: user.email, role: user.role },
+        process.env.JWT_SECRET,
+        { expiresIn: "7d" }
+      );
+      user.refreshToken = refreshToken;
+      await user.save();
+
+      res.status(200).json({
+        success: true,
+        message: "Phone verified successfully",
+        accessToken,
+        refreshToken,
+        user: user,
+        otpData: response.data
+      });
+      // return res.status(200).json({ success: true, message: "OTP verified successfully", data: response.data });
+    } else if (response.data.type == "error") {
+      return res.status(400).json({ success: false, message: response.data.message, data: response.data });
+    }
+
+  } catch (error) {
+    console.error("Error verifying OTP:", error.message);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+};
+
+exports.resendPhoneotp = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+    const otp = Math.floor(100000 + Math.random() * 900000);
+    const response = await axios.get(
+      `https://control.msg91.com/api/v5/otp/retry?mobile=91${user.phone}&authkey=${process.env.MSG91_AUTH_KEY}`,
+    )
+    if (response.data.type == "success") {
+      return res.status(200).json({ success: true, message: "OTP sent successfully", data: response.data });
+    } else if (response.data.type == "error") {
+      if (response.data.message == "otp_expired") {
+        const response = await axios.post('https://control.msg91.com/api/v5/otp', {
+          otp_expiry: 1,
+          template_id: "6835b4f2d6fc053de8172342",
+          mobile: `91${user.phone}`,
+          authkey: process.env.MSG91_AUTH_KEY,
+          otp: otp,
+          realTimeResponse: 1
+        })
+        if (response.data.type == "success") {
+          res.status(200).json({ success: true, message: "OTP sent successfully", data: response.data });
+        }
+        if (response.data.type == "error") {
+          return res.status(400).json({ success: false, message: response.data.message, data: response.data });
+        }
+      }
+      return res.status(400).json({ success: false, message: response.data.message, data: response.data });
+    }
+  } catch (error) {
+    console.error("Error generating OTP:", error.message);
     res.status(500).json({ success: false, message: "Server error", error: error.message });
   }
 };
