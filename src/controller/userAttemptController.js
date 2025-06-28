@@ -153,7 +153,7 @@ exports.saveAnswer = async (req, res) => {
                 message: 'Question not found'
             });
         }
-        const validateStatus = ['answered', 'not-answered', 'marked-for-review', 'unattempted'];
+        const validateStatus = ['answered', 'not-answered', 'not-answered-marked-for-review', 'answered-marked-for-review',  'unattempted'];
         const isValid = validateStatus.includes(status);
         if (!isValid) {
             return res.status(400).json({
@@ -173,7 +173,7 @@ exports.saveAnswer = async (req, res) => {
                 message: 'Answer not found'
             });
         }
-        if(status === 'unattempted'||status === 'not-answered'){
+        if(status === 'unattempted'||status === 'not-answered-marked-for-review'){
             attempt.answers[answerIndex].status = status;
             await attempt.save();
             return res.status(200).json({
