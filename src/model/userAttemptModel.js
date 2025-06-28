@@ -8,7 +8,7 @@ const answerSchema = new mongoose.Schema({
   marksAwarded: { type: Number, default: 0 },
   status: {
     type: String,
-    enum: ['answered', 'not-answered', 'marked-for-review', 'unattempted'],
+    enum: ['answered', 'not-answered','not-answered-marked-for-review', 'answered-marked-for-review', 'unattempted'],
     default: 'unattempted'
   },
   evaluatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
