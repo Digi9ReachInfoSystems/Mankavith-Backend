@@ -8,5 +8,6 @@ router.get("/:id", feedbackController.getFeedBackById);
 router.put("/:id", feedbackController.updateFeedback);
 router.delete("/:id", feedbackController.deleteFeedback);
 router.patch("/:id/approve", feedbackController.approveFeedback);
+router.delete("/bulk/delete", feedbackController.bulkDeleteFeedback);
 
 module.exports = router;

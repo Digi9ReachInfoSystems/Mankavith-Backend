@@ -17,4 +17,6 @@ router.put("/:id", lectureController.updateLecture);
 // Delete a lecture by ID
 router.delete("/:id", lectureController.deleteLecture);
 
+router.delete("/bulk/delete", lectureController.bulkDeleteLectures);
+
 module.exports = router;

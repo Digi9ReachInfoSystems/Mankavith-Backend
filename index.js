@@ -5,7 +5,7 @@ require("dotenv").config();
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const bodyParser = require("body-parser");
-const connectDB = require("./src/config/database");
+  const connectDB = require("./src/config/database");
 const encryptionUtils = require("./src/utils/Encryption");
 const encryptionMiddleware = require("./src/middleware/encryption");
 const key = process.env.CRYPTION_KEY;

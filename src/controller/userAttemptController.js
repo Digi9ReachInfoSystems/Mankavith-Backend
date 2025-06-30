@@ -153,7 +153,7 @@ exports.saveAnswer = async (req, res) => {
                 message: 'Question not found'
             });
         }
-        const validateStatus = ['answered', 'not-answered', 'not-answered-marked-for-review', 'answered-marked-for-review',  'unattempted'];
+        const validateStatus = ['answered', 'not-answered', 'not-answered-marked-for-review', 'answered-marked-for-review', 'unattempted'];
         const isValid = validateStatus.includes(status);
         if (!isValid) {
             return res.status(400).json({
@@ -173,7 +173,7 @@ exports.saveAnswer = async (req, res) => {
                 message: 'Answer not found'
             });
         }
-        if(status === 'unattempted'||status === 'not-answered-marked-for-review'){
+        if (status === 'unattempted' || status === 'not-answered-marked-for-review') {
             attempt.answers[answerIndex].status = status;
             await attempt.save();
             return res.status(200).json({
@@ -240,15 +240,28 @@ exports.submitAttempt = async (req, res) => {
             const question = mockTest.questions.id(answer.questionId);
 
             if (question.type === 'mcq') {
-                const isCorrect = question.correctAnswer === answer.answerIndex;
-                const marks = isCorrect ? question.marks : question.options[answer.answerIndex].marks;
-                mcqScore += marks;
+                if (answer.status === 'unattempted' || answer.status === 'not-answered-marked-for-review') {
 
-                return {
-                    ...answer.toObject(),
-                    isCorrect,
-                    marksAwarded: marks
-                };
+                    const marks = 0;
+                    mcqScore += marks;
+
+                    return {
+                        ...answer.toObject(),
+                        isCorrect: false,
+                        marksAwarded: marks
+                    };
+                } else {
+                    const isCorrect = question.correctAnswer === answer.answerIndex;
+                    const marks = isCorrect ? question.marks : question.options[answer.answerIndex].marks;
+                    mcqScore += marks;
+
+                    return {
+                        ...answer.toObject(),
+                        isCorrect,
+                        marksAwarded: marks
+                    };
+                }
+
             }
             return answer;
         });
@@ -286,6 +299,7 @@ exports.submitAttempt = async (req, res) => {
                 'Attempt submitted (does NOT count for rankings)'
         });
     } catch (err) {
+        console.log(err);
         res.status(500).json({
             success: false,
             message: err.message

@@ -7,6 +7,8 @@ const Feedback = require("../model/feedback");
 const RecordedSession = require("../model/recorded_sessionModel");
 const CourseProgress = require("../model/courseProgressModel");
 const Meeting = require("../model/meetingsModel");
+const Payment = require("../model/paymentModel");
+const Certificate = require("../model/certificatesModel");
 // Create a new course (updated for category reference)
 exports.createCourse = async (req, res) => {
   try {
@@ -151,6 +153,7 @@ exports.getAllCourses = async (req, res) => {
           {
             path: "mockTests",
             // select: "_id"
+
           }
 
         ]
@@ -463,6 +466,9 @@ exports.deleteCourse = async (req, res) => {
     await Promise.all(
       course.subjects.map(async (subjectId) => {
         const subject = await Subject.findById(subjectId);
+        if (!subject) {
+          return;
+        }
         subject.courses.pull(courseId);
         await subject.save();
 
@@ -470,6 +476,9 @@ exports.deleteCourse = async (req, res) => {
     await Promise.all(
       course.recorded_sessions.map(async (sessionId) => {
         const session = await RecordedSession.findById(sessionId);
+        if (!session) {
+          return;
+        }
         session.courses.pull(courseId);
         await session.save();
       })
@@ -483,8 +492,19 @@ exports.deleteCourse = async (req, res) => {
 
     const meeting = await Meeting.findOneAndDelete({ course_Ref: courseId });
     await Promise.all(
-      course.students.map(async (studentId) => {
+      course.student_enrolled.map(async (studentId) => {
         const student = await User.findById(studentId);
+        const foundSubscription = student.subscription.find(sub => sub.course_enrolled.equals(courseId));
+        if (!foundSubscription) {
+          return;
+        }
+        const payment = await Payment.findByIdAndDelete(foundSubscription.payment_id);
+        const certificate = await Certificate.findOneAndDelete({ course_ref: courseId, user_ref: studentId });
+        const userProgress = await UserProgress.findOne({ user_ref: studentId });
+        if (userProgress) {
+          userProgress.courseProgress = userProgress.courseProgress.filter(progress => !progress.course_id.equals(courseId));
+          await userProgress.save();
+        }
         student.subscription = student.subscription.filter(sub => !sub.course_enrolled.equals(courseId));
         await student.save();
       })
@@ -1166,5 +1186,94 @@ exports.getCourseandSubjectWithProgress = async (req, res) => {
   catch (err) {
     console.error("Error fetching course with progress:", err);
     res.status(500).json({ success: false, message: "Server error.", error: err.message });
+  }
+};
+
+exports.bulkDeleteCourse = async (req, res) => {
+  try {
+    const { courseIds } = req.body;
+    if (courseIds.length === 0) {
+      return res.status(400).json({ success: false, message: "No course ids provided." });
+    }
+    let result = [];
+    for (const courseId of courseIds) {
+      try {
+        const course = await Course.findById(courseId);
+
+        if (!course) {
+          result.push({ courseId, success: false, message: "Course not found" });
+          continue;
+        }
+        await Promise.all(
+          course.subjects.map(async (subjectId) => {
+            const subject = await Subject.findById(subjectId);
+            if (!subject) {
+              return;
+            }
+            subject.courses.pull(courseId);
+            await subject.save();
+
+          }))
+        await Promise.all(
+          course.recorded_sessions.map(async (sessionId) => {
+            const session = await RecordedSession.findById(sessionId);
+            if (!session) {
+              return;
+            }
+            session.courses.pull(courseId);
+            await session.save();
+          })
+        )
+        await Promise.all(
+          course.student_feedback.map(async (feedbackId) => {
+            const feedback = await Feedback.findByIdAndDelete(feedbackId);
+          })
+        )
+        const courseProgress = await CourseProgress.findOneAndDelete({ course_id: courseId });
+
+        const meeting = await Meeting.findOneAndDelete({ course_Ref: courseId });
+        await Promise.all(
+          course.student_enrolled.map(async (studentId) => {
+            const student = await User.findById(studentId);
+            const foundSubscription = student.subscription.find(sub => sub.course_enrolled.equals(courseId));
+            if (!foundSubscription) {
+              return;
+            }
+            const payment = await Payment.findByIdAndDelete(foundSubscription.payment_id);
+            const certificate = await Certificate.findOneAndDelete({ course_ref: courseId, user_ref: studentId });
+            const userProgress = await UserProgress.findOne({ user_ref: studentId });
+            if (userProgress) {
+              userProgress.courseProgress = userProgress.courseProgress.filter(progress => !progress.course_id.equals(courseId));
+              await userProgress.save();
+            }
+            student.subscription = student.subscription.filter(sub => !sub.course_enrolled.equals(courseId));
+            await student.save();
+          })
+        )
+
+        const deletedCourse = await Course.findByIdAndDelete(courseId);
+
+        if (!deletedCourse) {
+          result.push({ courseId, success: false, message: "Course not found" });
+          continue;
+        }
+
+        result.push({ courseId, success: true, message: "Course deleted successfully", data: deletedCourse });
+      } catch (error) {
+        result.push({ courseId, error: error.message });
+      }
+    }
+    res.status(200).json({
+      success: true,
+      message: "Bulk delete operation completed",
+      data: result,
+    });
+  } catch (error) {
+    console.error("Error deleting course:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Server error. Could not delete course.",
+      error: error.message,
+    });
   }
 };

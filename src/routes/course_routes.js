@@ -36,4 +36,5 @@ router.get("/getAllCourses/users/category/:user_id/:category", courseController.
 router.get("/search/CourseandCategory/:user_id/:categoryName", courseController.searchUserCourses);
 router.post("/coursebyId/withUserProgress", courseController.getCourseWithProgress);
 router.post("/subjectbyId/withUserProgress", courseController.getCourseandSubjectWithProgress);
+router.delete("/bulk/delete", courseController.bulkDeleteCourse);
 module.exports = router;
