@@ -144,8 +144,8 @@ exports.register = async (req, res) => {
   }
 };
 exports.login = async (req, res) => {
-  const { email, password, deviceId } = req.body;
-  console.log(email, password);
+  const { email, password, device } = req.body;
+  console.log(email, password, device);
   try {
     if (email == undefined || email == "" || email == null) {
       return res
@@ -176,26 +176,126 @@ exports.login = async (req, res) => {
         .status(401)
         .json({ success: false, message: "Invalid credentials" });
     }
-    if (user.deviceId && user.deviceId !== deviceId) {
-      return res.status(403).json({ success: false, message: "Already logged in on another device" });
+    // if (user.deviceId && user.deviceId !== deviceId) {
+    //   return res.status(403).json({ success: false, message: "Already logged in on another device" });
+    // }
+    if (!user.device || user?.device?.refreshTokenExpiry < Date.now()) {
+      const expiryTime = Date.now() + 3600 * 1000;
+      const expiryDate = new Date(expiryTime);
+
+      const accessToken = jwt.sign(
+        { username: user.email, role: user.role },
+        process.env.JWT_SECRET,
+        { expiresIn: "1h" }
+      );
+      user.accessToken = accessToken;
+      const refreshToken = jwt.sign(
+        { username: user.email, role: user.role },
+        process.env.JWT_SECRET,
+        { expiresIn: "7d" }
+      );
+      user.refreshToken = refreshToken;
+      await user.save();
+      let student;
+      if (user.role === "user") {
+        student = await Student.findOne({ userRef: user._id });
+      }
+      user.device = {
+        deviceId: device.deviceId,
+        deviceType: device.deviceType,
+        browser_name: device.browser_name,
+        userAgent: device.userAgent,
+        ipAddress: device.ipAddress,
+        lastLogin: Date.now(),
+        refreshTokenExpiry: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
+        isCurrent: true
+      };
+      await user.save();
+      res.status(200).json({
+        success: true,
+        message: "Login successful",
+        accessToken,
+        refreshToken,
+        user: user,
+        kyc_status: user.role === "user" ? user.kyc_status : null,
+        expiresIn: expiryDate,
+      });
+
+
+    } else if (user.device && user?.device?.deviceId === device.deviceId && user?.device?.ipAddress === device.ipAddress) {
+      const expiryTime = Date.now() + 3600 * 1000;
+      const expiryDate = new Date(expiryTime);
+      const accessToken = jwt.sign(
+        { username: user.email, role: user.role },
+        process.env.JWT_SECRET,
+        { expiresIn: "1h" }
+      );
+      user.accessToken = accessToken;
+      await user.save();
+      let student;
+      if (user.role === "user") {
+        student = await Student.findOne({ userRef: user._id });
+      }
+      res.status(200).json({
+        success: true,
+        message: "Login successful",
+        accessToken,
+        refreshToken: user.refreshToken,
+        user: user,
+        kyc_status: user.role === "user" ? user.kyc_status : null,
+        expiresIn: expiryDate,
+      });
+
+
+    } else {
+      const forceLoginData = jwt.sign(
+        { device: device, email: email, password: password },
+        process.env.JWT_SECRET,
+        { expiresIn: "1h" }
+      );
+      return res.status(200).json({ success: false, message: "Already logged in on another device", currentDevice: user.device, forceLoginData });
     }
 
-    user.deviceId = deviceId;
+
+  } catch (error) {
+    console.error("error", error);
+    res
+      .status(500)
+      .json({ success: false, message: "Login failed", error: error.message });
+  }
+};
+
+exports.forceLogin = async (req, res) => {
+  try {
+    const { forceLoginData } = req.body;
+    if (!forceLoginData) {
+      return res.status(400).json({ success: false, message: "forceLoginData is required" });
+    }
+    const decoded = jwt.verify(forceLoginData, process.env.JWT_SECRET);
+    const { email, password, device } = decoded;
+    if (!email || !password || !device) {
+      return res.status(400).json({ success: false, message: "Invalid forceLoginData" });
+    }
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "Account with this email does not exist",
+      });
+    }
+    if (!user || !(await bcrypt.compare(password, user.password))) {
+      return res
+        .status(401)
+        .json({ success: false, message: "Invalid credentials" });
+    }
     const expiryTime = Date.now() + 3600 * 1000;
     const expiryDate = new Date(expiryTime);
-
     const accessToken = jwt.sign(
       { username: user.email, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: "1h" }
+      { expiresIn: "1m" }
     );
     user.accessToken = accessToken;
-    const refreshToken = jwt.sign(
-      { username: user.email, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" }
-    );
-    user.refreshToken = refreshToken;
     await user.save();
     let student;
     if (user.role === "user") {
@@ -205,7 +305,7 @@ exports.login = async (req, res) => {
       success: true,
       message: "Login successful",
       accessToken,
-      refreshToken,
+      refreshToken: user.refreshToken,
       user: user,
       kyc_status: user.role === "user" ? user.kyc_status : null,
       expiresIn: expiryDate,
@@ -354,7 +454,7 @@ exports.refreshToken = async (req, res) => {
 
   if (!refreshToken) {
     return res
-      .status(401)
+      .status(405)
       .json({ success: false, message: "No refresh token provided" });
   }
 
@@ -362,15 +462,16 @@ exports.refreshToken = async (req, res) => {
     const user = await User.findOne({ refreshToken });
     if (!user) {
       return res
-        .status(401)
+        .status(405)
         .json({ success: false, message: "Invalid refresh token" });
     }
     jwt.verify(refreshToken, process.env.JWT_SECRET, (err, decoded) => {
       if (err) {
         user.deviceId = null;
         user.refreshToken = null;
+        user.device = null; // Clear device information
         user.save();
-        return res.status(403).json({
+        return res.status(405).json({
           success: false,
           message: "Refresh token is expired or invalid",
         });
@@ -450,7 +551,7 @@ exports.loginSendOtp = async (req, res) => {
 };
 
 exports.verifyLoginOtp = async (req, res) => {
-  const { email, loginOtp, deviceId } = req.body;
+  const { email, loginOtp, device } = req.body;
   try {
     const validMail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
     if (!validMail) {
@@ -468,17 +569,17 @@ exports.verifyLoginOtp = async (req, res) => {
     }
 
     if (user.loginOtp !== loginOtp) {
-      return res.status(401).json({ success: false, message: "Invalid OTP" });
+      return res.status(403).json({ success: false, message: "Invalid OTP" });
     }
 
     if (user.loginOtpExpiration < new Date()) {
       return res
-        .status(401)
+        .status(403)
         .json({ success: false, message: "OTP has expired" });
     }
-    if (user.deviceId && user.deviceId !== deviceId) {
-      return res.status(403).json({ success: false, message: "Already logged in on another device" });
-    }
+    // if (user.deviceId && user.deviceId !== deviceId) {
+    //   return res.status(403).json({ success: false, message: "Already logged in on another device" });
+    // }
     const expiryTime = Date.now() + 3600 * 1000;
     const expiryDate = new Date(expiryTime);
     const accessToken = jwt.sign(
@@ -497,6 +598,17 @@ exports.verifyLoginOtp = async (req, res) => {
     if (user.role === "user") {
       student = await Student.findOne({ userRef: user._id });
     }
+    user.device = {
+      deviceId: device.deviceId,
+      deviceType: device.deviceType,
+      browser_name: device.browser_name,
+      userAgent: device.userAgent,
+      ipAddress: device.ipAddress,
+      lastLogin: Date.now(),
+      refreshTokenExpiry: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
+      isCurrent: true
+    };
+    await user.save();
     res.status(200).json({
       success: true,
       message: "Login successful",
@@ -589,6 +701,7 @@ exports.logout = async (req, res) => {
     user.deviceId = undefined;
     user.refreshToken = undefined;
     user.accessToken = undefined;
+    user.device = undefined; // Clear device information
     await user.save();
     res.status(200).json({ success: true, message: "Logout successful" });
   } catch (error) {
@@ -1458,3 +1571,104 @@ exports.resendPhoneotp = async (req, res) => {
     res.status(500).json({ success: false, message: "Server error", error: error.message });
   }
 };
+
+exports.bulkDeleteUsers = async (req, res) => {
+  try {
+    const { userIds } = req.body;
+    if (userIds.length === 0) {
+      return res.status(400).json({ success: false, message: "No user IDs provided" });
+    }
+    const results = [];
+    for (const id of userIds) {
+      try {
+        const user = await User.findById(id);
+        if (!user) {
+          results.push({ id, success: false, message: "User not found" });
+          continue;
+        }
+        // const user = await User.findById(id);
+        // if (!user) {
+        //   return res.status(404).json({ success: false, message: "User not found" });
+        // }
+        user.subscription.forEach(async (sub) => {
+          const course = await Course.findById(sub.course_enrolled);
+          const courseProgress = await CourseProgress.findOne({ course_id: sub.course_enrolled });
+          courseProgress.progress.filter((progress) => !progress.user_id.equals(id));
+          await courseProgress.save();
+          if (course) {
+
+            course.student_enrolled = course.student_enrolled.filter(
+              (studentId) => !studentId.equals(id)
+            );
+            await course.save();
+          }
+        })
+        const attempts = await UserAttempt.find({ userId: user._id });
+        const deletedKyc = await KycDetails.findOneAndDelete({ userref: user._id });
+        const deletedSupport = await Support.find({ userRef: user._id });
+        deletedSupport.forEach(async (support) => {
+          await Support.findByIdAndDelete(support._id);
+        })
+        const userProgress = await UserProgress.findOneAndDelete({ user_id: user._id });
+        const payments = await Payments.find({ userRef: user._id });
+        payments.forEach(async (payment) => {
+          await Payments.findByIdAndDelete(payment._id);
+        })
+        const certificates = await Certificate.find({ user_ref: user._id });
+        certificates.forEach(async (certificate) => {
+          await Certificate.findByIdAndDelete(certificate._id);
+        })
+        attempts.forEach(async (attemptID) => {
+          const attempt = await UserAttempt.findByIdAndDelete(attemptID._id);
+          const userRanking = await UserRanking.findOneAndDelete({ userId: attempt.userId, subject: attempt.subject, bestAttemptId: attempt._id });
+          const userAttempts = await UserAttempt.find({ userId: attempt.userId, attemptNumber: { $gt: attempt.attemptNumber }, subject: attempt.subject, });
+          for (let i = 0; i < userAttempts.length; i++) {
+            userAttempts[i].attemptNumber -= 1;
+            await userAttempts[i].save();
+          }
+          const result = await updateRankings(attempt);
+
+        })
+        const feedbacks = await Feedback.find({ userRef: user._id });
+        feedbacks.forEach(async (feedback) => {
+          const course = await Course.findById(feedback.courseRef);
+          if (course) {
+            course.student_feedback = course.student_feedback.filter(
+              (feedbackId) => !feedbackId.equals(feedback._id)
+            );
+            await course.save();
+          }
+          await Feedback.findByIdAndDelete(feedback._id);
+
+        })
+        const deletedUser = await User.findByIdAndDelete(user._id);
+        results.push({
+          id,
+          success: true,
+          message: "User deleted successfully",
+          user: deletedUser,
+          kyc: deletedKyc,
+          Support: deletedSupport.length,
+          UserProgress: userProgress,
+          attempts: attempts.length,
+          Payments: (await Payments.find({ userRef: user._id })).length,
+          Certificates: certificates.length,
+          Feedbacks: feedbacks.length,
+        });
+      } catch (error) {
+        console.error(`Error deleting user ${id}:`, error.message);
+        results.push({ id, success: false, message: error.message });
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Bulk delete operation completed",
+      results
+    });
+  } catch (error) {
+    console.error("Error deleting user:", error.message);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+
+}

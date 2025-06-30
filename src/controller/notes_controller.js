@@ -21,14 +21,17 @@ module.exports.createNote = async (req, res) => {
       fileUrl,
       subjects
     });
-    if(subjects.length > 0){
-      for(let i = 0; i < subjects.length; i++){
+    if (subjects.length > 0) {
+      for (let i = 0; i < subjects.length; i++) {
         const subject = await Subject.findById(subjects[i]);
-        if(subject){
+        if (subject) {
+          if (!subject.notes) {
+            subject.notes = [];
+          }
           subject.notes.push(newNote._id);
           await subject.save();
         }
-        
+
       }
     }
 
@@ -72,14 +75,38 @@ module.exports.getNoteById = async (req, res) => {
 module.exports.updateNote = async (req, res) => {
   try {
     const { id } = req.params;
-    const updatedData = req.body;
+    let updatedData = req.body;
+    const note = await Note.findById(id);
+    if (!note) {
+      return res.status(404).json({ success: false, message: 'Note not found' });
+    }
+    await Promise.all(
+      note.subjects.map(async (subjectId) => {
+        const subject = await Subject.findById(subjectId);
+        if (!subject) {
+          return;
+        }
+        subject.notes.pull(id);
+        await subject.save();
+      })
+    );
 
     // Validate subjects references
     const validSubjects = await Subject.find({ '_id': { $in: updatedData.subjects } });
     if (validSubjects.length !== updatedData.subjects.length) {
       return res.status(400).json({ success: false, message: 'Some subjects are invalid' });
     }
-
+    await Promise.all(
+      updatedData.subjects.map(async (subjectId) => {
+        const subject = await Subject.findById(subjectId);
+        if (!subject) {
+          updatedData.subjects = updatedData.subjects.filter(id => id !== subjectId);
+          return;
+        }
+        subject.notes.push(id);
+        await subject.save();
+      })
+    );
     const updatedNote = await Note.findByIdAndUpdate(id, updatedData, { new: true })
       .populate('subjects');
     if (!updatedNote) {
@@ -97,6 +124,20 @@ module.exports.updateNote = async (req, res) => {
 module.exports.deleteNote = async (req, res) => {
   try {
     const { id } = req.params;
+    const notes = await Note.findById(id);
+    if (!notes) {
+      return res.status(404).json({ success: false, message: 'Note not found' });
+    }
+    await Promise.all(
+      notes.subjects.map(async (subjectId) => {
+        const subject = await Subject.findById(subjectId);
+        if (!subject) {
+          return;
+        }
+        subject.notes.pull(id);
+        await subject.save();
+      })
+    );
     const deletedNote = await Note.findByIdAndDelete(id);
     if (!deletedNote) {
       return res.status(404).json({ success: false, message: 'Note not found' });
@@ -123,5 +164,50 @@ module.exports.getNoOfNotes = async (req, res) => {
       message: "Server error. Could not fetch number of notes.",
       error: error.message,
     });
+  }
+};
+module.exports.bulkDeleteNotes = async (req, res) => {
+  try {
+    const { notesIds } = req.body;
+    if (notesIds.length === 0) {
+      return res.status(400).json({ success: false, message: 'No note IDs provided' });
+    }
+    const results = [];
+    for (const id of notesIds) {
+      try {
+
+
+        const notes = await Note.findById(id);
+        if (!notes) {
+          results.push({ id, success: false, message: 'Note not found' });
+          continue;
+        }
+        await Promise.all(
+          notes.subjects.map(async (subjectId) => {
+            const subject = await Subject.findById(subjectId);
+            if (!subject) {
+              return;
+            }
+            subject.notes.pull(id);
+            await subject.save();
+          })
+        );
+        const deletedNote = await Note.findByIdAndDelete(id);
+        if (!deletedNote) {
+          results.push({ id, success: false, message: 'Note not found' });
+          continue;
+        }
+        results.push({ id, success: true, message: 'Note deleted successfully' });
+      } catch (error) {
+        console.error('Error processing note ID:', id, error);
+        results.push({ id, success: false, message: 'Error processing note ID' });
+        continue;
+      }
+    }
+    return res.status(200).json({ success: true, message: 'Bulk delete operation completed', results });
+
+  } catch (error) {
+    console.error('Error deleting note:', error);
+    return res.status(500).json({ success: false, message: 'Error deleting note', error: error.message });
   }
 };

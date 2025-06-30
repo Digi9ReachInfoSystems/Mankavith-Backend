@@ -32,7 +32,7 @@ router.get("/get/ongoingEnrolledCourses/:userId", userController.getOngoingCours
 router.get("/get/completedEnrolledCourses/:userId", userController.getCompletedCourses);
 router.get("/get/notStartedEnrolledCourses/:userId", userController.getNotStartedCourses);
 router.post("/createStudent", userController.createStudent);
-router.get("/get/all/students", userController.getAllStudents);
+router.get("/get/all/students",authenticateJWT,allowedRoles(["admin", "user"]), userController.getAllStudents);
 router.put("/addCourseToStudent", userController.addCourseSubscriptionToStudent);
 router.delete("/deleteUser/:id", userController.deleteUserById);
 router.post("/verifyRoles",authenticateJWT,allowedRoles(["admin", "user"]), userController.verifyUserRoles);
@@ -40,6 +40,8 @@ router.put("/removeCourseFromStudent", userController.removeCourseSubscriptionTo
 router.post("/sendPhoneOtp", userController.phoneOtpGenerate);
 router.post("/verifyPhoneOtp", userController.phoneOtpVerify);
 router.post("/resendPhoneOtp", userController.resendPhoneotp);
+router.post("/forceLogin", userController.forceLogin);
+router.delete("/bulkDelete", userController.bulkDeleteUsers);
 module.exports = router;
 
 module.exports = router;

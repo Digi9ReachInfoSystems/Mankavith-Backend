@@ -26,10 +26,10 @@ const LectureSchema = new mongoose.Schema(
     //   type: mongoose.Schema.Types.ObjectId,
     //   ref: "Course",
     // },
-    // subjectRef: {
-    //   type: mongoose.Schema.Types.ObjectId,
-    //   ref: "Subject",
-    // },
+    subjectRef: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Subject",
+    }],
   },
   { timestamps: true }
 );

@@ -8,13 +8,13 @@ const Subject = require("../model/subject_model");
 // @access  Private/Admin
 exports.createLecture = async (req, res) => {
   try {
-    const { lectureName, description, duration, videoUrl,thumbnail } = req.body;
+    const { lectureName, description, duration, videoUrl, thumbnail } = req.body;
 
     // Validate required fields
     // if (!lectureName || !duration || !videoUrl) {
     //   return res.status(400).json({ success: false, message: "lectureName, duration and videoUrl are required" });
     // }
-    if(!lectureName){
+    if (!lectureName) {
       return res.status(400).json({ success: false, message: "lectureName is required" });
     }
 
@@ -27,7 +27,7 @@ exports.createLecture = async (req, res) => {
     //   return res.status(400).json({ success: false, message: "Invalid subjectRef" });
     // }
 
-    const lecture = new Lecture({ lectureName, description, duration, videoUrl,thumbnail });
+    const lecture = new Lecture({ lectureName, description, duration, videoUrl, thumbnail });
     const savedLecture = await lecture.save();
 
     res.status(201).json({ success: true, data: savedLecture });
@@ -86,7 +86,7 @@ exports.getLectureById = async (req, res) => {
 exports.updateLecture = async (req, res) => {
   try {
     const { id } = req.params;
-    const { lectureName, description, duration, videoUrl,thumbnail } = req.body;
+    const { lectureName, description, duration, videoUrl, thumbnail } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ success: false, message: "Invalid lecture ID" });
@@ -94,11 +94,11 @@ exports.updateLecture = async (req, res) => {
 
     const updatedLecture = await Lecture.findByIdAndUpdate(
       id,
-      { lectureName, description, duration, videoUrl, thumbnail},
+      { lectureName, description, duration, videoUrl, thumbnail },
       { new: true, runValidators: true }
     )
-      // .populate("courseRef", "courseName")
-      // .populate("subjectRef", "subjectName");
+    // .populate("courseRef", "courseName")
+    // .populate("subjectRef", "subjectName");
 
     if (!updatedLecture) {
       return res.status(404).json({ success: false, message: "Lecture not found" });
@@ -121,7 +121,22 @@ exports.deleteLecture = async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ success: false, message: "Invalid lecture ID" });
     }
-
+    const lecture = await Lecture.findById(id);
+    if (!lecture) {
+      return res.status(404).json({ success: false, message: "Lecture not found" });
+    }
+    // Remove lecture from associated subjects
+    await Promise.all(
+      lecture.subjectRef.map(async (subjectId) => {
+        const subject = await Subject.findById(subjectId);
+        if (subject) {
+          subject.lectures.pull(id);
+          await subject.save();
+        }else{
+          return;
+        }
+      })
+    );
     const deletedLecture = await Lecture.findByIdAndDelete(id);
 
     if (!deletedLecture) {
@@ -129,6 +144,57 @@ exports.deleteLecture = async (req, res) => {
     }
 
     res.status(200).json({ success: true, message: "Lecture deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting lecture:", error);
+    res.status(500).json({ success: false, message: "Internal server error", error: error.message });
+  }
+};
+exports.bulkDeleteLectures = async (req, res) => {
+  try {
+    const { lectureIds } = req.body;
+    if (lectureIds.length === 0) {
+      return res.status(400).json({ success: false, message: "No lecture IDs provided" });
+    }
+
+    let results = [];
+    for (const id of lectureIds) {
+      try {
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+          return res.status(400).json({ success: false, message: "Invalid lecture ID" });
+        }
+        const lecture = await Lecture.findById(id);
+        if (!lecture) {
+          results.push({ id, success: false, message: "Lecture not found" });
+          continue; // Skip to the next ID if lecture not found
+        }
+        // Remove lecture from associated subjects
+        await Promise.all(
+          lecture.subjectRef.map(async (subjectId) => {
+            const subject = await Subject.findById(subjectId);
+            if (subject) {
+              subject.lectures.pull(id);
+              await subject.save();
+            }else{
+              return;
+            }
+          })
+        );
+        const deletedLecture = await Lecture.findByIdAndDelete(id);
+
+        if (!deletedLecture) {
+          results.push({ id, success: false, message: "Lecture not found" });
+          continue; // Skip to the next ID if lecture not found
+        }
+
+        results.push({ id, success: true, message: "Lecture deleted successfully", data: deletedLecture });
+
+      } catch (error) {
+        console.error("Error processing lecture ID:", id, error);
+        results.push({ id, success: false, message: "Error processing lecture", error: error.message });
+      }
+    }
+
+    return res.status(200).json({ success: true, message: "Bulk delete operation completed", results });
   } catch (error) {
     console.error("Error deleting lecture:", error);
     res.status(500).json({ success: false, message: "Internal server error", error: error.message });

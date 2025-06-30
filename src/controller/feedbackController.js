@@ -184,6 +184,21 @@ exports.updateFeedback = async (req, res) => {
 exports.deleteFeedback = async (req, res) => {
   try {
     const feedbackId = req.params.id;
+    const feedback = await Feedback.findById(feedbackId);
+    if (!feedback) {
+      return res.status(404).json({
+        success: false,
+        message: "Feedback not found",
+      });
+    }
+    // Remove feedback from associated course's student_feedback array
+    if (feedback.isappproved) {
+      const course = await Course.findById(feedback.courseRef);
+      if (course) {
+        course.student_feedback.pull(feedbackId);
+        await course.save();
+      }
+    }
 
     const deletedFeedback = await Feedback.findByIdAndDelete(feedbackId);
 
@@ -249,3 +264,76 @@ exports.approveFeedback = async (req, res) => {
     });
   }
 };
+
+exports.bulkDeleteFeedback = async (req, res) => {
+  try {
+    const { feedbackIds } = req.body;
+    if (feedbackIds.length === 0) {
+      return res.status(400).json({ success: false, message: "No feedback IDs provided" });
+    }
+
+    let results = [];
+    for (const feedbackId of feedbackIds) {
+      try {
+
+        const feedback = await Feedback.findById(feedbackId);
+        if (!feedback) {
+          results.push({
+            id: feedbackId,
+            success: false,
+            message: "Feedback not found",
+          });
+          continue; // Skip to the next ID if feedback not found
+        }
+        // Remove feedback from associated course's student_feedback array
+        if (feedback.isappproved) {
+          const course = await Course.findById(feedback.courseRef);
+          if (course) {
+            course.student_feedback.pull(feedbackId);
+            await course.save();
+          }
+        }
+
+        const deletedFeedback = await Feedback.findByIdAndDelete(feedbackId);
+
+        if (!deletedFeedback) {
+          results.push({
+            id: feedbackId,
+            success: false,
+            message: "Feedback not found",
+          });
+          continue; // Skip to the next ID if feedback not found
+        }
+
+        results.push({
+          id: feedbackId,
+          success: true,
+          message: "Feedback deleted successfully",
+          data: deletedFeedback,
+        });
+
+      } catch (error) {
+        console.error("Error deleting feedback:", error.message);
+        results.push({
+          id: feedbackId,
+          success: false,
+          message: "Error deleting feedback",
+          error: error.message,
+        });
+      }
+    }
+    res.status(200).json({
+      success: true,
+      message: "Feedback deleted successfully",
+      data: results,
+    });
+  } catch (error) {
+    console.error("Error deleting feedback:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Server error. Could not delete feedback.",
+      error: error.message,
+    });
+  }
+};
+

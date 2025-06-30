@@ -79,9 +79,24 @@ const userSchema = new mongoose.Schema({
     default: "not-applied",
   },
   deviceId: {
-  type: String,
-  default: null,
-}
+    type: String,
+    default: null,
+  },
+  device: {
+    deviceId: { type: String, required: false },
+    deviceType: {
+      type: String,
+      enum: ["web", "android", "ios"],
+      required: false
+    },
+    browser_name: { type: String },
+
+    userAgent: String,
+    ipAddress: String,
+    lastLogin: { type: Date, default: Date.now },
+    refreshTokenExpiry: { type: Date, default: Date.now },
+    isCurrent: { type: Boolean, default: false }
+  },
 });
 
 // Create and export the User model
