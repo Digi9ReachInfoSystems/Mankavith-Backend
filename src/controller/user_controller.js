@@ -83,6 +83,7 @@ exports.register = async (req, res) => {
       otp,
       otpExpiration,
       isEmailVerified: false,
+      signedUpAt: new Date(),
     });
 
     const savedUser = await newUser.save();
@@ -210,6 +211,7 @@ exports.login = async (req, res) => {
         refreshTokenExpiry: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
         isCurrent: true
       };
+      user.lastLogin = Date.now();
       await user.save();
       res.status(200).json({
         success: true,
@@ -293,9 +295,10 @@ exports.forceLogin = async (req, res) => {
     const accessToken = jwt.sign(
       { username: user.email, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: "1m" }
+      { expiresIn: "1h" }
     );
     user.accessToken = accessToken;
+    user.lastLogin = Date.now();
     await user.save();
     let student;
     if (user.role === "user") {
@@ -476,7 +479,8 @@ exports.refreshToken = async (req, res) => {
           message: "Refresh token is expired or invalid",
         });
       }
-
+      user.isActive = true;
+      user.lastActive = Date.now();
       const newAccessToken = jwt.sign(
         { username: user.email, role: user.role },
         process.env.JWT_SECRET,
@@ -608,6 +612,7 @@ exports.verifyLoginOtp = async (req, res) => {
       refreshTokenExpiry: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
       isCurrent: true
     };
+    user.lastLogin = Date.now();
     await user.save();
     res.status(200).json({
       success: true,
@@ -702,6 +707,10 @@ exports.logout = async (req, res) => {
     user.refreshToken = undefined;
     user.accessToken = undefined;
     user.device = undefined; // Clear device information
+    user.lastLogin = null;
+    user.lastActive = null;
+    user.isActive = false;
+
     await user.save();
     res.status(200).json({ success: true, message: "Logout successful" });
   } catch (error) {
@@ -756,7 +765,16 @@ exports.getUserById = async (req, res) => {
 };
 exports.getAllUsers = async (req, res) => {
   try {
-    const users = await User.find({ role: "user" });
+    const users = await User.find({ role: "user" })
+      .populate('wishList')
+      .populate({
+        path: 'subscription',
+        populate: [
+          { path: 'payment_id' },
+          { path: 'course_enrolled' }
+        ]
+      })
+      .populate("kycRef");
     res
       .status(200)
       .json({ success: true, message: "Users found", users: users });
