@@ -1234,7 +1234,16 @@ exports.createStudent = async (req, res) => {
 
 exports.getAllStudents = async (req, res) => {
   try {
-    const students = await User.find({ role: "user" });
+    const students = await User.find({ role: "user" })
+     .populate('wishList')
+      .populate({
+        path: 'subscription',
+        populate: [
+          { path: 'payment_id' },
+          { path: 'course_enrolled' }
+        ]
+      })
+      .populate("kycRef");
     res.status(200).json({ success: true, message: "Students fetched successfully", students });
   } catch (error) {
     console.error("Error fetching students:", error.message);
