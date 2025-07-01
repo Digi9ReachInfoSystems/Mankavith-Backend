@@ -1,4 +1,5 @@
 const e = require("express");
+const { sign } = require("jsonwebtoken");
 const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema({
@@ -82,6 +83,10 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: null,
   },
+  signedUpAt: { type: Date, default: Date.now },
+  lastLogin: { type: Date,  },
+  isActive: { type: Boolean, default: true },
+  lastActive: { type: Date,  },
   device: {
     deviceId: { type: String, required: false },
     deviceType: {

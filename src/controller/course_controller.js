@@ -78,6 +78,7 @@ exports.searchCourses = async (req, res) => {
   try {
     const { name, category } = req.query;
     let query = {};
+    query.isPublished = true; // Only fetch published courses
 
     // Add name filter if provided (case-insensitive search)
     if (name) {
@@ -125,6 +126,7 @@ exports.getAllCourses = async (req, res) => {
   try {
     const { category } = req.query;
     let query = {};
+    query.isPublished = true; // Only fetch published courses
 
     if (category) {
       const categoryExists = await Category.findById(category);
@@ -186,7 +188,7 @@ exports.getCoursesByCategory = async (req, res) => {
 
 
     // Check if category exists in database
-    const category = await Category.findOne({ title: categoryName });
+    const category = await Category.findOne({ title: categoryName, isPublished: true });
     if (!category) {
       return res.status(404).json({
         success: false,
@@ -385,7 +387,7 @@ exports.getCourseById = async (req, res) => {
   try {
     const courseId = req.params.id;
 
-    const course = await Course.findById(courseId)
+    const course = await Course.findOne({_id:courseId})
       .populate({
         path: "subjects",
         select: "subjectName image description lectures notes",
@@ -537,6 +539,7 @@ exports.searchCourses = async (req, res) => {
   try {
     const { name, categoryName } = req.query;
     let query = {};
+    query.isPublished = true; // Only fetch published courses
 
     if (name) query.courseDisplayName = { $regex: name, $options: "i" };
     if (categoryName != 'null') {
@@ -608,7 +611,7 @@ exports.addFeedbackToCourse = async (req, res) => {
 
 exports.getNoOfCourses = async (req, res) => {
   try {
-    const count = await Course.countDocuments();
+    const count = await Course.countDocuments({ isPublished: true });
     return res.status(200).json({
       success: true,
       count: count,  // Changed from 'data' to 'count' for clarity
@@ -670,7 +673,7 @@ exports.getAllUserCoursesByCategory = async (req, res) => {
         message: "User not found",
       });
     }
-    const categoryExists = await Category.findOne({ title: category });
+    const categoryExists = await Category.findOne({ title: category,isPublished: true });
     if (!categoryExists) {
       return res.status(404).json({
         success: false,
@@ -710,6 +713,7 @@ exports.searchUserCourses = async (req, res) => {
     const { name } = req.query;
     const { user_id, categoryName } = req.params
     let query = {};
+    query.isPublished = true; // Only fetch published courses
     const user = await User.findById(user_id);
     if (!user) {
       return res.status(404).json({
@@ -769,7 +773,7 @@ exports.getCourseWithProgress = async (req, res) => {
     console.log("Fetching course with progress for user:", userId, "and course:", courseId);
 
     // Fetch course with nested subjects and lectures
-    let course = await Course.findById(courseId)
+    let course = await Course.findOne({_id:courseId, isPublished: true})
       .populate({
         path: "subjects",
         populate: [{
@@ -1277,3 +1281,25 @@ exports.bulkDeleteCourse = async (req, res) => {
     });
   }
 };
+
+exports.getAllCourseAdmin = async (req, res) => {
+  try {
+    const courses = await Course.find()
+      .populate("subjects")
+      .populate("category")
+      .populate("student_feedback")
+      .populate("recorded_sessions");
+
+    return res.status(200).json({
+      success: true,
+      data: courses,
+    });
+  } catch (error) {
+    console.error("Error fetching all courses:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Server error. Could not fetch all courses.",
+      error: error.message,
+    });
+  }
+}
