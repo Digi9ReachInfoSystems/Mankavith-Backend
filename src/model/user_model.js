@@ -71,7 +71,7 @@ const userSchema = new mongoose.Schema({
   loginOtpExpiration: { type: Date },
   kycRef: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "KycDetails",
+    ref: "Kyc",
     default: null,
   },
   kyc_status: {
