@@ -8,11 +8,11 @@ const courseSchema = new mongoose.Schema(
       unique: true,
       trim: true
     },
-    category: {
+    category: [{
       type: mongoose.Schema.Types.ObjectId,
       ref: "Category",
       required: false
-    },
+    }],
     scheduled_class: {
       type: Map,
       of: String, // Can store schedule details as key-value pairs

@@ -12,17 +12,27 @@ const Certificate = require("../model/certificatesModel");
 // Create a new course (updated for category reference)
 exports.createCourse = async (req, res) => {
   try {
-    const courseData = req.body;
+    let courseData = req.body;
 
     // Validate category if provided
-    if (courseData.category) {
-      const categoryExists = await Category.findById(courseData.category);
-      if (!categoryExists) {
-        return res.status(400).json({
-          success: false,
-          message: "Category not found",
-        });
-      }
+    if (courseData.category.length > 0) {
+
+      courseData.category = await Promise.all(courseData.category.map(async (cat) => {
+        const categoryExists = await Category.findById(cat);
+        if (!categoryExists) {
+          return null;
+        }
+        return cat;
+      }));
+      courseData.category =  courseData.category.filter(cat => cat !== null);
+
+      // const categoryExists = await Category.findById(courseData.category);
+      // if (!categoryExists) {
+      //   return res.status(400).json({
+      //     success: false,
+      //     message: "Category not found",
+      //   });
+      // }
     }
 
     // Check if course with this name already exists
@@ -188,7 +198,7 @@ exports.getCoursesByCategory = async (req, res) => {
 
 
     // Check if category exists in database
-    const category = await Category.findOne({ title: categoryName, isPublished: true });
+    const category = await Category.findOne({ title: categoryName });
     if (!category) {
       return res.status(404).json({
         success: false,
@@ -197,7 +207,7 @@ exports.getCoursesByCategory = async (req, res) => {
     }
 
     // Find courses that reference this category
-    const courses = await Course.find({ category: category._id })
+    const courses = await Course.find({ category: category._id, isPublished: true })
       .populate("subjects",)
       .populate("category",)
       .populate("student_feedback")
@@ -225,17 +235,25 @@ exports.getCoursesByCategory = async (req, res) => {
 exports.updateCourse = async (req, res) => {
   try {
     const courseId = req.params.id;
-    const updateData = req.body;
+    let updateData = req.body;
 
     // Validate category if provided in update
-    if (updateData.category) {
-      const categoryExists = await Category.findById(updateData.category);
-      if (!categoryExists) {
-        return res.status(400).json({
-          success: false,
-          message: "Category not found",
-        });
-      }
+    if (updateData.category.length > 0) {
+      updateData.category = await Promise.all(updateData.category.map(async (cat) => {
+        const categoryExists = await Category.findById(cat);
+        if (!categoryExists) {
+          return null;
+        }
+        return cat;
+      }));
+      updateData.category = updateData.category.filter(cat => cat !== null);
+      // const categoryExists = await Category.findById(updateData.category);
+      // if (!categoryExists) {
+      //   return res.status(400).json({
+      //     success: false,
+      //     message: "Category not found",
+      //   });
+      // }
     }
     const course = await Course.findById(courseId);
     if (!course) {
@@ -387,7 +405,7 @@ exports.getCourseById = async (req, res) => {
   try {
     const courseId = req.params.id;
 
-    const course = await Course.findOne({_id:courseId})
+    const course = await Course.findOne({ _id: courseId })
       .populate({
         path: "subjects",
         select: "subjectName image description lectures notes",
@@ -636,7 +654,7 @@ exports.getAllUserCourses = async (req, res) => {
         message: "User not found",
       });
     }
-    let courses = await Course.find();
+    let courses = await Course.find({ isPublished: true }).populate("subjects").populate("category");
     courses = courses.map(course => {
       if (user.subscription.find(sub => sub.course_enrolled.equals(course._id))) {
         return ({
@@ -673,14 +691,14 @@ exports.getAllUserCoursesByCategory = async (req, res) => {
         message: "User not found",
       });
     }
-    const categoryExists = await Category.findOne({ title: category,isPublished: true });
+    const categoryExists = await Category.findOne({ title: category });
     if (!categoryExists) {
       return res.status(404).json({
         success: false,
         message: "Category not found",
       });
     }
-    let courses = await Course.find({ category: categoryExists._id });
+    let courses = await Course.find({ category: categoryExists._id, isPublished: true });
     courses = courses.map(course => {
       if (user.subscription.find(sub => sub.course_enrolled.equals(course._id))) {
         return ({
@@ -773,7 +791,7 @@ exports.getCourseWithProgress = async (req, res) => {
     console.log("Fetching course with progress for user:", userId, "and course:", courseId);
 
     // Fetch course with nested subjects and lectures
-    let course = await Course.findOne({_id:courseId, isPublished: true})
+    let course = await Course.findOne({ _id: courseId, isPublished: true })
       .populate({
         path: "subjects",
         populate: [{

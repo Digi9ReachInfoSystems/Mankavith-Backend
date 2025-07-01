@@ -32,12 +32,17 @@ exports.createFeedback = async (req, res) => {
       feedbackExists.review = review;
       feedbackExists.title = title;
       feedbackExists.isappproved = false;
-      await feedbackExists.save();
+      const savedFeedback = await feedbackExists.save();
       const course = await Course.findById(courseRef);
       if (!course.student_feedback) {
         course.student_feedback = [];
       }
       course.student_feedback.pop(feedbackExists._id);
+      res.status(200).json({
+        success: true,
+        message: "Feedback updated successfully",
+        data: savedFeedback,
+      });
     } else {
       const newFeedback = new Feedback({
         name,
@@ -48,12 +53,18 @@ exports.createFeedback = async (req, res) => {
         title,
         courseRef,
       });
+      const savedFeedback = await newFeedback.save();
+      return res.status(201).json({
+        success: true,
+        message: "Feedback created successfully",
+        data: savedFeedback,
+      });
     }
 
 
 
 
-    const savedFeedback = await newFeedback.save();
+
     // const course = await Course.findById(courseRef);
     // if (!course.student_feedback) {
     //   course.student_feedback = [];
@@ -61,11 +72,7 @@ exports.createFeedback = async (req, res) => {
     // course.student_feedback.push(savedFeedback._id);
     // await course.save();
 
-    return res.status(201).json({
-      success: true,
-      message: "Feedback created successfully",
-      data: savedFeedback,
-    });
+
   } catch (error) {
     console.error("Error creating feedback:", error.message);
     return res.status(500).json({
