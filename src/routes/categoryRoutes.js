@@ -7,5 +7,6 @@ router.get("/", categoryController.getAllCategories);
 router.get("/:id", categoryController.getCategoryById);
 router.put("/:id", categoryController.updateCategory);
 router.delete("/:id", categoryController.deleteCategory);
+router.delete("/bulk/delete", categoryController.bulkDeleteCategory);
 
 module.exports = router;

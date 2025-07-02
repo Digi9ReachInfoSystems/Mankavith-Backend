@@ -1,4 +1,5 @@
 const Category = require("../model/category_model");
+const Course = require("../model/course_model");
 
 // Create a new category
 exports.createCategory = async (req, res) => {
@@ -101,6 +102,15 @@ exports.updateCategory = async (req, res) => {
         message: "Title is required",
       });
     }
+    const existingCategory = await Category.findOne({
+      title: { $regex: new RegExp(`^${title}$`, 'i') }
+    });
+    if (existingCategory && existingCategory._id.toString() !== categoryId) {
+      return res.status(400).json({
+        success: false,
+        message: "Category with this title already exists",
+      });
+    }
 
     const updatedCategory = await Category.findByIdAndUpdate(
       categoryId,
@@ -134,6 +144,25 @@ exports.updateCategory = async (req, res) => {
 exports.deleteCategory = async (req, res) => {
   try {
     const categoryId = req.params.id;
+    const category = await Category.findById(categoryId);
+
+    if (!category) {
+      return res.status(404).json({
+        success: false,
+        message: "Category not found",
+      });
+    }
+    const course = await Course.find({ category: category._id });
+    if (course.length > 0) {
+      await Promise.all(
+        course.map(async (course) => {
+          const courseData = await Course.findById(course._id);
+          courseData.category.pull(categoryId);
+          await courseData.save();
+        })
+      )
+    }
+
 
     const deletedCategory = await Category.findByIdAndDelete(categoryId);
 
@@ -149,6 +178,64 @@ exports.deleteCategory = async (req, res) => {
       message: "Category deleted successfully",
       data: deletedCategory,
     });
+  } catch (error) {
+    console.error("Error deleting category:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Server error. Could not delete category.",
+      error: error.message,
+    });
+  }
+};
+
+exports.bulkDeleteCategory = async (req, res) => {
+  try {
+    const {categoryIds} = req.body;
+    if (categoryIds.length == 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Category ID is required",
+      });
+    }
+    let result = [];
+    for (const categoryId of categoryIds) {
+      try {
+
+        const category = await Category.findById(categoryId);
+
+        if (!category) {
+          result.push({ categoryId, success: false, message: "Category not found" })
+        }
+        const course = await Course.find({ category:category._id });
+        if (course && course.length > 0) {
+          await Promise.all(
+            course.map(async (course) => {
+              const courseData = await Course.findById(course._id);
+              courseData.category.pull(categoryId);
+              await courseData.save();
+            })
+          )
+        }
+
+
+        const deletedCategory = await Category.findByIdAndDelete(categoryId);
+
+        if (!deletedCategory) {
+          result.push({ categoryId, success: false, message: "Category not found" })
+        }
+
+        result.push({ categoryId, success: true, message: "Category deleted successfully" })
+      } catch (error) {
+        result.push({ categoryId, success: false, message: error.message })
+
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Category deleted successfully",
+      data: result
+    })
   } catch (error) {
     console.error("Error deleting category:", error.message);
     return res.status(500).json({

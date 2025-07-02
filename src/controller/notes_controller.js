@@ -13,6 +13,10 @@ module.exports.createNote = async (req, res) => {
     if (validSubjects.length !== subjects.length) {
       return res.status(400).json({ success: false, message: 'Some subjects are invalid' });
     }
+    const existingNote = await Note.findOne({ noteName });
+    if (existingNote) {
+      return res.status(400).json({ success: false, message: 'Note name already exists' });
+    }
 
     const newNote = new Note({
       noteName,

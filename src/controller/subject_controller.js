@@ -225,7 +225,7 @@ module.exports.updateSubject = async (req, res) => {
         if (!course) {
           return;
         }
-        course.subjects.push(savedSubject._id);
+        course.subjects.push(subject._id);
         await course.save();
       })
     );
@@ -245,7 +245,7 @@ module.exports.updateSubject = async (req, res) => {
         if (!note) {
           return;
         }
-        note.subjects.push(savedSubject._id);
+        note.subjects.push(subject._id);
         await note.save();
       })
     );
@@ -265,7 +265,7 @@ module.exports.updateSubject = async (req, res) => {
         if (!lecture) {
           return;
         }
-        lecture.subjectRef.push(savedSubject._id);
+        lecture.subjectRef.push(subject._id);
         await lecture.save();
       })
     );

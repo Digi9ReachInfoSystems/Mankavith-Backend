@@ -8,8 +8,8 @@ const Subject = require("../model/subject_model");
 // @access  Private/Admin
 exports.createLecture = async (req, res) => {
   try {
-    const { lectureName, description, duration, videoUrl, thumbnail } = req.body;
-
+    const { lectureName, description, duration, videoUrl, thumbnail, subjectRef } = req.body;
+    
     // Validate required fields
     // if (!lectureName || !duration || !videoUrl) {
     //   return res.status(400).json({ success: false, message: "lectureName, duration and videoUrl are required" });
@@ -27,8 +27,15 @@ exports.createLecture = async (req, res) => {
     //   return res.status(400).json({ success: false, message: "Invalid subjectRef" });
     // }
 
-    const lecture = new Lecture({ lectureName, description, duration, videoUrl, thumbnail });
+    const lecture = new Lecture({ lectureName, description, duration, videoUrl, thumbnail, subjectRef });
     const savedLecture = await lecture.save();
+    subjectRef.forEach(async (subjectId) => {
+      const subject = await Subject.findById(subjectId);
+      if (subject) {
+        subject.lectures.push(savedLecture._id);
+        await subject.save();
+      }
+    })
 
     res.status(201).json({ success: true, data: savedLecture });
   } catch (error) {
@@ -86,15 +93,33 @@ exports.getLectureById = async (req, res) => {
 exports.updateLecture = async (req, res) => {
   try {
     const { id } = req.params;
-    const { lectureName, description, duration, videoUrl, thumbnail } = req.body;
+    const { lectureName, description, duration, videoUrl, thumbnail, subjectRef } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ success: false, message: "Invalid lecture ID" });
     }
+    const lecture = await Lecture.findById(id);
+    if (!lecture) {
+      return res.status(404).json({ success: false, message: "Lecture not found" });
+    }
+    lecture.subjectRef.forEach(async (subjectId) => {
+      const subject = await Subject.findById(subjectId);
+      if (subject) {
+        subject.lectures.pull(id);
+        await subject.save();
+      }
+    })
+    subjectRef.forEach(async (subjectId) => {
+      const subject = await Subject.findById(subjectId);
+      if (subject) {
+        subject.lectures.push(id);
+        await subject.save();
+      }
+    })
 
     const updatedLecture = await Lecture.findByIdAndUpdate(
       id,
-      { lectureName, description, duration, videoUrl, thumbnail },
+      { lectureName, description, duration, videoUrl, thumbnail, subjectRef },
       { new: true, runValidators: true }
     )
     // .populate("courseRef", "courseName")
@@ -132,7 +157,7 @@ exports.deleteLecture = async (req, res) => {
         if (subject) {
           subject.lectures.pull(id);
           await subject.save();
-        }else{
+        } else {
           return;
         }
       })
@@ -174,7 +199,7 @@ exports.bulkDeleteLectures = async (req, res) => {
             if (subject) {
               subject.lectures.pull(id);
               await subject.save();
-            }else{
+            } else {
               return;
             }
           })
