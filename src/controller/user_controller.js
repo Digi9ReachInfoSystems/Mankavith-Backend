@@ -183,18 +183,19 @@ exports.login = async (req, res) => {
     if (!user.device || user?.device?.refreshTokenExpiry < Date.now()) {
       const expiryTime = Date.now() + 3600 * 1000;
       const expiryDate = new Date(expiryTime);
-
-      const accessToken = jwt.sign(
-        { username: user.email, role: user.role },
-        process.env.JWT_SECRET,
-        { expiresIn: "1h" }
-      );
-      user.accessToken = accessToken;
       const refreshToken = jwt.sign(
         { username: user.email, role: user.role },
         process.env.JWT_SECRET,
         { expiresIn: "7d" }
       );
+
+      const accessToken = jwt.sign(
+        { username: user.email, role: user.role, refreshToken },
+        process.env.JWT_SECRET,
+        { expiresIn: "1h" }
+      );
+      user.accessToken = accessToken;
+
       user.refreshToken = refreshToken;
       await user.save();
       let student;
@@ -227,12 +228,20 @@ exports.login = async (req, res) => {
     } else if (user.device && user?.device?.deviceId === device.deviceId && user?.device?.ipAddress === device.ipAddress) {
       const expiryTime = Date.now() + 3600 * 1000;
       const expiryDate = new Date(expiryTime);
-      const accessToken = jwt.sign(
+      const refreshToken = jwt.sign(
         { username: user.email, role: user.role },
+        process.env.JWT_SECRET,
+        { expiresIn: "7d" }
+      );
+
+      const accessToken = jwt.sign(
+        { username: user.email, role: user.role, refreshToken },
         process.env.JWT_SECRET,
         { expiresIn: "1h" }
       );
       user.accessToken = accessToken;
+
+      user.refreshToken = refreshToken;
       await user.save();
       let student;
       if (user.role === "user") {
@@ -292,11 +301,19 @@ exports.forceLogin = async (req, res) => {
     }
     const expiryTime = Date.now() + 3600 * 1000;
     const expiryDate = new Date(expiryTime);
-    const accessToken = jwt.sign(
+    const refreshToken = jwt.sign(
       { username: user.email, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+
+    const accessToken = jwt.sign(
+      { username: user.email, role: user.role, refreshToken },
       process.env.JWT_SECRET,
       { expiresIn: "1h" }
     );
+    user.refreshToken = refreshToken;
     user.accessToken = accessToken;
     user.lastLogin = Date.now();
     await user.save();
@@ -482,7 +499,7 @@ exports.refreshToken = async (req, res) => {
       user.isActive = true;
       user.lastActive = Date.now();
       const newAccessToken = jwt.sign(
-        { username: user.email, role: user.role },
+        { username: user.email, role: user.role, refreshToken },
         process.env.JWT_SECRET,
         { expiresIn: "1h" }
       );
@@ -586,16 +603,21 @@ exports.verifyLoginOtp = async (req, res) => {
     // }
     const expiryTime = Date.now() + 3600 * 1000;
     const expiryDate = new Date(expiryTime);
-    const accessToken = jwt.sign(
-      { username: user.email, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: "1h" }
-    );
     const refreshToken = jwt.sign(
       { username: user.email, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
+    const accessToken = jwt.sign(
+      { username: user.email, role: user.role, refreshToken },
+      process.env.JWT_SECRET,
+      { expiresIn: "1h" }
+    );
+    // const refreshToken = jwt.sign(
+    //   { username: user.email, role: user.role },
+    //   process.env.JWT_SECRET,
+    //   { expiresIn: "7d" }
+    // );
     user.refreshToken = refreshToken;
     await user.save();
     let student;
@@ -1235,7 +1257,7 @@ exports.createStudent = async (req, res) => {
 exports.getAllStudents = async (req, res) => {
   try {
     const students = await User.find({ role: "user" })
-     .populate('wishList')
+      .populate('wishList')
       .populate({
         path: 'subscription',
         populate: [

@@ -139,18 +139,27 @@ exports.updateRecordedSession = async (req, res) => {
         message: "Recorded session not found",
       });
     }
-    console.log("recordedSession", recordedSession);
     await Promise.all(recordedSession.course_ref.map(async (courseId) => {
       const course = await Course.findById(courseId);
-      course.recorded_sessions.pull(sessionId);
-      await course.save();
+      if (course) {
+        if (course.recorded_sessions.length > 0) {
+          course.recorded_sessions.pull(sessionId);
+        }
+        await course.save();
+      }
+
+
+
     }))
 
     if (course_ref.length > 0) {
-      console.log("course_ref", course_ref);
+      
       course_ref.map(async (course_ref) => {
 
         const course = await Course.findById(course_ref);
+        if (!course.recorded_sessions) {
+          course.recorded_sessions = [];
+        }
         course.recorded_sessions.push(sessionId);
         await course.save();
       })
@@ -176,7 +185,7 @@ exports.updateRecordedSession = async (req, res) => {
       data: updatedSession,
     });
   } catch (error) {
-    console.error("Error updating recorded session:", error.message);
+    console.error("Error updating recorded session:", error);
     return res.status(500).json({
       success: false,
       message: "Server error. Could not update recorded session.",
@@ -247,6 +256,65 @@ exports.getSessionsByCourse = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Server error. Could not fetch sessions.",
+      error: error.message,
+    });
+  }
+};
+
+exports.bulkDeleteRecordedSession = async (req, res) => {
+  try {
+    const { sessionIds } = req.body;
+
+    if (!sessionIds || sessionIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide at least one session ID to delete.",
+      });
+    }
+    let result = [];
+
+    for (const sessionId of sessionIds) {
+      try {
+
+
+        const session = await RecordedSession.findById(sessionId);
+
+        if (!session) {
+          result.push({ sessionId, success: false, message: "Session not found" });
+          continue;
+        }
+
+        await Promise.all(session.course_ref.map(async (courseId) => {
+          const course = await Course.findById(courseId);
+          course.recorded_sessions.pull(sessionId);
+          await course.save();
+        }))
+
+        const deletedSession = await RecordedSession.findByIdAndDelete(sessionId);
+
+        if (!deletedSession) {
+          result.push({ sessionId, success: false, message: "Session not found" });
+          continue;
+        }
+
+        result.push({ sessionId, success: true, message: "Session deleted successfully", data: deletedSession });
+
+      } catch (error) {
+        result.push({ sessionId, success: false, message: "Session not found" });
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Recorded sessions deleted successfully",
+      data: result,
+    });
+
+  } catch (error) {
+    console.error("Error deleting recorded sessions:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Server error. Could not delete recorded sessions.",
       error: error.message,
     });
   }

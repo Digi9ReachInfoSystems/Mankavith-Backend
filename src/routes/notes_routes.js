@@ -1,29 +1,29 @@
 const express = require('express');
-const { createNote, getAllNotes, getNoteById, updateNote, deleteNote, getNoOfNotes,bulkDeleteNotes } = require('../controller/notes_controller');
+const { createNote, getAllNotes, getNoteById, updateNote, deleteNote, getNoOfNotes, bulkDeleteNotes } = require('../controller/notes_controller');
 const authenticateJWT = require('../middleware/authenticator');
 const multer = require('multer');
 const router = express.Router();
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
-router.get('/total', getNoOfNotes);
+router.get('/total', authenticateJWT, getNoOfNotes);
 
 // Create a new note
-router.post('/notes', createNote);
+router.post('/notes', authenticateJWT, createNote);
 
 // Get all notes
-router.get('/notes', getAllNotes);
+router.get('/notes', authenticateJWT, getAllNotes);
 
 // Get note by ID
-router.get('/notes/:id', getNoteById);
+router.get('/notes/:id', authenticateJWT, getNoteById);
 
 // Update note by ID
-router.put('/notes/:id', updateNote);
+router.put('/notes/:id', authenticateJWT, updateNote);
 
 // Delete note by ID
-router.delete('/notes/:id', deleteNote);
+router.delete('/notes/:id', authenticateJWT, deleteNote);
 
-router.delete('/notes/bulk/delete',bulkDeleteNotes);
+router.delete('/notes/bulk/delete', authenticateJWT, bulkDeleteNotes);
 
 
 module.exports = router;
