@@ -42,6 +42,7 @@ router.post("/verifyPhoneOtp", userController.phoneOtpVerify);
 router.post("/resendPhoneOtp", userController.resendPhoneotp);
 router.post("/forceLogin", userController.forceLogin);
 router.delete("/bulkDelete", userController.bulkDeleteUsers);
+router.delete("/deleteStudent", userController.deleteStudents);
 module.exports = router;
 
 module.exports = router;

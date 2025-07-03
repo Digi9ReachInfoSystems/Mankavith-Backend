@@ -1721,3 +1721,92 @@ exports.bulkDeleteUsers = async (req, res) => {
   }
 
 }
+
+exports.deleteStudents = async (req, res) => {
+  try {
+    const { userId } = req.body;
+    if (!userId) {
+      return res.status(400).json({ success: false, message: "No user ID provided" });
+    }
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+    // const user = await User.findById(id);
+    // if (!user) {
+    //   return res.status(404).json({ success: false, message: "User not found" });
+    // }
+    user.subscription.forEach(async (sub) => {
+      const course = await Course.findById(sub.course_enrolled);
+      const courseProgress = await CourseProgress.findOne({ course_id: sub.course_enrolled });
+      courseProgress?.progress.filter((progress) => !progress.user_id.equals(id));
+      await courseProgress.save();
+      if (course) {
+
+        course.student_enrolled = course.student_enrolled.filter(
+          (studentId) => !studentId.equals(id)
+        );
+        await course.save();
+      }
+    })
+    const attempts = await UserAttempt.find({ userId: user._id });
+    const deletedKyc = await KycDetails.findOneAndDelete({ userref: user._id });
+    const deletedSupport = await Support.find({ userRef: user._id });
+    deletedSupport.forEach(async (support) => {
+      await Support.findByIdAndDelete(support._id);
+    })
+    const userProgress = await UserProgress.findOneAndDelete({ user_id: user._id });
+    const payments = await Payments.find({ userRef: user._id });
+    payments.forEach(async (payment) => {
+      await Payments.findByIdAndDelete(payment._id);
+    })
+    const certificates = await Certificate.find({ user_ref: user._id });
+    certificates.forEach(async (certificate) => {
+      await Certificate.findByIdAndDelete(certificate._id);
+    })
+    attempts.forEach(async (attemptID) => {
+      const attempt = await UserAttempt.findByIdAndDelete(attemptID._id);
+      const userRanking = await UserRanking.findOneAndDelete({ userId: attempt.userId, subject: attempt.subject, bestAttemptId: attempt._id });
+      const userAttempts = await UserAttempt.find({ userId: attempt.userId, attemptNumber: { $gt: attempt.attemptNumber }, subject: attempt.subject, });
+      for (let i = 0; i < userAttempts.length; i++) {
+        userAttempts[i].attemptNumber -= 1;
+        await userAttempts[i].save();
+      }
+      const result = await updateRankings(attempt);
+
+    })
+    const feedbacks = await Feedback.find({ userRef: user._id });
+    feedbacks.forEach(async (feedback) => {
+      const course = await Course.findById(feedback.courseRef);
+      if (course) {
+        course.student_feedback = course.student_feedback.filter(
+          (feedbackId) => !feedbackId.equals(feedback._id)
+        );
+        await course.save();
+      }
+      await Feedback.findByIdAndDelete(feedback._id);
+
+    })
+    const deletedUser = await User.findByIdAndDelete(user._id);
+    res.status(200).json({
+      success: true, message: "User deleted successfully",
+
+      user: deletedUser,
+      kyc: deletedKyc,
+      Support: deletedSupport.length,
+      UserProgress: userProgress,
+      attempts: attempts.length,
+      Payments: (await Payments.find({ userRef: user._id })).length,
+      Certificates: certificates.length,
+      Feedbacks: feedbacks.length,
+    });
+
+
+
+  } catch (error) {
+    console.error("Error deleting user:", error.message);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+
+}
