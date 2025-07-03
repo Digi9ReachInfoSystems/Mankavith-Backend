@@ -4,7 +4,7 @@ const UserRanking = require('../model/userRankingModel');
 const User = require('../model/user_model');
 const mongoose = require('mongoose');
 
-// Start a new attempt (updated)
+// Start a new attempt (updated)getAttemptsByUserId
 // exports.startAttempt = async (req, res) => {
 //     try {
 //         const { mockTestId, courseId, user_id } = req.body;
