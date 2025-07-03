@@ -11,5 +11,5 @@ router.delete("/:id", recordedSessionController.deleteRecordedSession);
 
 // Specialized routes
 router.get("/course/:courseId", recordedSessionController.getSessionsByCourse);
-
+router.delete("/bulk/delete", recordedSessionController.bulkDeleteRecordedSession);
 module.exports = router;

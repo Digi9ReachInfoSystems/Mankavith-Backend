@@ -17,7 +17,7 @@ const questionSchema = new mongoose.Schema({
     required: function() { return this.type === 'mcq'; } 
   },
   expectedAnswer: { type: String }, // For subjective questions (optional)
-  marks: { type: Number, required: true, min: 1 }
+  marks: { type: Number, required: true }
 }, { _id: true });
 
 const mockTestSchema = new mongoose.Schema({
