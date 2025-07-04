@@ -1,5 +1,5 @@
 const express = require('express');
-const { createNote, getAllNotes, getNoteById, updateNote, deleteNote, getNoOfNotes, bulkDeleteNotes } = require('../controller/notes_controller');
+const { createNote, getAllNotes, getNoteById, updateNote, deleteNote, getNoOfNotes, bulkDeleteNotes,getAllNotesBySubjectIds } = require('../controller/notes_controller');
 const authenticateJWT = require('../middleware/authenticator');
 const multer = require('multer');
 const router = express.Router();
@@ -24,6 +24,8 @@ router.put('/notes/:id', authenticateJWT, updateNote);
 router.delete('/notes/:id', authenticateJWT, deleteNote);
 
 router.delete('/notes/bulk/delete', authenticateJWT, bulkDeleteNotes);
+
+router.post("/allNotes/bySubjectIds", authenticateJWT, getAllNotesBySubjectIds);
 
 
 module.exports = router;

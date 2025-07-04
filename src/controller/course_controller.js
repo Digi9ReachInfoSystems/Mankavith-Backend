@@ -796,6 +796,14 @@ exports.getCourseWithProgress = async (req, res) => {
         path: "subjects",
         populate: [{
           path: "lectures",
+          // path :"notes"
+        }],
+      })
+       .populate({
+        path: "subjects",
+        populate: [{
+          // path: "lectures",
+          path :"notes"
         }],
       });
 
