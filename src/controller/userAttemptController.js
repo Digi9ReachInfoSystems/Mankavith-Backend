@@ -3,6 +3,7 @@ const MockTest = require('../model/mockTestModel');
 const UserRanking = require('../model/userRankingModel');
 const User = require('../model/user_model');
 const mongoose = require('mongoose');
+const { removeAllListeners } = require('../model/testimonialsModel');
 
 // Start a new attempt (updated)getAttemptsByUserId
 // exports.startAttempt = async (req, res) => {
@@ -231,6 +232,7 @@ exports.submitAttempt = async (req, res) => {
 
         const now = new Date();
         const isWithinWindow = attempt.isWithinTestWindow;
+        const attemptNumber = attempt.attemptNumber;
 
         const mockTest = await MockTest.findById(attempt.mockTestId);
 
@@ -284,7 +286,7 @@ exports.submitAttempt = async (req, res) => {
         await attempt.save();
 
         // If no subjective questions, update rankings immediately
-        if (isWithinWindow) {
+        if (isWithinWindow && attemptNumber === 1) {
             if (!hasSubjective) {
                 await updateRankings(attempt);
             }
@@ -330,7 +332,7 @@ exports.evaluateSubjective = async (req, res) => {
         const mockTest = await MockTest.findById(attempt.mockTestId._id);
         const now = new Date();
         const isWithinWindow = attempt.isWithinTestWindow;
-
+        const attemptNumber = attempt.attemptNumber;
 
         let subjectiveScore = 0;
 
@@ -361,8 +363,9 @@ exports.evaluateSubjective = async (req, res) => {
         attempt.status = 'evaluated';
         attempt.evaluatedAt = new Date();
 
+
         await attempt.save();
-        if (isWithinWindow) {
+        if (isWithinWindow && attemptNumber === 1) {
             await updateRankings(attempt);
 
         }
@@ -932,6 +935,24 @@ exports.deleteUserAttempt = async (req, res) => {
         if (!attempt) return res.status(404).json({ success: false, message: 'Attempt not found' });
         const result = await updateRankings(attempt);
         res.status(200).json({ success: true, message: 'Attempt deleted successfully', data: attempt });
+    } catch (err) {
+        console.error("Error:", err);
+        res.status(500).json({ success: false, message: 'Internal error' });
+    }
+};
+
+
+exports.getUserResults = async (req, res) => {
+    try {
+        const { user_id, mockTestId } = req.body;
+        const attempts = await UserAttempt.find({ userId: user_id, mockTestId, $or: [{ status: 'submitted' }, { status: 'evaluated' }, { status: 'evaluating' }] }).populate('mockTestId');
+        const mockTest = await MockTest.findById(mockTestId);
+        const totalAttempts = mockTest.maxAttempts;
+        const userAttempts = attempts.length;
+        const remainigAttempts = totalAttempts - userAttempts;
+        const result = attempts.find(attempt => attempt.attemptNumber === 1);
+        const ranking = await UserRanking.findOne({ userId: user_id, mockTestId, subject: mockTest.subject }).populate('subject');
+        res.status(200).json({ success: true, totalAttempts, remainigAttempts, result,ranking });
     } catch (err) {
         console.error("Error:", err);
         res.status(500).json({ success: false, message: 'Internal error' });
