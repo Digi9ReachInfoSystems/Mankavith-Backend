@@ -215,3 +215,17 @@ module.exports.bulkDeleteNotes = async (req, res) => {
     return res.status(500).json({ success: false, message: 'Error deleting note', error: error.message });
   }
 };
+
+module.exports.getAllNotesBySubjectIds = async (req, res) => {
+  try {
+    const { subjectIds } = req.body;
+    if (subjectIds.length === 0) {
+      return res.status(400).json({ success: false, message: 'No subject IDs provided' });
+    }
+    const notes = await Note.find({ subjects: { $in: subjectIds } });
+    return res.status(200).json({ success: true, data: notes });
+  } catch (error) {
+    console.error('Error fetching notes by subject IDs:', error);
+    return res.status(500).json({ success: false, message: 'Error fetching notes by subject IDs', error: error.message });
+  }
+}

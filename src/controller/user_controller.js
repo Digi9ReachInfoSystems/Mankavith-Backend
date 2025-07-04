@@ -197,6 +197,7 @@ exports.login = async (req, res) => {
       user.accessToken = accessToken;
 
       user.refreshToken = refreshToken;
+      user.isActive = true;
       await user.save();
       let student;
       if (user.role === "user") {
@@ -316,6 +317,7 @@ exports.forceLogin = async (req, res) => {
     user.refreshToken = refreshToken;
     user.accessToken = accessToken;
     user.lastLogin = Date.now();
+    user.isActive = true;
     await user.save();
     let student;
     if (user.role === "user") {
@@ -619,6 +621,7 @@ exports.verifyLoginOtp = async (req, res) => {
     //   { expiresIn: "7d" }
     // );
     user.refreshToken = refreshToken;
+    user.isActive = true;
     await user.save();
     let student;
     if (user.role === "user") {
