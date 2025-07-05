@@ -1813,3 +1813,20 @@ exports.deleteStudents = async (req, res) => {
   }
 
 }
+
+exports.checkUserRefreshToken=async(req,res)=>{
+  try {
+    const { userId, refreshToken } = req.body;
+    if (!refreshToken) {
+      return res.status(400).json({ success: false, message: "No refresh token provided" });
+    }
+    const user = await User.findOne({userId, refreshToken });
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+    res.status(200).json({ success: true, message: "User found", user });
+  } catch (error) {
+    console.error("Error checking user:", error.message);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+}
