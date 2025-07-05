@@ -286,16 +286,41 @@ exports.submitAttempt = async (req, res) => {
         await attempt.save();
 
         // If no subjective questions, update rankings immediately
-        if (isWithinWindow && attemptNumber === 1) {
+        if (isWithinWindow) {
             if (!hasSubjective) {
                 await updateRankings(attempt);
             }
         }
+        const questionIds = [];
+
+        attempt.answers.forEach(answer => {
+            questionIds.push(answer.questionId);
+        });
+
+        const answeredQuestions = await MockTest.aggregate([
+            { $match: { _id: new mongoose.Types.ObjectId(attempt.mockTestId) } },
+            { $unwind: '$questions' },
+            { $match: { 'questions._id': { $in: questionIds } } },
+            { $project: { question: '$questions' } }
+        ]);
+        const questionMap = {};
+        answeredQuestions.forEach(item => {
+            questionMap[item.question._id.toString()] = item.question;
+        });
+        const enhancedAttempts = {
+            ...attempt.toObject(),
+            answers: attempt.answers.map(answer => ({
+                ...answer.toObject(),
+                questionDetails: questionMap[answer.questionId.toString()]
+            }))
+        };
+
 
 
         res.status(200).json({
             success: true,
-            data: attempt,
+            // data: attempt,
+            data: enhancedAttempts,
             message: isWithinWindow ?
                 'Attempt submitted (counts for rankings)' :
                 'Attempt submitted (does NOT count for rankings)'
@@ -365,7 +390,7 @@ exports.evaluateSubjective = async (req, res) => {
 
 
         await attempt.save();
-        if (isWithinWindow && attemptNumber === 1) {
+        if (isWithinWindow) {
             await updateRankings(attempt);
 
         }
@@ -950,9 +975,32 @@ exports.getUserResults = async (req, res) => {
         const totalAttempts = mockTest.maxAttempts;
         const userAttempts = attempts.length;
         const remainigAttempts = totalAttempts - userAttempts;
-        const result = attempts.find(attempt => attempt.attemptNumber === 1);
+        const attempt = attempts.find((attempt ,index)=> index === attempts.length - 1);
         const ranking = await UserRanking.findOne({ userId: user_id, mockTestId, subject: mockTest.subject }).populate('subject');
-        res.status(200).json({ success: true, totalAttempts, remainigAttempts, result,ranking });
+        const questionIds = [];
+
+        attempt.answers.forEach(answer => {
+            questionIds.push(answer.questionId);
+        });
+
+        const answeredQuestions = await MockTest.aggregate([
+            { $match: { _id: new mongoose.Types.ObjectId(attempt.mockTestId) } },
+            { $unwind: '$questions' },
+            { $match: { 'questions._id': { $in: questionIds } } },
+            { $project: { question: '$questions' } }
+        ]);
+        const questionMap = {};
+        answeredQuestions.forEach(item => {
+            questionMap[item.question._id.toString()] = item.question;
+        });
+        const enhancedAttempts = {
+            ...attempt.toObject(),
+            answers: attempt.answers.map(answer => ({
+                ...answer.toObject(),
+                questionDetails: questionMap[answer.questionId.toString()]
+            }))
+        };
+        res.status(200).json({ success: true, totalAttempts, remainigAttempts, result: enhancedAttempts, ranking });
     } catch (err) {
         console.error("Error:", err);
         res.status(500).json({ success: false, message: 'Internal error' });
