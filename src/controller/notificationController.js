@@ -6,7 +6,9 @@ exports.sendNotification = async (req, res) => {
   try {
     const { title, description, time, image, notificationType } = req.body;
 
-    const notification = new Notification({ title, description, time, image, notificationType });
+    const notification = new Notification({ title, description, time, 
+        // image,
+         notificationType });
     await notification.save();
 
     const users = await User.find();
@@ -16,7 +18,7 @@ exports.sendNotification = async (req, res) => {
         title,
         description,
         time,
-        image,
+        // image,
         user_ref: user._id,
       });
       await userNotification.save();
