@@ -411,3 +411,52 @@ exports.sendMockTestSubmissionAlert = async (studentName, studentEmail, testName
     console.error('Error sending mock test alert:', error);
   }
 };
+
+exports.sendQuestionPaperDownloadAlert = async (userName, userEmail, userPhone,adminEmail) => {
+  const mailOptions = {
+    from: fromMail,
+    to: adminEmail,
+    subject: `Question Paper Downloaded`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
+        <h2 style="color: #2d3748; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">Question Paper Download Alert</h2>
+        
+        <div style="background-color: #f8f9fa; border-radius: 8px; padding: 15px; margin: 20px 0;">
+          <h3 style="color: #4a5568; margin-top: 0;">Download Details</h3>
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; width: 40%;"><strong>User Name:</strong></td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0;">${userName}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0;"><strong>Email:</strong></td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0;">${userEmail}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0;"><strong>Phone:</strong></td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0;">${userPhone}</td>
+            </tr>
+           
+          </table>
+        </div>
+
+        <div style="margin: 25px 0;">
+          <a href="${siteUrl}/admin/downloads" 
+             style="background-color: #4299e1; color: white; padding: 10px 15px; text-decoration: none; border-radius: 5px; display: inline-block;">
+            View Download History
+          </a>
+        </div>
+
+        
+      </div>
+    `,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`Download alert sent to admin for ${userName}'s download of Question Paper `);
+  } catch (error) {
+    console.error('Error sending download alert:', error);
+    throw error; // Optional: rethrow if you want calling code to handle it
+  }
+};
