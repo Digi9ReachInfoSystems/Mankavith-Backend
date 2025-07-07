@@ -69,7 +69,7 @@ const userAttemptRoutes = require("./src/routes/userAttemptRoutes");
 const userRankingRoutes = require("./src/routes/userRankingRoutes");
 const pdfCertificatesRoutes = require("./src/routes/pdfCertificateRoutes");
 const socialMedialinksRoutes = require("./src/routes/socialMediaLinksRoutes");
-
+const notificationRoutes = require("./src/routes/notificationRoutes");
 app.use("/user", userRoutes);
 app.use("/api/v1/course", courseRoutes);
 app.use("/api/v1/subject", subjectRoutes);
@@ -109,6 +109,7 @@ app.use("/userAttempt", userAttemptRoutes);
 app.use("/userRanking", userRankingRoutes);
 app.use("/pdfCertificates", pdfCertificatesRoutes);
 app.use("/socialMediaLinks", socialMedialinksRoutes);
+app.use("/notifications", notificationRoutes);
 
 
 
