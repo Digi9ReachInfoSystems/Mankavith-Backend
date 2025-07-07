@@ -16,7 +16,7 @@ const Payments = require('../model/paymentModel');
 const Certificate = require('../model/certificatesModel');
 const Feedback = require('../model/feedback');
 const axios = require("axios");
-const { sendWelcomeEmail, sendAdminNotification } = require("../middleware/mailService");
+const { sendWelcomeEmail, sendAdminNotification, sendQuestionPaperDownloadAlert } = require("../middleware/mailService");
 const generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000).toString(); // Generates a 6-digit OTP
 };
@@ -1924,7 +1924,7 @@ exports.blockAndUnblockUser = async (req, res) => {
   }
 }
 
-exports.enableDisableMasterOtp= async (req, res) => {
+exports.enableDisableMasterOtp = async (req, res) => {
   try {
     const { userId } = req.body;
     if (!userId) {
@@ -1939,6 +1939,150 @@ exports.enableDisableMasterOtp= async (req, res) => {
     res.status(200).json({ success: true, message: user.isMasterOtpEnabled ? "Master OTP enabled successfully" : "Master OTP disabled successfully", user });
   } catch (error) {
     console.error("Error blocking user:", error.message);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+}
+
+exports.sendChangePasswordOtp = async (req, res) => {
+  try {
+    const { userId } = req.body;
+    if (!userId) {
+      return res.status(400).json({ success: false, message: "No user ID provided" });
+    }
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+    const otp = Math.floor(100000 + Math.random() * 900000);
+    const response = await axios.post('https://control.msg91.com/api/v5/otp', {
+      otp_expiry: 1,
+      template_id: "6835b4f2d6fc053de8172342",
+      mobile: `91${user.phone}`,
+      authkey: process.env.MSG91_AUTH_KEY,
+      otp: otp,
+      realTimeResponse: 1
+    })
+    if (response.data.type == "success") {
+      res.status(200).json({ success: true, message: "OTP sent successfully", data: response.data });
+    }
+  } catch (error) {
+    console.error("Error sending OTP:", error.message);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+}
+
+exports.resendChangePasswordOtp = async (req, res) => {
+  try {
+    const { userId } = req.body;
+    if (!userId) {
+      return res.status(400).json({ success: false, message: "No user ID provided" });
+    }
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+    const otp = Math.floor(100000 + Math.random() * 900000);
+    const response = await axios.get(
+      `https://control.msg91.com/api/v5/otp/retry?mobile=91${user.phone}&authkey=${process.env.MSG91_AUTH_KEY}`,
+    )
+    if (response.data.type == "success") {
+      return res.status(200).json({ success: true, message: "OTP sent successfully", data: response.data });
+    } else if (response.data.type == "error") {
+      if (response.data.message == "otp_expired") {
+        const response = await axios.post('https://control.msg91.com/api/v5/otp', {
+          otp_expiry: 1,
+          template_id: "6835b4f2d6fc053de8172342",
+          mobile: `91${user.phone}`,
+          authkey: process.env.MSG91_AUTH_KEY,
+          otp: otp,
+          realTimeResponse: 1
+        })
+        if (response.data.type == "success") {
+          res.status(200).json({ success: true, message: "OTP sent successfully", data: response.data });
+        }
+        if (response.data.type == "error") {
+          return res.status(400).json({ success: false, message: response.data.message, data: response.data });
+        }
+      }
+      return res.status(400).json({ success: false, message: response.data.message, data: response.data });
+    }
+  } catch (error) {
+    console.error("Error generating OTP:", error.message);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+}
+
+exports.verifyChangePassword = async (req, res) => {
+  try {
+    const { userId, Otp, currentPassword, newPassword, confirmPassword } = req.body;
+    if (!userId || !currentPassword || !newPassword || !confirmPassword || !Otp) {
+      return res.status(400).json({ success: false, message: "missing required fields" });
+    }
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+    if (!user || !(await bcrypt.compare(currentPassword, user.password))) {
+      return res
+        .status(401)
+        .json({ success: false, message: "Invalid credentials" });
+    }
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Passwords and Confirm Password do not match",
+      });
+    }
+    const passwordStrengthRegex =
+      /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*]).{8,}$/.test(newPassword);
+    console.log(passwordStrengthRegex);
+    if (!passwordStrengthRegex) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Password must be at least 8 characters long, include a number, an uppercase letter, and a special character.",
+      });
+    }
+    const response = await axios.get(
+      `https://control.msg91.com/api/v5/otp/verify?mobile=91${user.phone}&otp=${Otp}`,
+      {
+        headers: {
+          authkey: process.env.MSG91_AUTH_KEY,
+        },
+      }
+    );
+    if (response.data.type == "success") {
+
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      user.password = hashedPassword;
+      await user.save();
+
+
+    } else if (response.data.type == "error") {
+      if (response.data.message == "Mobile no. already verified") {
+        return res.status(400).json({ success: false, message: "OTP already verified Please generate new OTP" });
+      }
+      return res.status(400).json({ success: false, message: response.data.message, data: response.data });
+    }
+
+    res.status(200).json({ success: true, message: "Password changed successfully", user });
+  } catch (error) {
+    console.error("Error changing password:", error);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+}
+
+exports.collectDetailsOnQuestionPaperDownload = async (req, res) => {
+  try {
+    const { name , email ,phoneNumber } = req.body;
+    const userAdmins = await User.find({ role: "admin" });
+    Promise.all(userAdmins.map(async (admin) => {
+      await sendQuestionPaperDownloadAlert(name,email,phoneNumber,admin.email)
+    }))
+    res.status(200).json({ success: true, message: "Details collected successfully" });
+   
+  } catch (error) {
+    console.error("Error collecting details:", error);
     res.status(500).json({ success: false, message: "Server error", error: error.message });
   }
 }
