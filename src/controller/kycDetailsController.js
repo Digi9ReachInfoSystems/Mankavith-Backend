@@ -1,3 +1,4 @@
+const { sendStudentKYCAcknowledgment, sendAdminKYCNofification, sendKYCApprovalEmail, sendKYCRejectionEmail } = require("../middleware/mailService");
 const Kyc = require("../model/kycDetails");
 const User = require("../model/user_model");
 
@@ -92,7 +93,13 @@ exports.createKyc = async (req, res) => {
     user.kycRef = savedKyc._id;
     user.kyc_status = "pending"; // Set initial KYC status
     await user.save();
-
+    await sendStudentKYCAcknowledgment(user.displayName, user.email);
+    const  userAdmin = await User.find({role:"admin"});
+    await Promise.all(
+      userAdmin.map(async (admin) => {
+        await sendAdminKYCNofification(user.displayName, user.email, admin.email);
+      })
+    )
     return res.status(201).json({
       success: true,
       message: "KYC record created successfully",
@@ -192,6 +199,12 @@ exports.updateKycStatus = async (req, res) => {
     }
     user.kyc_status = status;
     await user.save();
+    if (status === "approved") {
+      await sendKYCApprovalEmail(user.displayName, user.email);
+     
+    }else if (status === "rejected") {
+      await sendKYCRejectionEmail(user.displayName, user.email);
+    }
     if (!updatedKyc) {
       return res.status(404).json({
         success: false,

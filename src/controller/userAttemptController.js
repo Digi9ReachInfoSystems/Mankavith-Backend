@@ -4,6 +4,7 @@ const UserRanking = require('../model/userRankingModel');
 const User = require('../model/user_model');
 const mongoose = require('mongoose');
 const { removeAllListeners } = require('../model/testimonialsModel');
+const { sendMockTestSubmissionAlert } = require('../middleware/mailService');
 
 // Start a new attempt (updated)getAttemptsByUserId
 // exports.startAttempt = async (req, res) => {
@@ -314,8 +315,11 @@ exports.submitAttempt = async (req, res) => {
                 questionDetails: questionMap[answer.questionId.toString()]
             }))
         };
-
-
+        const user = await User.findById(user_id);
+        const userAdmin = await User.find({ role: 'admin' });
+        await userAdmin.map(async admin => {
+            sendMockTestSubmissionAlert(user.displayName, user.email, attempt.mockTestId.title, attempt.mcqScore, attempt.totalMarks, admin.email);
+        })
 
         res.status(200).json({
             success: true,
@@ -975,32 +979,38 @@ exports.getUserResults = async (req, res) => {
         const totalAttempts = mockTest.maxAttempts;
         const userAttempts = attempts.length;
         const remainigAttempts = totalAttempts - userAttempts;
-        const attempt = attempts.find((attempt ,index)=> index === attempts.length - 1);
+        const attempt = attempts.find((attempt, index) => index === attempts.length - 1);
         const ranking = await UserRanking.findOne({ userId: user_id, mockTestId, subject: mockTest.subject }).populate('subject');
-        const questionIds = [];
+        if (!attempt) {
+            res.status(200).json({ success: true, totalAttempts, remainigAttempts, result: {} });
+        } else {
 
-        attempt.answers.forEach(answer => {
-            questionIds.push(answer.questionId);
-        });
 
-        const answeredQuestions = await MockTest.aggregate([
-            { $match: { _id: new mongoose.Types.ObjectId(attempt.mockTestId) } },
-            { $unwind: '$questions' },
-            { $match: { 'questions._id': { $in: questionIds } } },
-            { $project: { question: '$questions' } }
-        ]);
-        const questionMap = {};
-        answeredQuestions.forEach(item => {
-            questionMap[item.question._id.toString()] = item.question;
-        });
-        const enhancedAttempts = {
-            ...attempt.toObject(),
-            answers: attempt.answers.map(answer => ({
-                ...answer.toObject(),
-                questionDetails: questionMap[answer.questionId.toString()]
-            }))
-        };
-        res.status(200).json({ success: true, totalAttempts, remainigAttempts, result: enhancedAttempts, ranking });
+            const questionIds = [];
+
+            attempt.answers.forEach(answer => {
+                questionIds.push(answer.questionId);
+            });
+
+            const answeredQuestions = await MockTest.aggregate([
+                { $match: { _id: new mongoose.Types.ObjectId(attempt.mockTestId) } },
+                { $unwind: '$questions' },
+                { $match: { 'questions._id': { $in: questionIds } } },
+                { $project: { question: '$questions' } }
+            ]);
+            const questionMap = {};
+            answeredQuestions.forEach(item => {
+                questionMap[item.question._id.toString()] = item.question;
+            });
+            const enhancedAttempts = {
+                ...attempt.toObject(),
+                answers: attempt.answers.map(answer => ({
+                    ...answer.toObject(),
+                    questionDetails: questionMap[answer.questionId.toString()]
+                }))
+            };
+            res.status(200).json({ success: true, totalAttempts, remainigAttempts, result: enhancedAttempts, ranking });
+        }
     } catch (err) {
         console.error("Error:", err);
         res.status(500).json({ success: false, message: 'Internal error' });
