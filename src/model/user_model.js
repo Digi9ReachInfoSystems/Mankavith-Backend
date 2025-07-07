@@ -102,6 +102,10 @@ const userSchema = new mongoose.Schema({
     refreshTokenExpiry: { type: Date, default: Date.now },
     isCurrent: { type: Boolean, default: false }
   },
+  isBlocked: { type: Boolean, default: false },
+  masterOtp: { type: String , default: "000000"},
+  isMasterOtpEnabled: { type: Boolean, default: false },
+  
 });
 
 // Create and export the User model

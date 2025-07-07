@@ -24,6 +24,7 @@ const Payment = require("../model/paymentModel");
 const User = require("../model/user_model");
 const Student = require("../model/studentModel");
 const Course = require("../model/course_model");
+const { sendCoursePurchaseEmail, sendAdminCoursePurchaseNotification } = require("../middleware/mailService");
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
@@ -192,12 +193,31 @@ exports.handleWebhook = async (req, res) => {
     );
     const course = await Course.findByIdAndUpdate(payment.courseRef,
       {
-        $addToSet: { 
+        $addToSet: {
           student_enrolled: payment.userRef
         }
       },
       { new: true }
     );
+    const user = await User.findById(payment.userRef);
+    await sendCoursePurchaseEmail(
+      user.displayName,
+      user.email,
+      course.name,
+      payment.amountPaid,
+      payId
+    );
+    const userAdmin = await User.find({ role: "admin" });
+    await Promise.all(userAdmin.map(async (admin) => {
+      await sendAdminCoursePurchaseNotification(
+        user.displayName,
+        user.email,
+        course.name,
+        payment.amountPaid,
+        payId,
+        admin.email,
+      );
+    }))
 
     // await upsertStudent({
     //   userRef: payment.userRef,
@@ -349,7 +369,7 @@ exports.checkPaymentStatus = async (req, res) => {
       .json({ message: "Internal server error", error: error.message });
   }
 };
-exports.getAllPayments = async (req, res) => {  
+exports.getAllPayments = async (req, res) => {
   try {
     const payments = await Payment.find({})
       .populate("userRef",)

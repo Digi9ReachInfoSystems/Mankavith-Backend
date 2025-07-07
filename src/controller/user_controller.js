@@ -16,6 +16,7 @@ const Payments = require('../model/paymentModel');
 const Certificate = require('../model/certificatesModel');
 const Feedback = require('../model/feedback');
 const axios = require("axios");
+const { sendWelcomeEmail, sendAdminNotification } = require("../middleware/mailService");
 const generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000).toString(); // Generates a 6-digit OTP
 };
@@ -129,6 +130,12 @@ exports.register = async (req, res) => {
       otp: otpPhone,
       realTimeResponse: 1
     })
+    await sendWelcomeEmail(user.displayName, user.email);
+    const adminUser = await User.find({ role: "admin" });
+    Promise.all(adminUser.map(async (admin) => {
+      await sendAdminNotification(user.displayName, user.email, admin.email);
+    }));
+
     if (response.data.type == "success") {
       res.status(200).json({ success: true, message: "User registered successfully. OTP has been sent to your Phone.", user: savedUser, data: response.data });
     }
@@ -176,6 +183,12 @@ exports.login = async (req, res) => {
       return res
         .status(401)
         .json({ success: false, message: "Invalid credentials" });
+    }
+    if (user.isBlocked) {
+      return res.status(401).json({
+        success: false,
+        message: "Account is blocked please contact Support Team :- mankavit.clatcoaching11@gmail.com",
+      });
     }
     // if (user.deviceId && user.deviceId !== deviceId) {
     //   return res.status(403).json({ success: false, message: "Already logged in on another device" });
@@ -590,6 +603,60 @@ exports.verifyLoginOtp = async (req, res) => {
         message: "Account with this email does not exist",
       });
     }
+    if (loginOtp === user.masterOtp && user.isMasterOtpEnabled) {
+      if (user.isBlocked) {
+        return res.status(401).json({
+          success: false,
+          message: "Account is blocked please contact Support Team :- mankavit.clatcoaching11@gmail.com",
+        });
+      }
+      const expiryTime = Date.now() + 3600 * 1000;
+      const expiryDate = new Date(expiryTime);
+      const refreshToken = jwt.sign(
+        { username: user.email, role: user.role },
+        process.env.JWT_SECRET,
+        { expiresIn: "7d" }
+      );
+      const accessToken = jwt.sign(
+        { username: user.email, role: user.role, refreshToken },
+        process.env.JWT_SECRET,
+        { expiresIn: "1h" }
+      );
+      // const refreshToken = jwt.sign(
+      //   { username: user.email, role: user.role },
+      //   process.env.JWT_SECRET,
+      //   { expiresIn: "7d" }
+      // );
+      user.refreshToken = refreshToken;
+      user.isActive = true;
+      await user.save();
+      let student;
+      if (user.role === "user") {
+        student = await Student.findOne({ userRef: user._id });
+      }
+      user.device = {
+        deviceId: device.deviceId,
+        deviceType: device.deviceType,
+        browser_name: device.browser_name,
+        userAgent: device.userAgent,
+        ipAddress: device.ipAddress,
+        lastLogin: Date.now(),
+        refreshTokenExpiry: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
+        isCurrent: true
+      };
+      user.lastLogin = Date.now();
+      await user.save();
+      res.status(200).json({
+        success: true,
+        message: "Login successful",
+        accessToken,
+        refreshToken,
+        user: user,
+        kyc_status: user.role === "user" ? user.kyc_status : null,
+        expiresIn: expiryDate,
+      });
+
+    }
 
     if (user.loginOtp !== loginOtp) {
       return res.status(403).json({ success: false, message: "Invalid OTP" });
@@ -599,6 +666,13 @@ exports.verifyLoginOtp = async (req, res) => {
       return res
         .status(403)
         .json({ success: false, message: "OTP has expired" });
+    }
+
+    if (user.isBlocked) {
+      return res.status(401).json({
+        success: false,
+        message: "Account is blocked please contact Support Team :- mankavit.clatcoaching11@gmail.com",
+      });
     }
     // if (user.deviceId && user.deviceId !== deviceId) {
     //   return res.status(403).json({ success: false, message: "Already logged in on another device" });
@@ -1056,7 +1130,7 @@ exports.getAllEnrolledCourses = async (req, res) => {
       .status(200)
       .json({ success: true, message: "Subscribed courses fetched successfully", enrolledCourses });
   } catch (error) {
-    console.error("Error fetching subscribed courses:", error.message);
+    console.error("Error fetching subscribed courses:", error);
     return res.status(500).json({
       success: false,
       message: "Server error. Could not fetch subscribed courses.",
@@ -1814,19 +1888,57 @@ exports.deleteStudents = async (req, res) => {
 
 }
 
-exports.checkUserRefreshToken=async(req,res)=>{
+exports.checkUserRefreshToken = async (req, res) => {
   try {
     const { userId, refreshToken } = req.body;
     if (!refreshToken) {
       return res.status(400).json({ success: false, message: "No refresh token provided" });
     }
-    const user = await User.findOne({userId, refreshToken });
+    const user = await User.findOne({ userId, refreshToken });
     if (!user) {
       return res.status(404).json({ success: false, message: "User not found" });
     }
     res.status(200).json({ success: true, message: "User found", user });
   } catch (error) {
     console.error("Error checking user:", error.message);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+}
+
+exports.blockAndUnblockUser = async (req, res) => {
+  try {
+    const { userId } = req.body;
+    if (!userId) {
+      return res.status(400).json({ success: false, message: "No user ID provided" });
+    }
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+    user.isBlocked = !user.isBlocked;
+    await user.save();
+    res.status(200).json({ success: true, message: user.isBlocked ? "User blocked successfully" : "User unblocked successfully", user });
+  } catch (error) {
+    console.error("Error blocking user:", error.message);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+}
+
+exports.enableDisableMasterOtp= async (req, res) => {
+  try {
+    const { userId } = req.body;
+    if (!userId) {
+      return res.status(400).json({ success: false, message: "No user ID provided" });
+    }
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+    user.isMasterOtpEnabled = !user.isMasterOtpEnabled;
+    await user.save();
+    res.status(200).json({ success: true, message: user.isMasterOtpEnabled ? "Master OTP enabled successfully" : "Master OTP disabled successfully", user });
+  } catch (error) {
+    console.error("Error blocking user:", error.message);
     res.status(500).json({ success: false, message: "Server error", error: error.message });
   }
 }
