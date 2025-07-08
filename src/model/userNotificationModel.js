@@ -4,7 +4,7 @@ const userNotificationSchema = new mongoose.Schema({
     title: { type: String, required: true },
     description: { type: String, required: true },
     time : { type: String, required: true },
-    image: { type: String, required: true },
+    // image: { type: String, required: true },
     user_ref: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
