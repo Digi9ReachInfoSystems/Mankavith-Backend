@@ -2074,15 +2074,111 @@ exports.verifyChangePassword = async (req, res) => {
 
 exports.collectDetailsOnQuestionPaperDownload = async (req, res) => {
   try {
-    const { name , email ,phoneNumber } = req.body;
+    const { name, email, phoneNumber } = req.body;
     const userAdmins = await User.find({ role: "admin" });
     Promise.all(userAdmins.map(async (admin) => {
-      await sendQuestionPaperDownloadAlert(name,email,phoneNumber,admin.email)
+      await sendQuestionPaperDownloadAlert(name, email, phoneNumber, admin.email)
     }))
     res.status(200).json({ success: true, message: "Details collected successfully" });
-   
+
   } catch (error) {
     console.error("Error collecting details:", error);
     res.status(500).json({ success: false, message: "Server error", error: error.message });
   }
 }
+
+exports.getAllStudentsByCourse = async (req, res) => {
+  try {
+    const { courseId } = req.query;
+    let students;
+    if (courseId) {
+      students = await User.find({ role: "user", "subscription.course_enrolled": courseId })
+        .populate('wishList')
+        .populate({
+          path: 'subscription',
+          populate: [
+            { path: 'payment_id' },
+            { path: 'course_enrolled' }
+          ]
+        })
+        .populate("kycRef");
+    } else {
+      students = await User.find({ role: "user" })
+        .populate('wishList')
+        .populate({
+          path: 'subscription',
+          populate: [
+            { path: 'payment_id' },
+            { path: 'course_enrolled' }
+          ]
+        })
+        .populate("kycRef");
+    }
+
+    res.status(200).json({ success: true, message: "Students fetched successfully", students });
+  } catch (error) {
+    console.error("Error fetching students:", error.message);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+};
+
+exports.createSubAdmin = async (req, res) => {
+  try {
+    const {
+      email,
+      password,
+      displayName,
+      phone,
+      isSuperAdmin = false,
+      studentManagement = { access: false, readOnly: false },
+      courseManagement = { access: false, readOnly: false },
+      paymentManagement = { access: false, readOnly: false },
+      webManagement = { access: false, readOnly: false },
+      mockTestManagement = { access: false, readOnly: false },
+      staticPageManagement = { access: false, readOnly: false },
+    } = req.body;
+    
+
+    // Validate required fields
+    if (!email || !password || !displayName) {
+      return res.status(400).json({
+        success: false,
+        message: "Email, password, and name are required",
+      });
+    }
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(409).json({ success: false, message: "Email already exists" });
+    }
+
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create admin user
+    const newAdmin = new User({
+      email,
+      password: hashedPassword,
+      displayName,
+      phone,
+      role: "admin",
+      permissions: {
+        studentManagement,
+        courseManagement,
+        paymentManagement,
+        webManagement,
+        mockTestManagement,
+        staticPageManagement,
+      },
+      isSuperAdmin,
+      isEmailVerified: true,
+    });
+
+    await newAdmin.save();
+    res.status(201).json({ success: true, message: "Admin created successfully", admin: newAdmin });
+  } catch (error) {
+    console.error("Create Admin Error:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};

@@ -105,6 +105,36 @@ const userSchema = new mongoose.Schema({
   isBlocked: { type: Boolean, default: false },
   masterOtp: { type: String , default: "000000"},
   isMasterOtpEnabled: { type: Boolean, default: false },
+  isSuperAdmin: { type: Boolean, default: false },
+  permissions: {
+    studentManagement:{
+      access:{type: Boolean, default: false},
+      readOnly:{type: Boolean, default: false},
+    },
+    courseManagement:{
+      access:{type: Boolean, default: false},
+      readOnly:{type: Boolean, default: false},
+    },
+    paymentManagement:{
+      access:{type: Boolean, default: false},
+      readOnly:{type: Boolean, default: false},
+    },
+    webManagement:{
+      access:{type: Boolean, default: false},
+      readOnly:{type: Boolean, default: false},
+    },
+    mockTestManagement:{
+      access:{type: Boolean, default: false},
+      readOnly:{type: Boolean, default: false},
+    },
+    staticPageManagement:{
+      access:{type: Boolean, default: false},
+      readOnly:{type: Boolean, default: false},
+    },
+   
+
+
+  }
   
 });
 

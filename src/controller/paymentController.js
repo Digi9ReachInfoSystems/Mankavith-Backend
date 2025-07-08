@@ -411,3 +411,25 @@ exports.getPaymentById = async (req, res) => {
       .json({ message: "Internal server error", error: error.message });
   }
 };
+
+exports.getPayemntByCourseId = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({ message: "Course ID is required" });
+    }
+
+    const payments = await Payment.find({ courseRef: id })
+      .populate("userRef", "displayName email")
+      .populate("courseRef", "title");
+
+
+    res.status(200).json({ success: true, payments });
+  } catch (error) {
+    console.error("Error fetching payments by course ID:", error);
+    res
+      .status(500)
+      .json({ message: "Internal server error", error: error.message });
+  }
+}

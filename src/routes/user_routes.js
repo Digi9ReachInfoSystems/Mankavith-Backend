@@ -49,6 +49,8 @@ router.post("/sendChangePasswordOtp", userController.sendChangePasswordOtp);
 router.post("/resendChangePasswordOtp", userController.resendChangePasswordOtp);
 router.post("/verifyChangePasswordOtp", userController.verifyChangePassword);
 router.post("/collectQuestionPaperDetails", userController.collectDetailsOnQuestionPaperDownload);
+router.get("/get/stubents/byCourse", userController.getAllStudentsByCourse);
+router.post("/create/subAdmin", userController.createSubAdmin);
 module.exports = router;
 
 module.exports = router;
