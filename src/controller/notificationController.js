@@ -4,7 +4,7 @@ const UserNotification = require('../model/userNotificationModel');
 const mongoose = require('mongoose');
 exports.sendNotification = async (req, res) => {
   try {
-    const { title, description, time, image, notificationType } = req.body;
+    const { title, description, time, notificationType } = req.body;
 
     const notification = new Notification({ title, description, time, 
         // image,
