@@ -34,6 +34,27 @@ exports.sendNotification = async (req, res) => {
   }
 };
 
+
+
+exports.getNotificationById = async (req, res) => {
+  try {
+    const { notificationId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(notificationId)) {
+      return res.status(400).json({ message: 'Invalid notification ID' });
+    }
+
+    const notification = await Notification.findById(notificationId);
+    if (!notification) {
+      return res.status(404).json({ message: 'Notification not found' });
+    }
+
+    return res.status(200).json({ notification });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: 'Error fetching notification' });
+  }
+};
+
 /**
  * Retrieve all app notifications for a given user.
  * Assumes you pass userId as a URL param or have req.user._id set via auth middleware.
@@ -56,22 +77,29 @@ exports.getUserNotifications = async (req, res) => {
   }
 };
 
+exports.clearUserNotification = async (req, res) => {
+  const { userNotificationId } = req.params;
 
-exports.getNotificationById = async (req, res) => {
+  // 1) Validate ID format
+  if (!mongoose.Types.ObjectId.isValid(userNotificationId)) {
+    return res.status(400).json({ message: "Invalid notification ID" });
+  }
+
   try {
-    const { notificationId } = req.params;
-    if (!mongoose.Types.ObjectId.isValid(notificationId)) {
-      return res.status(400).json({ message: 'Invalid notification ID' });
+    // 2) Remove that one record
+    const deleted = await UserNotification.findByIdAndDelete(userNotificationId);
+    if (!deleted) {
+      return res
+        .status(404)
+        .json({ message: "User notification not found" });
     }
 
-    const notification = await Notification.findById(notificationId);
-    if (!notification) {
-      return res.status(404).json({ message: 'Notification not found' });
-    }
-
-    return res.status(200).json({ notification });
+    // 3) Success
+    return res
+      .status(200)
+      .json({ message: "User notification cleared successfully" });
   } catch (err) {
-    console.error(err);
-    return res.status(500).json({ message: 'Error fetching notification' });
+    console.error("Error clearing user notification:", err);
+    return res.status(500).json({ message: err.message });
   }
 };
