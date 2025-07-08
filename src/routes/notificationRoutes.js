@@ -6,5 +6,9 @@ router.post("/create", notificationController.sendNotification);
 router.get("/getUserNotifications/:userId", notificationController.getUserNotifications);
 router.get("/getNotificationById/:notificationId", notificationController.getNotificationById);
 // router.put("/updateNotification/:id", notificationController.updateNotification);
-// router.delete("/deleteNotification/:id", notificationController.deleteNotification);
+
+router.delete(
+  "/userNotifications/:userNotificationId",
+  notificationController.clearUserNotification
+);
 module.exports = router;
