@@ -45,6 +45,10 @@ router.delete("/bulkDelete", userController.bulkDeleteUsers);
 router.delete("/deleteStudent", userController.deleteStudents);
 router.put("/blockAndUnblockUser", userController.blockAndUnblockUser);
 router.put("/enableAndDisableMasterOtp", userController.enableDisableMasterOtp);
+router.post("/sendChangePasswordOtp", userController.sendChangePasswordOtp);
+router.post("/resendChangePasswordOtp", userController.resendChangePasswordOtp);
+router.post("/verifyChangePasswordOtp", userController.verifyChangePassword);
+router.post("/collectQuestionPaperDetails", userController.collectDetailsOnQuestionPaperDownload);
 module.exports = router;
 
 module.exports = router;
