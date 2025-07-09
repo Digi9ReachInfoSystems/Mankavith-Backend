@@ -50,7 +50,11 @@ router.post("/resendChangePasswordOtp", userController.resendChangePasswordOtp);
 router.post("/verifyChangePasswordOtp", userController.verifyChangePassword);
 router.post("/collectQuestionPaperDetails", userController.collectDetailsOnQuestionPaperDownload);
 router.get("/get/stubents/byCourse", userController.getAllStudentsByCourse);
-router.post("/create/subAdmin", userController.createSubAdmin);
+router.post("/create/sub/Admin", userController.createSubAdmin);
+router.put("/update/sub/Admin/:id", userController.updateSubAdmin);
+router.delete("/delete/sub/Admin/:id", userController.deleteSubAdmin);
+router.put("/reset/adminPassword/:id", userController.resetAdminPassword);
+router.get("/get/sub/Admins", userController.getAllAdmins);
 module.exports = router;
 
 module.exports = router;

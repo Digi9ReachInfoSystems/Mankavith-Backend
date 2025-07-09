@@ -4,7 +4,7 @@ const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema({
   phone: { type: String, required: false },
-  displayName: { type: String, required: false },
+  displayName: { type: String, required: false ,default:"User"},
   subscription: [{
     payment_id: {
       type: mongoose.Schema.Types.ObjectId,

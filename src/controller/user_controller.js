@@ -2173,6 +2173,7 @@ exports.createSubAdmin = async (req, res) => {
       },
       isSuperAdmin,
       isEmailVerified: true,
+      wishList: [],
     });
 
     await newAdmin.save();
@@ -2182,3 +2183,111 @@ exports.createSubAdmin = async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
+exports.updateSubAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      email,
+      displayName,
+      phone,
+      isSuperAdmin,
+      studentManagement,
+      courseManagement,
+      paymentManagement,
+      webManagement,
+      mockTestManagement,
+      staticPageManagement,
+    } = req.body;
+
+    // Find the admin by ID
+    const user = await User.findById(id);
+    if (!user || user.role !== "admin") {
+      return res.status(404).json({ success: false, message: "Admin not found" });
+    }
+
+    // Update fields if present
+    if (email) user.email = email;
+    if (displayName) user.displayName = displayName;
+    if (phone) user.phone = phone;
+    if (typeof isSuperAdmin === "boolean") user.isSuperAdmin = isSuperAdmin;
+
+    // Password update
+    // if (password) {
+    //   user.password = await bcrypt.hash(password, 10);
+    // }
+
+    // Update permissions if provided
+    if (studentManagement) user.permissions.studentManagement = studentManagement;
+    if (courseManagement) user.permissions.courseManagement = courseManagement;
+    if (paymentManagement) user.permissions.paymentManagement = paymentManagement;
+    if (webManagement) user.permissions.webManagement = webManagement;
+    if (mockTestManagement) user.permissions.mockTestManagement = mockTestManagement;
+    if (staticPageManagement) user.permissions.staticPageManagement = staticPageManagement;
+
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Admin updated successfully",
+      admin: user,
+    });
+  } catch (error) {
+    console.error("Edit Admin Error:", error);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+exports.deleteSubAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await User.findById(id);
+    if (!user || user.role !== "admin") {
+      return res.status(404).json({ success: false, message: "Admin not found" });
+    }
+
+    await User.findByIdAndDelete(id);
+
+    return res.status(200).json({
+      success: true,
+      message: "Admin deleted successfully",
+    });
+  } catch (error) {
+    console.error("Delete Admin Error:", error);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+exports.resetAdminPassword = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { password } = req.body;
+
+    const user = await User.findById(id);
+    if (!user || user.role !== "admin") {
+      return res.status(404).json({ success: false, message: "Admin not found" });
+    }
+
+    user.password = await bcrypt.hash(password, 10);
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Admin password reset successfully",
+    });
+  } catch (error) {
+    console.error("Reset Admin Password Error:", error);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+exports.getAllAdmins = async (req, res) => {
+  try {
+    const admins = await User.find({ role: "admin",isSuperAdmin: false });
+    return res.status(200).json({ success: true, message: "Admins fetched successfully", admins });
+  } catch (error) {
+    console.error("Get Admins Error:", error);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
