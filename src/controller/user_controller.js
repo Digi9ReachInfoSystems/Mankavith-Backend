@@ -1546,7 +1546,7 @@ exports.verifyUserRoles = async (req, res, next) => {
     if (!user) {
       return res.status(403).json({ success: false, message: 'Access denied' });
     } else {
-      return res.status(200).json({ success: true, role: user.role, message: 'Access granted' });
+      return res.status(200).json({ success: true, role: user.role, message: 'Access granted',isSuperAdmin:user.isSuperAdmin ,permissions:user.permissions });
     }
 
   } catch (error) {
