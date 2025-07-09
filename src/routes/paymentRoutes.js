@@ -11,4 +11,5 @@ router.post(
 router.get("/status/:id", paymentController.checkPaymentStatus);
 router.get("/getAllPayments", paymentController.getAllPayments);
 router.get("/getPaymentById/:id", paymentController.getPaymentById);
+router.get("/getPayamentsByCourseId/:id", paymentController.getPayemntByCourseId);
 module.exports = router;
