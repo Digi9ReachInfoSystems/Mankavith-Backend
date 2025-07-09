@@ -350,14 +350,15 @@ exports.evaluateSubjective = async (req, res) => {
                 message: 'Attempt not found'
             });
         }
+        console.log(attempt.status);
 
-        if (attempt.status !== 'submitted') {
+        if (attempt.status !== 'submitted'&& attempt.status !== 'evaluating') {
             return res.status(400).json({
                 success: false,
                 message: 'Attempt is not ready for evaluation'
             });
         }
-
+       console.log(attempt.status);
         const mockTest = await MockTest.findById(attempt.mockTestId._id);
         const now = new Date();
         const isWithinWindow = attempt.isWithinTestWindow;
@@ -404,6 +405,7 @@ exports.evaluateSubjective = async (req, res) => {
             data: attempt
         });
     } catch (err) {
+        console.log(err);
         res.status(500).json({
             success: false,
             message: err.message

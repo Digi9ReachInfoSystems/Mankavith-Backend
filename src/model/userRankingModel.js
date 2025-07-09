@@ -23,7 +23,7 @@ const userRankingSchema = new mongoose.Schema({
   },
   bestScore: { type: Number, required: true },
   rank: { type: Number, required: true },
-  attemptsCount: { type: Number, required: true, min: 1, max: 3 },
+  attemptsCount: { type: Number, required: true, min: 1, },
   lastUpdated: { type: Date, default: Date.now }
 });
 
