@@ -233,6 +233,7 @@ exports.login = async (req, res) => {
         message: "Login successful",
         accessToken,
         refreshToken,
+        alreadyLoggedIn: false,
         user: user,
         kyc_status: user.role === "user" ? user.kyc_status : null,
         expiresIn: expiryDate,
@@ -265,6 +266,7 @@ exports.login = async (req, res) => {
         success: true,
         message: "Login successful",
         accessToken,
+        alreadyLoggedIn: false,
         refreshToken: user.refreshToken,
         user: user,
         kyc_status: user.role === "user" ? user.kyc_status : null,
@@ -278,7 +280,7 @@ exports.login = async (req, res) => {
         process.env.JWT_SECRET,
         { expiresIn: "1h" }
       );
-      return res.status(200).json({ success: false, message: "Already logged in on another device", currentDevice: user.device, forceLoginData });
+      return res.status(200).json({ success: false, message: "Already logged in on another device", alreadyLoggedIn: true, currentDevice: user.device, forceLoginData });
     }
 
 
@@ -342,6 +344,7 @@ exports.forceLogin = async (req, res) => {
       accessToken,
       refreshToken: user.refreshToken,
       user: user,
+      alreadyLoggedIn: false,
       kyc_status: user.role === "user" ? user.kyc_status : null,
       expiresIn: expiryDate,
     });
@@ -651,6 +654,7 @@ exports.verifyLoginOtp = async (req, res) => {
         message: "Login successful",
         accessToken,
         refreshToken,
+        alreadyLoggedIn: false,
         user: user,
         kyc_status: user.role === "user" ? user.kyc_status : null,
         expiresIn: expiryDate,
@@ -718,6 +722,7 @@ exports.verifyLoginOtp = async (req, res) => {
       message: "Login successful",
       accessToken,
       refreshToken,
+      alreadyLoggedIn: false,
       user: user,
       kyc_status: user.role === "user" ? user.kyc_status : null,
       expiresIn: expiryDate,
@@ -1546,7 +1551,7 @@ exports.verifyUserRoles = async (req, res, next) => {
     if (!user) {
       return res.status(403).json({ success: false, message: 'Access denied' });
     } else {
-      return res.status(200).json({ success: true, role: user.role, message: 'Access granted',isSuperAdmin:user.isSuperAdmin ,permissions:user.permissions });
+      return res.status(200).json({ success: true, role: user.role, message: 'Access granted', isSuperAdmin: user.isSuperAdmin, permissions: user.permissions });
     }
 
   } catch (error) {
@@ -2137,7 +2142,7 @@ exports.createSubAdmin = async (req, res) => {
       mockTestManagement = { access: false, readOnly: false },
       staticPageManagement = { access: false, readOnly: false },
     } = req.body;
-    
+
 
     // Validate required fields
     if (!email || !password || !displayName) {
@@ -2283,7 +2288,7 @@ exports.resetAdminPassword = async (req, res) => {
 
 exports.getAllAdmins = async (req, res) => {
   try {
-    const admins = await User.find({ role: "admin",isSuperAdmin: false });
+    const admins = await User.find({ role: "admin", isSuperAdmin: false });
     return res.status(200).json({ success: true, message: "Admins fetched successfully", admins });
   } catch (error) {
     console.error("Get Admins Error:", error);
