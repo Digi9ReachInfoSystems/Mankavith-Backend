@@ -44,6 +44,17 @@ const paymentSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  couponApplied:{
+    type:Boolean,
+    default:false
+  },
+  couponRef: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Coupon",
+  },
+  couponDiscount: {
+    type: Number,
+  },
 });
 
 module.exports = mongoose.model("Payment", paymentSchema);

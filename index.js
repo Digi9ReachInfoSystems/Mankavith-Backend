@@ -5,7 +5,7 @@ require("dotenv").config();
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const bodyParser = require("body-parser");
-  const connectDB = require("./src/config/database");
+const connectDB = require("./src/config/database");
 const encryptionUtils = require("./src/utils/Encryption");
 const encryptionMiddleware = require("./src/middleware/encryption");
 const key = process.env.CRYPTION_KEY;
@@ -24,7 +24,7 @@ app.post(
   paymentController.handleWebhook
 );
 
-app.use(bodyParser.json({limit:'1024mb'}));
+app.use(bodyParser.json({ limit: '1024mb' }));
 app.use(cors());
 app.use(express.json());
 
@@ -65,11 +65,14 @@ const userProgressRoutes = require("./src/routes/userProgressRoutes");
 const meetingRoutes = require("./src/routes/meetingRoutes");
 const contactSupportRoutes = require("./src/routes/supportRoutes");
 const mockTestRoutes = require("./src/routes/mockTestRoutes");
-const userAttemptRoutes = require("./src/routes/userAttemptRoutes");  
+const userAttemptRoutes = require("./src/routes/userAttemptRoutes");
 const userRankingRoutes = require("./src/routes/userRankingRoutes");
 const pdfCertificatesRoutes = require("./src/routes/pdfCertificateRoutes");
 const socialMedialinksRoutes = require("./src/routes/socialMediaLinksRoutes");
 const notificationRoutes = require("./src/routes/notificationRoutes");
+const couponRoutes = require("./src/routes/couponRoutes");
+
+
 app.use("/user", userRoutes);
 app.use("/api/v1/course", courseRoutes);
 app.use("/api/v1/subject", subjectRoutes);
@@ -102,7 +105,7 @@ app.use("/blog", blogRoutes);
 app.use("/contactSupport", contactSupportRoutes);
 
 
-app.use("/userProgress", userProgressRoutes);   
+app.use("/userProgress", userProgressRoutes);
 app.use("/meeting", meetingRoutes);
 app.use("/mockTest", mockTestRoutes);
 app.use("/userAttempt", userAttemptRoutes);
@@ -110,6 +113,7 @@ app.use("/userRanking", userRankingRoutes);
 app.use("/pdfCertificates", pdfCertificatesRoutes);
 app.use("/socialMediaLinks", socialMedialinksRoutes);
 app.use("/notifications", notificationRoutes);
+app.use("/coupon", couponRoutes);
 
 
 
