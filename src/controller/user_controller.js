@@ -660,73 +660,75 @@ exports.verifyLoginOtp = async (req, res) => {
         expiresIn: expiryDate,
       });
 
-    }
+    } else {
+      if (user.loginOtp !== loginOtp) {
+        return res.status(403).json({ success: false, message: "Invalid OTP" });
+      }
 
-    if (user.loginOtp !== loginOtp) {
-      return res.status(403).json({ success: false, message: "Invalid OTP" });
-    }
+      if (user.loginOtpExpiration < new Date()) {
+        return res
+          .status(403)
+          .json({ success: false, message: "OTP has expired" });
+      }
 
-    if (user.loginOtpExpiration < new Date()) {
-      return res
-        .status(403)
-        .json({ success: false, message: "OTP has expired" });
-    }
-
-    if (user.isBlocked) {
-      return res.status(401).json({
-        success: false,
-        message: "Account is blocked please contact Support Team :- mankavit.clatcoaching11@gmail.com",
+      if (user.isBlocked) {
+        return res.status(401).json({
+          success: false,
+          message: "Account is blocked please contact Support Team :- mankavit.clatcoaching11@gmail.com",
+        });
+      }
+      // if (user.deviceId && user.deviceId !== deviceId) {
+      //   return res.status(403).json({ success: false, message: "Already logged in on another device" });
+      // }
+      const expiryTime = Date.now() + 3600 * 1000;
+      const expiryDate = new Date(expiryTime);
+      const refreshToken = jwt.sign(
+        { username: user.email, role: user.role },
+        process.env.JWT_SECRET,
+        { expiresIn: "7d" }
+      );
+      const accessToken = jwt.sign(
+        { username: user.email, role: user.role, refreshToken },
+        process.env.JWT_SECRET,
+        { expiresIn: "1h" }
+      );
+      // const refreshToken = jwt.sign(
+      //   { username: user.email, role: user.role },
+      //   process.env.JWT_SECRET,
+      //   { expiresIn: "7d" }
+      // );
+      user.refreshToken = refreshToken;
+      user.isActive = true;
+      await user.save();
+      let student;
+      if (user.role === "user") {
+        student = await Student.findOne({ userRef: user._id });
+      }
+      user.device = {
+        deviceId: device.deviceId,
+        deviceType: device.deviceType,
+        browser_name: device.browser_name,
+        userAgent: device.userAgent,
+        ipAddress: device.ipAddress,
+        lastLogin: Date.now(),
+        refreshTokenExpiry: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
+        isCurrent: true
+      };
+      user.lastLogin = Date.now();
+      await user.save();
+      res.status(200).json({
+        success: true,
+        message: "Login successful",
+        accessToken,
+        refreshToken,
+        alreadyLoggedIn: false,
+        user: user,
+        kyc_status: user.role === "user" ? user.kyc_status : null,
+        expiresIn: expiryDate,
       });
     }
-    // if (user.deviceId && user.deviceId !== deviceId) {
-    //   return res.status(403).json({ success: false, message: "Already logged in on another device" });
-    // }
-    const expiryTime = Date.now() + 3600 * 1000;
-    const expiryDate = new Date(expiryTime);
-    const refreshToken = jwt.sign(
-      { username: user.email, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" }
-    );
-    const accessToken = jwt.sign(
-      { username: user.email, role: user.role, refreshToken },
-      process.env.JWT_SECRET,
-      { expiresIn: "1h" }
-    );
-    // const refreshToken = jwt.sign(
-    //   { username: user.email, role: user.role },
-    //   process.env.JWT_SECRET,
-    //   { expiresIn: "7d" }
-    // );
-    user.refreshToken = refreshToken;
-    user.isActive = true;
-    await user.save();
-    let student;
-    if (user.role === "user") {
-      student = await Student.findOne({ userRef: user._id });
-    }
-    user.device = {
-      deviceId: device.deviceId,
-      deviceType: device.deviceType,
-      browser_name: device.browser_name,
-      userAgent: device.userAgent,
-      ipAddress: device.ipAddress,
-      lastLogin: Date.now(),
-      refreshTokenExpiry: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
-      isCurrent: true
-    };
-    user.lastLogin = Date.now();
-    await user.save();
-    res.status(200).json({
-      success: true,
-      message: "Login successful",
-      accessToken,
-      refreshToken,
-      alreadyLoggedIn: false,
-      user: user,
-      kyc_status: user.role === "user" ? user.kyc_status : null,
-      expiresIn: expiryDate,
-    });
+
+
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -2296,3 +2298,152 @@ exports.getAllAdmins = async (req, res) => {
   }
 };
 
+exports.forgotPasswordSendOtp = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    const otp = generateOTP();
+    const otpExpiration = new Date();
+    otpExpiration.setMinutes(otpExpiration.getMinutes() + 1);
+    user.forgotOtp = otp;
+    user.forgotOtpExpiration = otpExpiration;
+    await user.save();
+
+    //mail otp on signup
+
+    const mailOptions = {
+      from: "mankavit.clatcoaching11@gmail.com",
+      to: email,
+      subject: "Email Verification OTP",
+      text: `Your OTP is: ${otp}. It will expire in 1 minutes.`,
+    };
+
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        console.error("Error sending email:", error);
+        return res
+          .status(500)
+          .json({ success: false, message: "Error sending OTP" });
+      }
+      res.status(200).json({
+        success: true,
+        message:
+          "OTP sent successfully. Please check your email for the OTP.",
+      });
+    });
+
+  } catch (error) {
+    console.error("Forgot Password Error:", error);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+exports.resendForgotPasswordOtp = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+    if (user.forgotOtpExpiration && user.forgotOtpExpiration > new Date()) {
+      return res.status(400).json({ success: false, message: "OTP already sent" });
+    }
+
+    const otp = generateOTP();
+    const otpExpiration = new Date();
+    otpExpiration.setMinutes(otpExpiration.getMinutes() + 1);
+    user.forgotOtp = otp;
+    user.forgotOtpExpiration = otpExpiration;
+    await user.save();
+    //mail otp on signup
+
+    const mailOptions = {
+      from: "mankavit.clatcoaching11@gmail.com",
+      to: email,
+      subject: "Email Verification OTP",
+      text: `Your OTP is: ${otp}. It will expire in 1 minutes.`,
+    };
+
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        console.error("Error sending email:", error);
+        return res
+          .status(500)
+          .json({ success: false, message: "Error sending OTP" });
+      }
+      res.status(200).json({
+        success: true,
+        message:
+          "OTP sent successfully. Please check your email for the OTP.",
+      });
+    });
+
+  } catch (error) {
+    console.error("Forgot Password Error:", error);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+
+exports.verifyForgotPasswordOtp = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+    if (!user.forgotOtpExpiration || user.forgotOtpExpiration < new Date()) {
+      return res.status(400).json({ success: false, message: "OTP has expired" });
+    }
+    if (user.forgotOtp !== otp) {
+      return res.status(400).json({ success: false, message: "Invalid OTP" });
+    }
+    user.forgotOtpVerified = true;
+    await user.save();
+    return res.status(200).json({ success: true, message: "OTP verified successfully" });
+  } catch (error) {
+    console.error("Verify OTP Error:", error);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+exports.resetPassword = async (req, res) => {
+  try {
+    const { email, password, confirmPassword } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+    if (password !== confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Passwords and Confirm Password do not match",
+      });
+    }
+    const passwordStrengthRegex =
+      /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*]).{8,}$/.test(password);
+    console.log(passwordStrengthRegex);
+    if (!passwordStrengthRegex) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Password must be at least 8 characters long, include a number, an uppercase letter, and a special character.",
+      });
+    }
+    if (user.forgotOtpVerified !== true) {
+      return res.status(400).json({ success: false, message: "OTP not verified" });
+    }
+    user.password = await bcrypt.hash(password, 10);
+    user.forgotOtpVerified = false;
+    user.forgotOtp = null;
+    user.forgotOtpExpiration = null;
+    await user.save();
+    return res.status(200).json({ success: true, message: "Password reset successfully" });
+  } catch (error) {
+    console.error("Reset Password Error:", error);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};

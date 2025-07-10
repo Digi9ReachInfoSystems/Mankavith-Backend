@@ -55,6 +55,10 @@ router.put("/update/sub/Admin/:id", userController.updateSubAdmin);
 router.delete("/delete/sub/Admin/:id", userController.deleteSubAdmin);
 router.put("/reset/adminPassword/:id", userController.resetAdminPassword);
 router.get("/get/sub/Admins", userController.getAllAdmins);
+router.post("/send/forgotPasswordOtp", userController.forgotPasswordSendOtp);
+router.post("/verify/forgotPasswordOtp", userController.verifyForgotPasswordOtp);
+router.post("/resend/forgotPasswordOtp", userController.resendForgotPasswordOtp);
+router.put("/reset/password", userController.resetPassword);
 module.exports = router;
 
 module.exports = router;
