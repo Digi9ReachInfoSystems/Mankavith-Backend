@@ -25,7 +25,7 @@ const User = require("../model/user_model");
 const Student = require("../model/studentModel");
 const Course = require("../model/course_model");
 const { sendCoursePurchaseEmail, sendAdminCoursePurchaseNotification } = require("../middleware/mailService");
-
+const Coupon= require("../model/couponModel");
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
   key_secret: process.env.RAZORPAY_KEY_SECRET,
@@ -35,7 +35,7 @@ const razorpay = new Razorpay({
  *  CREATE ORDER + PAYMENT-LINK
  * ────────────────────────────────────────────────────────────────────────── */
 exports.createOrder = async (req, res) => {
-  const { userRef, courseRef, amountPaid, paymentType, callback_url } =
+  const { userRef, courseRef, amountPaid, paymentType, callback_url, couponApplied, couponRef, couponDiscount } =
     req.body;
 
   try {
@@ -87,6 +87,9 @@ exports.createOrder = async (req, res) => {
       razorpay_reference_id: paymentLink.reference_id,
       payment_link: paymentLink.short_url,
       status: "created",
+      couponApplied, 
+      couponRef:couponApplied ? couponRef : null, 
+      couponDiscount:couponApplied ? couponDiscount : 0
     }).save();
 
     /* 5️⃣  Return data to frontend */
@@ -199,6 +202,17 @@ exports.handleWebhook = async (req, res) => {
       },
       { new: true }
     );
+    const coupon= await Coupon.findById(payment.couponRef);
+    if(coupon){
+      await Coupon.findByIdAndUpdate(payment.couponRef,
+        {
+          $addToSet: {
+            applied_users: payment.userRef
+          }
+        },
+        { new: true }
+      );
+    }
     const user = await User.findById(payment.userRef);
     await sendCoursePurchaseEmail(
       user.displayName,

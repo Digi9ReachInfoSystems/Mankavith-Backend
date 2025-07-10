@@ -2,10 +2,11 @@ const Support = require("../model/supportModel");
 
 exports.createSupport = async (req, res) => {
     try {
-        const { userRef, description } = req.body;
+        const { name, email, description } = req.body;
 
         const newSupport = new Support({ 
-            userRef, 
+            name, 
+            email,
             description 
         });
 
@@ -13,7 +14,7 @@ exports.createSupport = async (req, res) => {
         
         // Populate after saving
         const populatedSupport = await Support.findById(savedSupport._id)
-            .populate("userRef", "name email");
+            .populate("userRef", );
             
         res.status(201).json(populatedSupport);
     } catch (error) {
@@ -25,7 +26,7 @@ exports.getSupportById = async (req, res) => {
     try {
         const supportId = req.params.id;
         const support = await Support.findById(supportId)
-            .populate("userRef", "name email");
+            .populate("userRef", );
         if (!support) {
             return res.status(404).json({ error: "Support not found" });
         }

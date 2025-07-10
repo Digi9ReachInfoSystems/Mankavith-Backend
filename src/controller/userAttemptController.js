@@ -927,6 +927,7 @@ exports.getAttemptsByUserId = async (req, res) => {
                     path: 'subject',
                 }
             })
+            .populate('userId')
             .populate('subject');
         res.status(200).json({ success: true, data: attempts });
     } catch (err) {
