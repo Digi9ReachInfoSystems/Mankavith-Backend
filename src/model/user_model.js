@@ -69,6 +69,9 @@ const userSchema = new mongoose.Schema({
   refreshToken: { type: String },
   loginOtp: { type: String },
   loginOtpExpiration: { type: Date },
+  forgotOtp: { type: String },
+  forgotOtpExpiration: { type: Date },
+  forgotOtpVerified: { type: Boolean, default: false },
   kycRef: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Kyc",
