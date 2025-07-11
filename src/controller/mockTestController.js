@@ -4,6 +4,10 @@ const Subject = require('../model/subject_model');
 // const UserRanking = require('../models/UserRanking');
 const User = require('../model/user_model');
 const Course = require('../model/course_model');
+const UserAttempt= require('../model/userAttemptModel');
+const UserRanking = require('../model/userRankingModel');
+const mongoose = require('mongoose');
+
 
 // Admin: Create a new mock test
 exports.createMockTest = async (req, res) => {
@@ -484,5 +488,31 @@ exports.rearrangeQuestions = async (req, res) => {
   } catch (error) {
     console.error('Error rearranging questions:', error);
     res.status(500).json({ success: false, message: 'Failed to rearrange questions' });
+  }
+};
+
+exports.deleteMockTestById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const mockTest = await MockTest.findById(id);
+    if (!mockTest) {
+      return res.status(404).json({ success: false, message: 'Mock test not found' });
+    }
+    const subject= await Subject.findById(mockTest.subject);
+    subject.mockTests.pull(mockTest._id);
+    await subject.save();
+    await MockTest.findByIdAndDelete(id);
+    const userRanking= await UserRanking.deleteMany({mockTestId:id});
+    const userAttempt= await UserAttempt.deleteMany({mockTestId:id});
+    const deleteMockTest= await MockTest.findByIdAndDelete(id);
+    
+    res.status(200).json({ success: true, message: 'Mock test deleted' ,
+      deleteMockTest,
+      userRanking,
+      userAttempt
+    });
+  } catch (error) {
+    console.error('Error deleting mock test:', error);
+    res.status(500).json({ success: false, message: 'Failed to delete mock test' });
   }
 };
