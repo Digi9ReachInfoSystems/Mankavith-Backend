@@ -499,8 +499,13 @@ exports.deleteMockTestById = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Mock test not found' });
     }
     const subject= await Subject.findById(mockTest.subject);
-    subject.mockTests.pull(mockTest._id);
+    if(subject){
+      if(subject.mockTests.length>0){
+        subject.mockTests.pull(mockTest._id);
     await subject.save();
+      }
+    }
+   
     await MockTest.findByIdAndDelete(id);
     const userRanking= await UserRanking.deleteMany({mockTestId:id});
     const userAttempt= await UserAttempt.deleteMany({mockTestId:id});
