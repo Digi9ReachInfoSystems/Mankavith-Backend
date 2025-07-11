@@ -25,7 +25,7 @@ const User = require("../model/user_model");
 const Student = require("../model/studentModel");
 const Course = require("../model/course_model");
 const { sendCoursePurchaseEmail, sendAdminCoursePurchaseNotification } = require("../middleware/mailService");
-const Coupon= require("../model/couponModel");
+const Coupon = require("../model/couponModel");
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
   key_secret: process.env.RAZORPAY_KEY_SECRET,
@@ -87,9 +87,9 @@ exports.createOrder = async (req, res) => {
       razorpay_reference_id: paymentLink.reference_id,
       payment_link: paymentLink.short_url,
       status: "created",
-      couponApplied, 
-      couponRef:couponApplied ? couponRef : null, 
-      couponDiscount:couponApplied ? couponDiscount : 0
+      couponApplied,
+      couponRef: couponApplied ? couponRef : null,
+      couponDiscount: couponApplied ? couponDiscount : 0
     }).save();
 
     /* 5️⃣  Return data to frontend */
@@ -202,8 +202,8 @@ exports.handleWebhook = async (req, res) => {
       },
       { new: true }
     );
-    const coupon= await Coupon.findById(payment.couponRef);
-    if(coupon){
+    const coupon = await Coupon.findById(payment.couponRef);
+    if (coupon) {
       await Coupon.findByIdAndUpdate(payment.couponRef,
         {
           $addToSet: {
@@ -387,7 +387,8 @@ exports.getAllPayments = async (req, res) => {
   try {
     const payments = await Payment.find({})
       .populate("userRef",)
-      .populate("courseRef");
+      .populate("courseRef")
+      .populate("couponRef");
 
     if (!payments || payments.length === 0) {
       return res.status(404).json({ message: "No payments found" });
@@ -411,7 +412,9 @@ exports.getPaymentById = async (req, res) => {
 
     const payment = await Payment.findById(id)
       .populate("userRef", "displayName email")
-      .populate("courseRef", "title");
+      .populate("courseRef", "title")
+      .populate("couponRef");
+
 
     if (!payment) {
       return res.status(404).json({ message: "Payment not found" });
@@ -436,7 +439,9 @@ exports.getPayemntByCourseId = async (req, res) => {
 
     const payments = await Payment.find({ courseRef: id })
       .populate("userRef", "displayName email")
-      .populate("courseRef", "title");
+      .populate("courseRef", "title")
+      .populate("couponRef");
+
 
 
     res.status(200).json({ success: true, payments });
