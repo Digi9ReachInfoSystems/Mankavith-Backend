@@ -8,13 +8,15 @@ const optionSchema = new mongoose.Schema({
 const questionSchema = new mongoose.Schema({
   type: { type: String, enum: ['mcq', 'subjective'], required: true },
   questionText: { type: String, required: true },
-  options: { 
-    type: [optionSchema], 
-    required: function() { return this.type === 'mcq'; } 
+  isPassage: { type: Boolean, default: false },
+  passageText: { type: String, required: false },
+  options: {
+    type: [optionSchema],
+    required: function () { return this.type === 'mcq'; }
   },
-  correctAnswer: { 
+  correctAnswer: {
     type: Number, // Now storing index of correct answer
-    required: function() { return this.type === 'mcq'; } 
+    required: function () { return this.type === 'mcq'; }
   },
   expectedAnswer: { type: String }, // For subjective questions (optional)
   marks: { type: Number, required: true }
@@ -23,7 +25,7 @@ const questionSchema = new mongoose.Schema({
 const mockTestSchema = new mongoose.Schema({
   title: { type: String, required: true },
   description: { type: String },
-  subject: {type:mongoose.Schema.Types.ObjectId, ref: 'Subject', required: true}, // Changed from courseId to subject
+  subject: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Subject', required: true }], // Changed from courseId to subject
   duration: { type: Number, required: true, min: 1 }, // in minutes
   totalMarks: { type: Number, required: false },
   passingMarks: { type: Number, required: false },
@@ -39,7 +41,7 @@ const mockTestSchema = new mongoose.Schema({
   isDeleted: { type: Boolean, default: false }
 });
 
-mockTestSchema.pre('save', function(next) {
+mockTestSchema.pre('save', function (next) {
   this.updatedAt = Date.now();
   next();
 });

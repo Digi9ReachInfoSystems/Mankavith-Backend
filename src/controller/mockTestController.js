@@ -4,7 +4,7 @@ const Subject = require('../model/subject_model');
 // const UserRanking = require('../models/UserRanking');
 const User = require('../model/user_model');
 const Course = require('../model/course_model');
-const UserAttempt= require('../model/userAttemptModel');
+const UserAttempt = require('../model/userAttemptModel');
 const UserRanking = require('../model/userRankingModel');
 const mongoose = require('mongoose');
 
@@ -49,11 +49,18 @@ exports.createMockTest = async (req, res) => {
     //   },
     //   { upsert: true, new: true }
     // );
-    await Subject.findByIdAndUpdate(
-      subject,
-      { $push: { mockTests: savedTest._id } },
-      { new: true }
-    );
+    await Promise.all(subject.map(async (sub) => {
+      await Subject.findByIdAndUpdate(
+        sub,
+        { $push: { mockTests: savedTest._id } },
+        { new: true }
+      );
+    }))
+    // await Subject.findByIdAndUpdate(
+    //   subject,
+    //   { $push: { mockTests: savedTest._id } },
+    //   { new: true }
+    // );
 
     res.status(201).json({
       success: true,
@@ -262,6 +269,14 @@ exports.editMockTest = async (req, res) => {
         message: 'Mock test not found'
       });
     }
+    await Promise.all(existingTest.subject.map(async (subject) => {
+      const sub = await Subject.findById(subject);
+      await sub.updateOne({ $pull: { mockTests: id } });
+    }))
+    await Promise.all(updates.subject.map(async (subject) => {
+      const sub = await Subject.findById(subject);
+      await sub.updateOne({ $push: { mockTests: id } });
+    }))
 
     // Additional permission check (example)
     // if (existingTest.createdBy.toString() !== req.user.id) {
@@ -498,20 +513,21 @@ exports.deleteMockTestById = async (req, res) => {
     if (!mockTest) {
       return res.status(404).json({ success: false, message: 'Mock test not found' });
     }
-    const subject= await Subject.findById(mockTest.subject);
-    if(subject){
-      if(subject.mockTests.length>0){
+    const subject = await Subject.findById(mockTest.subject);
+    if (subject) {
+      if (subject.mockTests.length > 0) {
         subject.mockTests.pull(mockTest._id);
-    await subject.save();
+        await subject.save();
       }
     }
-   
+
     await MockTest.findByIdAndDelete(id);
-    const userRanking= await UserRanking.deleteMany({mockTestId:id});
-    const userAttempt= await UserAttempt.deleteMany({mockTestId:id});
-    const deleteMockTest= await MockTest.findByIdAndDelete(id);
-    
-    res.status(200).json({ success: true, message: 'Mock test deleted' ,
+    const userRanking = await UserRanking.deleteMany({ mockTestId: id });
+    const userAttempt = await UserAttempt.deleteMany({ mockTestId: id });
+    const deleteMockTest = await MockTest.findByIdAndDelete(id);
+
+    res.status(200).json({
+      success: true, message: 'Mock test deleted',
       deleteMockTest,
       userRanking,
       userAttempt

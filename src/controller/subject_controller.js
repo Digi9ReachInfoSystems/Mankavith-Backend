@@ -6,6 +6,7 @@ const Lecture = require("../model/lecturesModel.js");
 const mongoose = require("mongoose");
 const { applyTimestamps } = require("../model/courseProgressModel.js");
 const Note = require("../model/notes_model.js");
+const MockTest = require("../model/mockTestModel.js"); 
 
 
 
@@ -86,6 +87,16 @@ module.exports.createSubject = async (req, res) => {
         }
         lecture.subjectRef.push(savedSubject._id);
         await lecture.save();
+      })
+    );
+    await Promise.all(
+      savedSubject.mockTests.map(async (mockTestId) => {
+        const mockTest = await MockTest.findById(mockTestId);
+        if (!mockTest) {
+          return;
+        }
+        mockTest.subject.push(savedSubject._id);
+        await mockTest.save();
       })
     );
 
@@ -267,6 +278,26 @@ module.exports.updateSubject = async (req, res) => {
         }
         lecture.subjectRef.push(subject._id);
         await lecture.save();
+      })
+    );
+    await Promise.all(
+      subject.mockTests.map(async (mockId) => {
+        const mock = await MockTest.findById(mockId);
+        if (!mock) {
+          return;
+        }
+        mock.subject.pull(id);
+        await mock.save();
+      })
+    );
+    await Promise.all(
+      updatedData.mockTests.map(async (mockId) => {
+        const mock = await MockTest.findById(mockId);
+        if (!mock) {
+          return;
+        }
+        mock.subject.push(subject._id);
+        await mock.save();
       })
     );
 
