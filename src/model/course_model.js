@@ -166,7 +166,11 @@ const courseSchema = new mongoose.Schema(
     recorded_sessions: [{
       type: mongoose.Schema.Types.ObjectId,
       ref: "RecordedSession"
-    }]
+    }],
+    courseExpiry: {
+      type: Date,
+      required: false
+    }
   },
   {
     timestamps: true,

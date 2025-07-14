@@ -1107,11 +1107,20 @@ exports.getAllEnrolledCourses = async (req, res) => {
     }
     // if (user.kyc_status !== "approved") return res.status(200).json({ success: true, enrolledCourses: [], message: "Please complete kyc to view Course" });
     if (!user.subscription) return res.status(200).json({ success: true, enrolledCourses: [] });
-    const subscribedCourses = user.subscription;
+    let subscribedCourses = user.subscription;
+    subscribedCourses = await Promise.all(user.subscription.map(async (sub) => {
+      const course = await Course.findOne({ _id: sub.course_enrolled, courseExpiry: { $gt: new Date() }, isPublished: true });
+      if (course) {
+        return course;
+      } else {
+        return null
+      }
+    }));
+    subscribedCourses = subscribedCourses.filter((course) => course !== null);
     let enrolledCourses = user.subscription.map(sub => sub.course_enrolled);
     const userProgress = await UserProgress.findOne({ user_id: userId });
     if (!userProgress) return res.status(200).json({ success: true, enrolledCourses });
-    enrolledCourses = await Promise.all(enrolledCourses.map(course => {
+    enrolledCourses = await Promise.all(subscribedCourses.map(course => {
       const plainCourse = course.toObject();
       const courseProgress = userProgress.courseProgress.find((progress) => progress.course_id.equals(course._id));
       if (courseProgress) {
@@ -1157,10 +1166,19 @@ exports.getOngoingCourses = async (req, res) => {
     if (!user.subscription) return res.status(200).json({ success: true, enrolledCourses: [] });
     const userProgress = await UserProgress.findOne({ user_id: userId });
     if (!userProgress) return res.status(200).json({ success: true, enrolledCourses: [] });
-
+    let subscribedCourses = user.subscription;
+    subscribedCourses = await Promise.all(user.subscription.map(async (sub) => {
+      const course = await Course.findOne({ _id: sub.course_enrolled, courseExpiry: { $gt: new Date() }, isPublished: true });
+      if (course) {
+        return course;
+      } else {
+        return null
+      }
+    }));
+    subscribedCourses = subscribedCourses.filter((course) => course !== null);
     let enrolledCourses = user.subscription.map(sub => sub.course_enrolled);
 
-    let filteredCourses = await Promise.all(enrolledCourses.map(course => {
+    let filteredCourses = await Promise.all(subscribedCourses.map(course => {
       const plainCourse = course.toObject();
       const progress = userProgress.courseProgress.find(p => p.course_id.equals(course._id));
       if (progress && progress.status === 'ongoing') {
@@ -1199,10 +1217,19 @@ exports.getCompletedCourses = async (req, res) => {
     if (!user.subscription) return res.status(200).json({ success: true, enrolledCourses: [] });
     const userProgress = await UserProgress.findOne({ user_id: userId });
     if (!userProgress) return res.status(200).json({ success: true, enrolledCourses: [] });
-
+    let subscribedCourses = user.subscription;
+    subscribedCourses = await Promise.all(user.subscription.map(async (sub) => {
+      const course = await Course.findOne({ _id: sub.course_enrolled, courseExpiry: { $gt: new Date() }, isPublished: true });
+      if (course) {
+        return course;
+      } else {
+        return null
+      }
+    }));
+    subscribedCourses = subscribedCourses.filter((course) => course !== null);
     let enrolledCourses = user.subscription.map(sub => sub.course_enrolled);
 
-    let filteredCourses = await Promise.all(enrolledCourses.map(course => {
+    let filteredCourses = await Promise.all(subscribedCourses.map(course => {
       const plainCourse = course.toObject();
       const progress = userProgress.courseProgress.find(p => p.course_id.equals(course._id));
       if (progress && progress.status === 'completed') {
@@ -2015,6 +2042,82 @@ exports.resendChangePasswordOtp = async (req, res) => {
     }
   } catch (error) {
     console.error("Error generating OTP:", error.message);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+}
+
+exports.verifyChangePasswordOtp = async (req, res) => {
+  try {
+    const { userId, Otp } = req.body;
+    if (!userId || !Otp) {
+      return res.status(400).json({ success: false, message: "missing required fields" });
+    }
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+    const response = await axios.get(
+      `https://control.msg91.com/api/v5/otp/verify?mobile=91${user.phone}&otp=${Otp}`,
+      {
+        headers: {
+          authkey: process.env.MSG91_AUTH_KEY,
+        },
+      }
+    );
+    if (response.data.type == "success") {
+
+      res.status(200).json({ success: true, message: "OTP verified successfully", data: response.data });
+
+
+    } else if (response.data.type == "error") {
+      if (response.data.message == "Mobile no. already verified") {
+        return res.status(400).json({ success: false, message: "OTP already verified Please generate new OTP" });
+      }
+      return res.status(400).json({ success: false, message: response.data.message, data: response.data });
+    }
+  } catch (error) {
+    console.error("Error verifying OTP:", error.message);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+};
+
+exports.changePassword = async (req, res) => {
+  try {
+    const { userId, currentPassword, newPassword, confirmPassword } = req.body;
+    if (!userId || !currentPassword || !newPassword || !confirmPassword) {
+      return res.status(400).json({ success: false, message: "missing required fields" });
+    }
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+    if (!user || !(await bcrypt.compare(currentPassword, user.password))) {
+      return res
+        .status(401)
+        .json({ success: false, message: "Invalid credentials" });
+    }
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Passwords and Confirm Password do not match",
+      });
+    }
+    const passwordStrengthRegex =
+      /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*]).{8,}$/.test(newPassword);
+    console.log(passwordStrengthRegex);
+    if (!passwordStrengthRegex) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Password must be at least 8 characters long, include a number, an uppercase letter, and a special character.",
+      });
+    }
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    await user.save();
+    return res.status(200).json({ success: true, message: "Password changed successfully" });
+  } catch (error) {
+    console.error("Error changing password:", error.message);
     res.status(500).json({ success: false, message: "Server error", error: error.message });
   }
 }
