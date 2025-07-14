@@ -48,6 +48,8 @@ router.put("/enableAndDisableMasterOtp", userController.enableDisableMasterOtp);
 router.post("/sendChangePasswordOtp", userController.sendChangePasswordOtp);
 router.post("/resendChangePasswordOtp", userController.resendChangePasswordOtp);
 router.post("/verifyChangePasswordOtp", userController.verifyChangePassword);
+router.post("/verify/changePasswordOtp", userController.verifyChangePasswordOtp);
+router.post("/confirmChangePassword", userController.changePassword);
 router.post("/collectQuestionPaperDetails", userController.collectDetailsOnQuestionPaperDownload);
 router.get("/get/stubents/byCourse", userController.getAllStudentsByCourse);
 router.post("/create/sub/Admin", userController.createSubAdmin);

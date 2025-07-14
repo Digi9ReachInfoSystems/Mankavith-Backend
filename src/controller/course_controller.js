@@ -89,7 +89,7 @@ exports.searchCourses = async (req, res) => {
     const { name, category } = req.query;
     let query = {};
     query.isPublished = true; // Only fetch published courses
-
+    query.courseExpiry = { $gte: new Date() }; // Only fetch courses that are not expired
     // Add name filter if provided (case-insensitive search)
     if (name) {
       query.courseName = { $regex: name, $options: "i" };
@@ -137,7 +137,7 @@ exports.getAllCourses = async (req, res) => {
     const { category } = req.query;
     let query = {};
     query.isPublished = true; // Only fetch published courses
-
+    query.courseExpiry = { $gte: new Date() }; // Only fetch courses that are not expired
     if (category) {
       const categoryExists = await Category.findById(category);
       if (!categoryExists) {
@@ -207,7 +207,7 @@ exports.getCoursesByCategory = async (req, res) => {
     }
 
     // Find courses that reference this category
-    const courses = await Course.find({ category: category._id, isPublished: true })
+    const courses = await Course.find({ category: category._id, isPublished: true ,courseExpiry: { $gte: new Date() }})
       .populate("subjects",)
       .populate("category",)
       .populate("student_feedback")
@@ -333,6 +333,9 @@ exports.updateCourse = async (req, res) => {
     }
 
     course.image = updateData.image ?? course.image;
+    if(updateData.courseExpiry != null) {
+      course.courseExpiry = updateData.courseExpiry;
+    }
 
     const updatedCourse = await course.save();
     // const updatedCourse = await Course.findByIdAndUpdate(courseId, updateData, {
@@ -654,7 +657,7 @@ exports.getAllUserCourses = async (req, res) => {
         message: "User not found",
       });
     }
-    let courses = await Course.find({ isPublished: true }).populate("subjects").populate("category");
+    let courses = await Course.find({ isPublished: true ,courseExpiry: { $gte: new Date() }}).populate("subjects").populate("category");
     courses = courses.map(course => {
       if (user.subscription.find(sub => sub.course_enrolled.equals(course._id))) {
         return ({
@@ -698,7 +701,7 @@ exports.getAllUserCoursesByCategory = async (req, res) => {
         message: "Category not found",
       });
     }
-    let courses = await Course.find({ category: categoryExists._id, isPublished: true });
+    let courses = await Course.find({ category: categoryExists._id, isPublished: true, courseExpiry: { $gte: new Date() } }).populate("subjects").populate("category");
     courses = courses.map(course => {
       if (user.subscription.find(sub => sub.course_enrolled.equals(course._id))) {
         return ({
@@ -732,6 +735,7 @@ exports.searchUserCourses = async (req, res) => {
     const { user_id, categoryName } = req.params
     let query = {};
     query.isPublished = true; // Only fetch published courses
+    query.courseExpiry = { $gte: new Date() }; // Only fetch courses that are not expired
     const user = await User.findById(user_id);
     if (!user) {
       return res.status(404).json({
@@ -752,6 +756,7 @@ exports.searchUserCourses = async (req, res) => {
       }
       query.category = categoryExists._id;
     }
+
 
     let courses = await Course.find(query)
       .populate("subjects")
@@ -791,7 +796,7 @@ exports.getCourseWithProgress = async (req, res) => {
     console.log("Fetching course with progress for user:", userId, "and course:", courseId);
 
     // Fetch course with nested subjects and lectures
-    let course = await Course.findOne({ _id: courseId, isPublished: true })
+    let course = await Course.findOne({ _id: courseId, isPublished: true, courseExpiry: { $gte: new Date() } })
       .populate({
         path: "subjects",
         populate: [{
