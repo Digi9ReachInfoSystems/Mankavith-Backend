@@ -8,7 +8,7 @@ const Subject = require("../model/subject_model");
 // @access  Private/Admin
 exports.createLecture = async (req, res) => {
   try {
-    const { lectureName, description, duration, videoUrl, thumbnail, subjectRef } = req.body;
+    const { lectureName, description, duration, videoUrl, subjectRef } = req.body;
     
     // Validate required fields
     // if (!lectureName || !duration || !videoUrl) {
@@ -27,7 +27,7 @@ exports.createLecture = async (req, res) => {
     //   return res.status(400).json({ success: false, message: "Invalid subjectRef" });
     // }
 
-    const lecture = new Lecture({ lectureName, description, duration, videoUrl, thumbnail, subjectRef });
+    const lecture = new Lecture({ lectureName, description, duration, videoUrl, subjectRef });
     const savedLecture = await lecture.save();
     subjectRef.forEach(async (subjectId) => {
       const subject = await Subject.findById(subjectId);
@@ -93,7 +93,7 @@ exports.getLectureById = async (req, res) => {
 exports.updateLecture = async (req, res) => {
   try {
     const { id } = req.params;
-    const { lectureName, description, duration, videoUrl, thumbnail, subjectRef } = req.body;
+    const { lectureName, description, duration, videoUrl, subjectRef } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ success: false, message: "Invalid lecture ID" });
@@ -119,7 +119,7 @@ exports.updateLecture = async (req, res) => {
 
     const updatedLecture = await Lecture.findByIdAndUpdate(
       id,
-      { lectureName, description, duration, videoUrl, thumbnail, subjectRef },
+      { lectureName, description, duration, videoUrl, subjectRef },
       { new: true, runValidators: true }
     )
     // .populate("courseRef", "courseName")
