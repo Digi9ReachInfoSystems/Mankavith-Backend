@@ -542,3 +542,21 @@ module.exports.bulkDeleteSubjects = async (req, res) => {
     });
   }
 };
+
+module.exports.getSubjectsByCourseId = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    const subjects = await Subject.find({ courses: courseId });
+    return res.status(200).json({
+      success: true,
+      data: subjects,
+    });
+  } catch (error) {
+    console.error("Error fetching subjects by course ID:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Error fetching subjects by course ID",
+      error: error.message,
+    });
+  }
+}
