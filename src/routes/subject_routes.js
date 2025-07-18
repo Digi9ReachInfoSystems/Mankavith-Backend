@@ -6,7 +6,8 @@ const {
   updateSubject,
   deleteSubject,
   getNoOfSubjects,
-  bulkDeleteSubjects
+  bulkDeleteSubjects,
+  getSubjectsByCourseId
 } = require("../controller/subject_controller");
 const authenticateJWT = require("../middleware/authenticator");
 
@@ -29,5 +30,7 @@ router.put("/:id", updateSubject);
 router.delete("/:id", deleteSubject);
 
 router.delete("/bulk/delete", bulkDeleteSubjects);
+
+router.get("/getCourseBySubject/:courseId",getSubjectsByCourseId)
 
 module.exports = router;
