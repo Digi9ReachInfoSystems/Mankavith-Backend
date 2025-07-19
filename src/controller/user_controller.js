@@ -554,7 +554,7 @@ exports.loginSendOtp = async (req, res) => {
 
     const loginOtp = generateOTP();
     const loginOtpExpiration = new Date();
-    loginOtpExpiration.setMinutes(loginOtpExpiration.getMinutes() + 1);
+    loginOtpExpiration.setMinutes(loginOtpExpiration.getMinutes() + 2);
 
     user.loginOtp = loginOtp;
     user.loginOtpExpiration = loginOtpExpiration;
@@ -564,7 +564,7 @@ exports.loginSendOtp = async (req, res) => {
       from: "mankavit.clatcoaching11@gmail.com",
       to: email,
       subject: "Login Verification OTP",
-      text: `Your login OTP is: ${loginOtp}. It will expire in 1 minutes.`,
+      text: `Your login OTP is: ${loginOtp}. It will expire in 2 minutes.`,
     };
 
     transporter.sendMail(mailOptions, (error, info) => {
@@ -759,7 +759,7 @@ exports.resendLoginOtp = async (req, res) => {
 
     const loginOtp = generateOTP();
     const loginOtpExpiration = new Date();
-    loginOtpExpiration.setMinutes(loginOtpExpiration.getMinutes() + 1);
+    loginOtpExpiration.setMinutes(loginOtpExpiration.getMinutes() + 2);
 
     user.loginOtp = loginOtp;
     user.loginOtpExpiration = loginOtpExpiration;
@@ -769,7 +769,7 @@ exports.resendLoginOtp = async (req, res) => {
       from: "mankavit.clatcoaching11@gmail.com",
       to: email,
       subject: "Login Verification OTP",
-      text: `Your login OTP is: ${loginOtp}. It will expire in 1 minutes.`,
+      text: `Your login OTP is: ${loginOtp}. It will expire in 2 minutes.`,
     };
 
     transporter.sendMail(mailOptions, (error, info) => {
