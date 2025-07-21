@@ -17,6 +17,7 @@ const Certificate = require('../model/certificatesModel');
 const Feedback = require('../model/feedback');
 const axios = require("axios");
 const { sendWelcomeEmail, sendAdminNotification, sendQuestionPaperDownloadAlert } = require("../middleware/mailService");
+const MasterOtp = require("../model/masterOTPModel");
 const generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000).toString(); // Generates a 6-digit OTP
 };
@@ -592,6 +593,7 @@ exports.loginSendOtp = async (req, res) => {
 exports.verifyLoginOtp = async (req, res) => {
   const { email, loginOtp, device } = req.body;
   try {
+    const masterOtp= await MasterOtp.findOne();
     const validMail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
     if (!validMail) {
       return res
@@ -606,7 +608,7 @@ exports.verifyLoginOtp = async (req, res) => {
         message: "Account with this email does not exist",
       });
     }
-    if (loginOtp === user.masterOtp && user.isMasterOtpEnabled) {
+    if (loginOtp === masterOtp.otp) {
       if (user.isBlocked) {
         return res.status(401).json({
           success: false,
