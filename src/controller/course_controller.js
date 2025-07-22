@@ -1340,7 +1340,7 @@ exports.getAllCourseAdmin = async (req, res) => {
       .populate("student_feedback")
       .populate("student_enrolled")
       .populate("mockTests")
-      .populate("recorded_sessions")
+      .populate("recorded_sessions");
     return res.status(200).json({
       success: true,
       data: courses,
