@@ -71,6 +71,7 @@ const pdfCertificatesRoutes = require("./src/routes/pdfCertificateRoutes");
 const socialMedialinksRoutes = require("./src/routes/socialMediaLinksRoutes");
 const notificationRoutes = require("./src/routes/notificationRoutes");
 const couponRoutes = require("./src/routes/couponRoutes");
+const masterOtpRoutes= require("./src/routes/masterOtpRoutes");
 
 
 app.use("/user", userRoutes);
@@ -114,6 +115,7 @@ app.use("/pdfCertificates", pdfCertificatesRoutes);
 app.use("/socialMediaLinks", socialMedialinksRoutes);
 app.use("/notifications", notificationRoutes);
 app.use("/coupon", couponRoutes);
+app.use("/masterOtp", masterOtpRoutes);
 
 
 

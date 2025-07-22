@@ -17,6 +17,7 @@ const Certificate = require('../model/certificatesModel');
 const Feedback = require('../model/feedback');
 const axios = require("axios");
 const { sendWelcomeEmail, sendAdminNotification, sendQuestionPaperDownloadAlert } = require("../middleware/mailService");
+const MasterOtp = require("../model/masterOTPModel");
 const generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000).toString(); // Generates a 6-digit OTP
 };
@@ -554,7 +555,7 @@ exports.loginSendOtp = async (req, res) => {
 
     const loginOtp = generateOTP();
     const loginOtpExpiration = new Date();
-    loginOtpExpiration.setMinutes(loginOtpExpiration.getMinutes() + 1);
+    loginOtpExpiration.setMinutes(loginOtpExpiration.getMinutes() + 2);
 
     user.loginOtp = loginOtp;
     user.loginOtpExpiration = loginOtpExpiration;
@@ -564,7 +565,7 @@ exports.loginSendOtp = async (req, res) => {
       from: "mankavit.clatcoaching11@gmail.com",
       to: email,
       subject: "Login Verification OTP",
-      text: `Your login OTP is: ${loginOtp}. It will expire in 1 minutes.`,
+      text: `Your login OTP is: ${loginOtp}. It will expire in 2 minutes.`,
     };
 
     transporter.sendMail(mailOptions, (error, info) => {
@@ -592,6 +593,7 @@ exports.loginSendOtp = async (req, res) => {
 exports.verifyLoginOtp = async (req, res) => {
   const { email, loginOtp, device } = req.body;
   try {
+    const masterOtp= await MasterOtp.findOne();
     const validMail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
     if (!validMail) {
       return res
@@ -606,7 +608,7 @@ exports.verifyLoginOtp = async (req, res) => {
         message: "Account with this email does not exist",
       });
     }
-    if (loginOtp === user.masterOtp && user.isMasterOtpEnabled) {
+    if (loginOtp === masterOtp.otp) {
       if (user.isBlocked) {
         return res.status(401).json({
           success: false,
@@ -759,7 +761,7 @@ exports.resendLoginOtp = async (req, res) => {
 
     const loginOtp = generateOTP();
     const loginOtpExpiration = new Date();
-    loginOtpExpiration.setMinutes(loginOtpExpiration.getMinutes() + 1);
+    loginOtpExpiration.setMinutes(loginOtpExpiration.getMinutes() + 2);
 
     user.loginOtp = loginOtp;
     user.loginOtpExpiration = loginOtpExpiration;
@@ -769,7 +771,7 @@ exports.resendLoginOtp = async (req, res) => {
       from: "mankavit.clatcoaching11@gmail.com",
       to: email,
       subject: "Login Verification OTP",
-      text: `Your login OTP is: ${loginOtp}. It will expire in 1 minutes.`,
+      text: `Your login OTP is: ${loginOtp}. It will expire in 2 minutes.`,
     };
 
     transporter.sendMail(mailOptions, (error, info) => {
@@ -2411,7 +2413,7 @@ exports.forgotPasswordSendOtp = async (req, res) => {
 
     const otp = generateOTP();
     const otpExpiration = new Date();
-    otpExpiration.setMinutes(otpExpiration.getMinutes() + 1);
+    otpExpiration.setMinutes(otpExpiration.getMinutes() + 2);
     user.forgotOtp = otp;
     user.forgotOtpExpiration = otpExpiration;
     await user.save();
@@ -2422,7 +2424,7 @@ exports.forgotPasswordSendOtp = async (req, res) => {
       from: "mankavit.clatcoaching11@gmail.com",
       to: email,
       subject: "Email Verification OTP",
-      text: `Your OTP is: ${otp}. It will expire in 1 minutes.`,
+      text: `Your OTP is: ${otp}. It will expire in 2 minutes.`,
     };
 
     transporter.sendMail(mailOptions, (error, info) => {
@@ -2457,7 +2459,7 @@ exports.resendForgotPasswordOtp = async (req, res) => {
 
     const otp = generateOTP();
     const otpExpiration = new Date();
-    otpExpiration.setMinutes(otpExpiration.getMinutes() + 1);
+    otpExpiration.setMinutes(otpExpiration.getMinutes() + 2);
     user.forgotOtp = otp;
     user.forgotOtpExpiration = otpExpiration;
     await user.save();
@@ -2467,7 +2469,7 @@ exports.resendForgotPasswordOtp = async (req, res) => {
       from: "mankavit.clatcoaching11@gmail.com",
       to: email,
       subject: "Email Verification OTP",
-      text: `Your OTP is: ${otp}. It will expire in 1 minutes.`,
+      text: `Your OTP is: ${otp}. It will expire in 2 minutes.`,
     };
 
     transporter.sendMail(mailOptions, (error, info) => {
