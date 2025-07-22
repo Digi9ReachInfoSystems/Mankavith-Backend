@@ -2413,7 +2413,7 @@ exports.forgotPasswordSendOtp = async (req, res) => {
 
     const otp = generateOTP();
     const otpExpiration = new Date();
-    otpExpiration.setMinutes(otpExpiration.getMinutes() + 1);
+    otpExpiration.setMinutes(otpExpiration.getMinutes() + 2);
     user.forgotOtp = otp;
     user.forgotOtpExpiration = otpExpiration;
     await user.save();
@@ -2424,7 +2424,7 @@ exports.forgotPasswordSendOtp = async (req, res) => {
       from: "mankavit.clatcoaching11@gmail.com",
       to: email,
       subject: "Email Verification OTP",
-      text: `Your OTP is: ${otp}. It will expire in 1 minutes.`,
+      text: `Your OTP is: ${otp}. It will expire in 2 minutes.`,
     };
 
     transporter.sendMail(mailOptions, (error, info) => {
@@ -2459,7 +2459,7 @@ exports.resendForgotPasswordOtp = async (req, res) => {
 
     const otp = generateOTP();
     const otpExpiration = new Date();
-    otpExpiration.setMinutes(otpExpiration.getMinutes() + 1);
+    otpExpiration.setMinutes(otpExpiration.getMinutes() + 2);
     user.forgotOtp = otp;
     user.forgotOtpExpiration = otpExpiration;
     await user.save();
@@ -2469,7 +2469,7 @@ exports.resendForgotPasswordOtp = async (req, res) => {
       from: "mankavit.clatcoaching11@gmail.com",
       to: email,
       subject: "Email Verification OTP",
-      text: `Your OTP is: ${otp}. It will expire in 1 minutes.`,
+      text: `Your OTP is: ${otp}. It will expire in 2 minutes.`,
     };
 
     transporter.sendMail(mailOptions, (error, info) => {
