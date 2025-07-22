@@ -1316,11 +1316,31 @@ exports.bulkDeleteCourse = async (req, res) => {
 exports.getAllCourseAdmin = async (req, res) => {
   try {
     const courses = await Course.find()
-      .populate("subjects")
-      .populate("category")
-      .populate("student_feedback")
-      .populate("recorded_sessions");
+       .populate({
+        path: "subjects",
+        select: "subjectName image description lectures notes",
+        populate: [
+          {
+            path: "lectures",
+            // select: "_id"
+          },
+          {
+            path: "notes",
+            // select: "_id"
+          },
+          {
+            path: "mockTests",
+            // select: "_id"
 
+          }
+
+        ]
+      })
+      .populate("category",)
+      .populate("student_feedback")
+      .populate("student_enrolled")
+      .populate("mockTests")
+      .populate("recorded_sessions")
     return res.status(200).json({
       success: true,
       data: courses,
