@@ -183,7 +183,7 @@ exports.login = async (req, res) => {
     if (!user || !(await bcrypt.compare(password, user.password))) {
       return res
         .status(401)
-        .json({ success: false, message: "Invalid credentials" });
+        .json({ success: false, message: "Invalid email or password" });
     }
     if (user.isBlocked) {
       return res.status(401).json({
@@ -314,7 +314,7 @@ exports.forceLogin = async (req, res) => {
     if (!user || !(await bcrypt.compare(password, user.password))) {
       return res
         .status(401)
-        .json({ success: false, message: "Invalid credentials" });
+        .json({ success: false, message: "Invalid email or password" });
     }
     const expiryTime = Date.now() + 3600 * 1000;
     const expiryDate = new Date(expiryTime);

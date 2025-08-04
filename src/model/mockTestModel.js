@@ -29,8 +29,8 @@ const mockTestSchema = new mongoose.Schema({
   duration: { type: Number, required: true, min: 1 }, // in minutes
   totalMarks: { type: Number, required: false },
   passingMarks: { type: Number, required: false },
-  startDate: { type: Date, required: true }, // Test availability window
-  endDate: { type: Date, required: true },
+  startDate: { type: Date, required: false }, // Test availability window
+  endDate: { type: Date, required: false },
   isActive: { type: Boolean, default: false },
   questions: [questionSchema],
   createdAt: { type: Date, default: Date.now },
