@@ -442,6 +442,7 @@ exports.getNoOfSubjects = async (req, res) => {
   }
 };
 
+
 module.exports.bulkDeleteSubjects = async (req, res) => {
   try {
     const { subjectIds } = req.body;

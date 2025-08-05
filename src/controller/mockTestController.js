@@ -537,3 +537,118 @@ exports.deleteMockTestById = async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to delete mock test' });
   }
 };
+
+
+exports.bulkDeleteMocktests = async (req, res) => {
+  try {
+    const { mockTestIds } = req.body;
+
+    if (!mockTestIds || !Array.isArray(mockTestIds) || mockTestIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "No mock test IDs provided",
+      });
+    }
+
+    let results = [];
+
+    for (const id of mockTestIds) {
+      try {
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+          results.push({
+            id,
+            success: false,
+            message: "Invalid mock test ID",
+          });
+          continue;
+        }
+
+        const deletedMockTest = await MockTest.findByIdAndDelete(id);
+
+        if (!deletedMockTest) {
+          results.push({
+            id,
+            success: false,
+            message: "Mock test not found",
+          });
+        } else {
+          results.push({
+            id: deletedMockTest._id,
+            success: true,
+            message: "Mock test deleted successfully",
+          });
+        }
+
+      } catch (error) {
+        console.error(`Error deleting mock test ${id}:`, error.message);
+        results.push({
+          id,
+          success: false,
+          message: "Error deleting mock test",
+          error: error.message,
+        });
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Mock tests processed for deletion",
+      results,
+    });
+
+  } catch (error) {
+    console.error("Fatal error in bulkDeleteMocktests:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error during mock test deletion",
+      error: error.message,
+    });
+  }
+};
+
+exports.getMocktestsBySubjectName = async (req, res) => {
+  try {
+    const { subjectname } = req.params;
+
+    if (!subjectname || typeof subjectname !== 'string') {
+      return res.status(400).json({
+        success: false,
+        message: "Subject name is required and must be a string."
+      });
+    }
+
+    // Find subject(s) by name (case-insensitive)
+    const subjects = await Subject.find({
+      subjectName: { $regex: new RegExp(subjectname, 'i') }
+    });
+
+    if (!subjects || subjects.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: `No subjects found matching name '${subjectname}'.`
+      });
+    }
+
+    // Extract subject IDs
+    const subjectIds = subjects.map(sub => sub._id);
+
+    // Find mock tests linked to these subjects
+    const mocktests = await MockTest.find({ subject: { $in: subjectIds } })
+      .populate('subject')
+      .populate('students'); // Now valid
+
+    return res.status(200).json({
+      success: true,
+      message: `Mock tests for subject '${subjectname}' fetched successfully.`,
+      count: mocktests.length,
+      data: mocktests
+    });
+  } catch (error) {
+    console.error("Error fetching mock tests by subject name:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error while fetching mock tests.",
+      error: error.message
+    });
+  }
+};

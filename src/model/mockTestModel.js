@@ -38,7 +38,13 @@ const mockTestSchema = new mongoose.Schema({
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false },
   maxAttempts: { type: Number, default: 1 },
   isPublished: { type: Boolean, default: false },
-  isDeleted: { type: Boolean, default: false }
+  isDeleted: { type: Boolean, default: false },
+    students: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    }
+  ],
 });
 
 mockTestSchema.pre('save', function (next) {
