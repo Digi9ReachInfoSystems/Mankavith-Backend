@@ -7,7 +7,8 @@ const {
   deleteSubject,
   getNoOfSubjects,
   bulkDeleteSubjects,
-  getSubjectsByCourseId
+  getSubjectsByCourseId,
+  rearrangeSubjects
 } = require("../controller/subject_controller");
 const authenticateJWT = require("../middleware/authenticator");
 
@@ -33,4 +34,5 @@ router.delete("/bulk/delete", bulkDeleteSubjects);
 
 router.get("/getCourseBySubject/:courseId",getSubjectsByCourseId)
 
+router.put("/subjects/rearrangeSubjects",rearrangeSubjects);
 module.exports = router;

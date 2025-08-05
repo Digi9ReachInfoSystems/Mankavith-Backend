@@ -1,5 +1,6 @@
 const Note = require('../model/notes_model.js');
 const Subject = require('../model/subject_model');
+const mongoose = require('mongoose');
 const { BlobServiceClient, StorageSharedKeyCredential } = require('@azure/storage-blob');
 // const blobServiceClient = require('../utils/azureBlobService.js');
 // Create Note
@@ -229,3 +230,66 @@ module.exports.getAllNotesBySubjectIds = async (req, res) => {
     return res.status(500).json({ success: false, message: 'Error fetching notes by subject IDs', error: error.message });
   }
 }
+module.exports.rearrangeNotes = async (req, res) => {
+  try {
+    const { noteIds } = req.body;
+
+    // Validation
+    if (!noteIds || !Array.isArray(noteIds) || noteIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide an array of note IDs in the desired order'
+      });
+    }
+
+    // Validate all IDs are valid MongoDB ObjectIds
+    if (noteIds.some(id => !mongoose.Types.ObjectId.isValid(id))) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid note ID format'
+      });
+    }
+
+    // Create bulk operations
+    const bulkOps = noteIds.map((noteId, index) => ({
+      updateOne: {
+        filter: { _id: noteId },
+        update: { $set: { order: index + 1 } } // 1-based indexing
+      }
+    }));
+
+    // Execute bulk write
+    const result = await Note.bulkWrite(bulkOps);
+
+    // Check if all notes were updated
+    if (result.matchedCount !== noteIds.length) {
+      return res.status(404).json({
+        success: false,
+        message: 'Some notes could not be found',
+        found: result.matchedCount,
+        requested: noteIds.length
+      });
+    }
+
+    // Successful response
+    res.status(200).json({
+      success: true,
+      message: 'Notes reordered successfully',
+      data: {
+        updatedCount: result.modifiedCount,
+        newOrder: noteIds.map((id, index) => ({
+          noteId: id,
+          position: index + 1
+        }))
+      }
+    });
+
+  } catch (error) {
+    console.error('Error reordering notes:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error while reordering notes',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
