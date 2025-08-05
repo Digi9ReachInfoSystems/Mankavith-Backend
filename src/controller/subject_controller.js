@@ -8,12 +8,6 @@ const { applyTimestamps } = require("../model/courseProgressModel.js");
 const Note = require("../model/notes_model.js");
 const MockTest = require("../model/mockTestModel.js"); 
 
-
-
-
-// @desc    Create a new subject
-// @route   POST /api/subjects
-// @access  Private/Admin
 module.exports.createSubject = async (req, res) => {
   try {
     // extract only subjectName for the required check
@@ -561,3 +555,77 @@ module.exports.getSubjectsByCourseId = async (req, res) => {
     });
   }
 }
+module.exports.rearrangeSubjects = async (req, res) => {
+  try {
+    const rawIds = req.body.subjectIds;
+console.log("Subject ids:", rawIds);
+    if (!Array.isArray(rawIds) || rawIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide an array of subject IDs"
+      });
+    }
+
+    // Self-healing logic: extract strings from $oid if present
+    const subjectIds = rawIds.map(id => {
+      if (typeof id === 'object' && id !== null && id.$oid) {
+        return id.$oid;
+      }
+      return id;
+    });
+
+    // Validate ObjectIds
+    const objectIds = [];
+    for (let id of subjectIds) {
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        console.error("❌ Invalid subject ID received:", id);
+        return res.status(400).json({
+          success: false,
+          message: "Invalid subject ID",
+          invalidId: id
+        });
+      }
+      objectIds.push(new mongoose.Types.ObjectId(id));
+    }
+
+    // Create bulk operations
+    const bulkOps = objectIds.map((subjectId, index) => ({
+      updateOne: {
+        filter: { _id: subjectId },
+        update: { $set: { order: index + 1 } }
+      }
+    }));
+
+    // Execute bulk write
+    const result = await Subject.bulkWrite(bulkOps);
+
+    if (result.matchedCount !== objectIds.length) {
+      return res.status(404).json({
+        success: false,
+        message: "Some subjects could not be found",
+        matchedCount: result.matchedCount,
+        expected: objectIds.length
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Subjects reordered successfully",
+      data: {
+        updatedCount: result.modifiedCount,
+        newOrder: subjectIds.map((id, index) => ({
+          subjectId: id,
+          position: index + 1
+        }))
+      }
+    });
+
+  } catch (error) {
+    console.error("🚨 Error reordering subjects:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message
+    });
+  }
+};

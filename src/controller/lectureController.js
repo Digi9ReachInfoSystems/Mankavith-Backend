@@ -225,3 +225,80 @@ exports.bulkDeleteLectures = async (req, res) => {
     res.status(500).json({ success: false, message: "Internal server error", error: error.message });
   }
 };
+
+
+
+
+module.exports.rearrangeLectures = async (req, res) => {
+  try {
+    const { lectureIds } = req.body;
+
+    // Validation
+    if (!lectureIds || !Array.isArray(lectureIds) || lectureIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide an array of lecture IDs in the desired order"
+      });
+    }
+
+    // Convert and validate ObjectIds
+    const objectIds = lectureIds.map(id => {
+      try {
+        return new mongoose.Types.ObjectId(id);
+      } catch (error) {
+        return null;
+      }
+    });
+
+    if (objectIds.some(id => !id)) {
+      return res.status(400).json({
+        success: false,
+        message: "One or more lecture IDs are invalid",
+        invalidIds: lectureIds.filter((_, index) => !objectIds[index])
+      });
+    }
+
+    // Create bulk operations
+    const bulkOps = objectIds.map((lectureId, index) => ({
+      updateOne: {
+        filter: { _id: lectureId },
+        update: { $set: { order: index + 1 } } // 1-based indexing
+      }
+    }));
+
+    // Execute bulk write
+    const result = await mongoose.model('Lecture').bulkWrite(bulkOps);
+
+    // Check if all lectures were found
+    if (result.matchedCount !== lectureIds.length) {
+      return res.status(404).json({
+        success: false,
+        message: 'Some lectures could not be found',
+        found: result.matchedCount,
+        requested: lectureIds.length,
+        missing: lectureIds.length - result.matchedCount
+      });
+    }
+
+    // Successful response
+    res.status(200).json({
+      success: true,
+      message: 'Lectures reordered successfully',
+      data: {
+        updatedCount: result.modifiedCount,
+        newOrder: lectureIds.map((id, index) => ({
+          lectureId: id,
+          position: index + 1
+        }))
+      }
+    });
+
+  } catch (error) {
+    console.error('Error reordering lectures:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error while reordering lectures',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};

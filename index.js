@@ -104,8 +104,6 @@ app.use("/api/v1/zoom", zoomRoutes);
 app.use("/api/v1/payment", paymentRoutes);
 app.use("/blog", blogRoutes);
 app.use("/contactSupport", contactSupportRoutes);
-
-
 app.use("/userProgress", userProgressRoutes);
 app.use("/meeting", meetingRoutes);
 app.use("/mockTest", mockTestRoutes);
