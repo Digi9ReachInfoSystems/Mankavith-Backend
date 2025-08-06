@@ -9,14 +9,18 @@ const UserProgress = require("../model/userProgressModel");
 const KycDetails = require("../model/kycDetails");
 const Support = require("../model/supportModel");
 const CourseProgress = require("../model/courseProgressModel");
-const UserAttempt = require('../model/userAttemptModel');
-const MockTest = require('../model/mockTestModel');
-const UserRanking = require('../model/userRankingModel');
-const Payments = require('../model/paymentModel');
-const Certificate = require('../model/certificatesModel');
-const Feedback = require('../model/feedback');
+const UserAttempt = require("../model/userAttemptModel");
+const MockTest = require("../model/mockTestModel");
+const UserRanking = require("../model/userRankingModel");
+const Payments = require("../model/paymentModel");
+const Certificate = require("../model/certificatesModel");
+const Feedback = require("../model/feedback");
 const axios = require("axios");
-const { sendWelcomeEmail, sendAdminNotification, sendQuestionPaperDownloadAlert } = require("../middleware/mailService");
+const {
+  sendWelcomeEmail,
+  sendAdminNotification,
+  sendQuestionPaperDownloadAlert,
+} = require("../middleware/mailService");
 const MasterOtp = require("../model/masterOTPModel");
 const generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000).toString(); // Generates a 6-digit OTP
@@ -123,25 +127,37 @@ exports.register = async (req, res) => {
 
     const user = await User.findOne({ email });
     const otpPhone = Math.floor(100000 + Math.random() * 900000);
-    const response = await axios.post('https://control.msg91.com/api/v5/otp', {
+    const response = await axios.post("https://control.msg91.com/api/v5/otp", {
       otp_expiry: 1,
       template_id: "6835b4f2d6fc053de8172342",
       mobile: `91${user.phone}`,
       authkey: process.env.MSG91_AUTH_KEY,
       otp: otpPhone,
-      realTimeResponse: 1
-    })
+      realTimeResponse: 1,
+    });
     await sendWelcomeEmail(user.displayName, user.email);
     const adminUser = await User.find({ role: "admin" });
-    Promise.all(adminUser.map(async (admin) => {
-      await sendAdminNotification(user.displayName, user.email, admin.email);
-    }));
+    Promise.all(
+      adminUser.map(async (admin) => {
+        await sendAdminNotification(user.displayName, user.email, admin.email);
+      })
+    );
 
     if (response.data.type == "success") {
-      res.status(200).json({ success: true, message: "User registered successfully. OTP has been sent to your Phone.", user: savedUser, data: response.data });
+      res.status(200).json({
+        success: true,
+        message:
+          "User registered successfully. OTP has been sent to your Phone.",
+        user: savedUser,
+        data: response.data,
+      });
     }
     if (response.data.type == "error") {
-      return res.status(400).json({ success: false, message: response.data.message, data: response.data });
+      return res.status(400).json({
+        success: false,
+        message: response.data.message,
+        data: response.data,
+      });
     }
   } catch (error) {
     console.error("error", error);
@@ -188,7 +204,8 @@ exports.login = async (req, res) => {
     if (user.isBlocked) {
       return res.status(401).json({
         success: false,
-        message: "Account is blocked please contact Support Team :- mankavit.clatcoaching11@gmail.com",
+        message:
+          "Account is blocked please contact Support Team :- mankavit.clatcoaching11@gmail.com",
       });
     }
     // if (user.deviceId && user.deviceId !== deviceId) {
@@ -225,7 +242,7 @@ exports.login = async (req, res) => {
         ipAddress: device.ipAddress,
         lastLogin: Date.now(),
         refreshTokenExpiry: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
-        isCurrent: true
+        isCurrent: true,
       };
       user.lastLogin = Date.now();
       await user.save();
@@ -239,9 +256,11 @@ exports.login = async (req, res) => {
         kyc_status: user.role === "user" ? user.kyc_status : null,
         expiresIn: expiryDate,
       });
-
-
-    } else if (user.device && user?.device?.deviceId === device.deviceId && user?.device?.ipAddress === device.ipAddress) {
+    } else if (
+      user.device &&
+      user?.device?.deviceId === device.deviceId &&
+      user?.device?.ipAddress === device.ipAddress
+    ) {
       const expiryTime = Date.now() + 3600 * 1000;
       const expiryDate = new Date(expiryTime);
       const refreshToken = jwt.sign(
@@ -273,18 +292,20 @@ exports.login = async (req, res) => {
         kyc_status: user.role === "user" ? user.kyc_status : null,
         expiresIn: expiryDate,
       });
-
-
     } else {
       const forceLoginData = jwt.sign(
         { device: device, email: email, password: password },
         process.env.JWT_SECRET,
         { expiresIn: "1h" }
       );
-      return res.status(200).json({ success: false, message: "Already logged in on another device", alreadyLoggedIn: true, currentDevice: user.device, forceLoginData });
+      return res.status(200).json({
+        success: false,
+        message: "Already logged in on another device",
+        alreadyLoggedIn: true,
+        currentDevice: user.device,
+        forceLoginData,
+      });
     }
-
-
   } catch (error) {
     console.error("error", error);
     res
@@ -297,12 +318,16 @@ exports.forceLogin = async (req, res) => {
   try {
     const { forceLoginData } = req.body;
     if (!forceLoginData) {
-      return res.status(400).json({ success: false, message: "forceLoginData is required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "forceLoginData is required" });
     }
     const decoded = jwt.verify(forceLoginData, process.env.JWT_SECRET);
     const { email, password, device } = decoded;
     if (!email || !password || !device) {
-      return res.status(400).json({ success: false, message: "Invalid forceLoginData" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid forceLoginData" });
     }
     const user = await User.findOne({ email });
     if (!user) {
@@ -323,7 +348,6 @@ exports.forceLogin = async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
-
 
     const accessToken = jwt.sign(
       { username: user.email, role: user.role, refreshToken },
@@ -593,7 +617,7 @@ exports.loginSendOtp = async (req, res) => {
 exports.verifyLoginOtp = async (req, res) => {
   const { email, loginOtp, device } = req.body;
   try {
-    const masterOtp= await MasterOtp.findOne();
+    const masterOtp = await MasterOtp.findOne();
     const validMail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
     if (!validMail) {
       return res
@@ -612,7 +636,8 @@ exports.verifyLoginOtp = async (req, res) => {
       if (user.isBlocked) {
         return res.status(401).json({
           success: false,
-          message: "Account is blocked please contact Support Team :- mankavit.clatcoaching11@gmail.com",
+          message:
+            "Account is blocked please contact Support Team :- mankavit.clatcoaching11@gmail.com",
         });
       }
       const expiryTime = Date.now() + 3600 * 1000;
@@ -647,7 +672,7 @@ exports.verifyLoginOtp = async (req, res) => {
         ipAddress: device.ipAddress,
         lastLogin: Date.now(),
         refreshTokenExpiry: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
-        isCurrent: true
+        isCurrent: true,
       };
       user.lastLogin = Date.now();
       await user.save();
@@ -661,7 +686,6 @@ exports.verifyLoginOtp = async (req, res) => {
         kyc_status: user.role === "user" ? user.kyc_status : null,
         expiresIn: expiryDate,
       });
-
     } else {
       if (user.loginOtp !== loginOtp) {
         return res.status(403).json({ success: false, message: "Invalid OTP" });
@@ -676,7 +700,8 @@ exports.verifyLoginOtp = async (req, res) => {
       if (user.isBlocked) {
         return res.status(401).json({
           success: false,
-          message: "Account is blocked please contact Support Team :- mankavit.clatcoaching11@gmail.com",
+          message:
+            "Account is blocked please contact Support Team :- mankavit.clatcoaching11@gmail.com",
         });
       }
       // if (user.deviceId && user.deviceId !== deviceId) {
@@ -714,7 +739,7 @@ exports.verifyLoginOtp = async (req, res) => {
         ipAddress: device.ipAddress,
         lastLogin: Date.now(),
         refreshTokenExpiry: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
-        isCurrent: true
+        isCurrent: true,
       };
       user.lastLogin = Date.now();
       await user.save();
@@ -729,8 +754,6 @@ exports.verifyLoginOtp = async (req, res) => {
         expiresIn: expiryDate,
       });
     }
-
-
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -855,8 +878,9 @@ exports.createAdmin = async (req, res) => {
 exports.getUserById = async (req, res) => {
   try {
     const { id } = req.params;
-    const user = await User.findById(id)
-      .populate("subscription.course_enrolled");
+    const user = await User.findById(id).populate(
+      "subscription.course_enrolled"
+    );
     if (!user) {
       return res
         .status(404)
@@ -874,13 +898,10 @@ exports.getUserById = async (req, res) => {
 exports.getAllUsers = async (req, res) => {
   try {
     const users = await User.find({ role: "user" })
-      .populate('wishList')
+      .populate("wishList")
       .populate({
-        path: 'subscription',
-        populate: [
-          { path: 'payment_id' },
-          { path: 'course_enrolled' }
-        ]
+        path: "subscription",
+        populate: [{ path: "payment_id" }, { path: "course_enrolled" }],
       })
       .populate("kycRef");
     res
@@ -1084,9 +1105,11 @@ exports.editUser = async (req, res) => {
     const updatedUser = await User.findByIdAndUpdate(userId, req.body, {
       new: true,
     });
-    res
-      .status(200)
-      .json({ success: true, message: "User updated successfully", user: updatedUser });
+    res.status(200).json({
+      success: true,
+      message: "User updated successfully",
+      user: updatedUser,
+    });
   } catch (error) {
     console.error("Error updating user:", error.message);
     return res.status(500).json({
@@ -1097,56 +1120,79 @@ exports.editUser = async (req, res) => {
   }
 };
 
-
 exports.getAllEnrolledCourses = async (req, res) => {
   try {
     const { userId } = req.params;
-    const user = await User.findById(userId).populate("subscription.course_enrolled");
+    const user = await User.findById(userId).populate(
+      "subscription.course_enrolled"
+    );
     if (!user) {
       return res
         .status(404)
         .json({ success: false, message: "User not found" });
     }
     // if (user.kyc_status !== "approved") return res.status(200).json({ success: true, enrolledCourses: [], message: "Please complete kyc to view Course" });
-    if (!user.subscription) return res.status(200).json({ success: true, enrolledCourses: [] });
+    if (!user.subscription)
+      return res.status(200).json({ success: true, enrolledCourses: [] });
     let subscribedCourses = user.subscription;
-    subscribedCourses = await Promise.all(user.subscription.map(async (sub) => {
-      const course = await Course.findOne({ _id: sub.course_enrolled, courseExpiry: { $gt: new Date() }, isPublished: true });
-      if (course) {
-        return course;
-      } else {
-        return null
-      }
-    }));
+    subscribedCourses = await Promise.all(
+      user.subscription.map(async (sub) => {
+        const course = await Course.findOne({
+          _id: sub.course_enrolled,
+          courseExpiry: { $gt: new Date() },
+          isPublished: true,
+        });
+        if (course) {
+          return course;
+        } else {
+          return null;
+        }
+      })
+    );
     subscribedCourses = subscribedCourses.filter((course) => course !== null);
-    let enrolledCourses = user.subscription.map(sub => sub.course_enrolled);
+    let enrolledCourses = user.subscription.map((sub) => sub.course_enrolled);
     const userProgress = await UserProgress.findOne({ user_id: userId });
-    if (!userProgress) return res.status(200).json({ success: true, enrolledCourses });
-    enrolledCourses = await Promise.all(subscribedCourses.map(course => {
-      const plainCourse = course.toObject();
-      const courseProgress = userProgress.courseProgress.find((progress) => progress.course_id.equals(course._id));
-      if (courseProgress) {
-        return ({
-          ...plainCourse,
-          course_status: courseProgress.status,
-          completePercentage: courseProgress.completedPercentage,
-          kycStatus: course.isKycRequired ? (user.kyc_status === "approved" ? true : false) : true,
-          userKycStatus: user.kyc_status
-        })
-      } else {
-        return ({
-          ...plainCourse,
-          course_status: "Not started",
-          completePercentage: 0,
-          kycStatus: course.isKycRequired ? (user.kyc_status === "approved" ? true : false) : true,
-          userKycStatus: user.kyc_status
-        })
-      }
-    }));
+    if (!userProgress)
+      return res.status(200).json({ success: true, enrolledCourses });
+    enrolledCourses = await Promise.all(
+      subscribedCourses.map((course) => {
+        const plainCourse = course.toObject();
+        const courseProgress = userProgress.courseProgress.find((progress) =>
+          progress.course_id.equals(course._id)
+        );
+        if (courseProgress) {
+          return {
+            ...plainCourse,
+            course_status: courseProgress.status,
+            completePercentage: courseProgress.completedPercentage,
+            kycStatus: course.isKycRequired
+              ? user.kyc_status === "approved"
+                ? true
+                : false
+              : true,
+            userKycStatus: user.kyc_status,
+          };
+        } else {
+          return {
+            ...plainCourse,
+            course_status: "Not started",
+            completePercentage: 0,
+            kycStatus: course.isKycRequired
+              ? user.kyc_status === "approved"
+                ? true
+                : false
+              : true,
+            userKycStatus: user.kyc_status,
+          };
+        }
+      })
+    );
 
-    res
-      .status(200)
-      .json({ success: true, message: "Subscribed courses fetched successfully", enrolledCourses });
+    res.status(200).json({
+      success: true,
+      message: "Subscribed courses fetched successfully",
+      enrolledCourses,
+    });
   } catch (error) {
     console.error("Error fetching subscribed courses:", error);
     return res.status(500).json({
@@ -1160,143 +1206,208 @@ exports.getAllEnrolledCourses = async (req, res) => {
 exports.getOngoingCourses = async (req, res) => {
   try {
     const { userId } = req.params;
-    const user = await User.findById(userId).populate("subscription.course_enrolled");
+    const user = await User.findById(userId).populate(
+      "subscription.course_enrolled"
+    );
     if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
-    if (user.kyc_status !== "approved") return res.status(200).json({ success: true, enrolledCourses: [], message: "Please complete kyc to view Course" });
-    if (!user.subscription) return res.status(200).json({ success: true, enrolledCourses: [] });
+    if (user.kyc_status !== "approved")
+      return res.status(200).json({
+        success: true,
+        enrolledCourses: [],
+        message: "Please complete kyc to view Course",
+      });
+    if (!user.subscription)
+      return res.status(200).json({ success: true, enrolledCourses: [] });
     const userProgress = await UserProgress.findOne({ user_id: userId });
-    if (!userProgress) return res.status(200).json({ success: true, enrolledCourses: [] });
+    if (!userProgress)
+      return res.status(200).json({ success: true, enrolledCourses: [] });
     let subscribedCourses = user.subscription;
-    subscribedCourses = await Promise.all(user.subscription.map(async (sub) => {
-      const course = await Course.findOne({ _id: sub.course_enrolled, courseExpiry: { $gt: new Date() }, isPublished: true });
-      if (course) {
-        return course;
-      } else {
-        return null
-      }
-    }));
+    subscribedCourses = await Promise.all(
+      user.subscription.map(async (sub) => {
+        const course = await Course.findOne({
+          _id: sub.course_enrolled,
+          courseExpiry: { $gt: new Date() },
+          isPublished: true,
+        });
+        if (course) {
+          return course;
+        } else {
+          return null;
+        }
+      })
+    );
     subscribedCourses = subscribedCourses.filter((course) => course !== null);
-    let enrolledCourses = user.subscription.map(sub => sub.course_enrolled);
+    let enrolledCourses = user.subscription.map((sub) => sub.course_enrolled);
 
-    let filteredCourses = await Promise.all(subscribedCourses.map(course => {
-      const plainCourse = course.toObject();
-      const progress = userProgress.courseProgress.find(p => p.course_id.equals(course._id));
-      if (progress && progress.status === 'ongoing') {
-        return {
-          ...plainCourse,
-          course_status: progress.status,
-          completePercentage: progress.completedPercentage,
-          kycStatus: course.isKycRequired ? (user.kyc_status === "approved" ? true : false) : true,
-          userKycStatus: user.kyc_status
-        };
-      }
-      return null;
-    }));
+    let filteredCourses = await Promise.all(
+      subscribedCourses.map((course) => {
+        const plainCourse = course.toObject();
+        const progress = userProgress.courseProgress.find((p) =>
+          p.course_id.equals(course._id)
+        );
+        if (progress && progress.status === "ongoing") {
+          return {
+            ...plainCourse,
+            course_status: progress.status,
+            completePercentage: progress.completedPercentage,
+            kycStatus: course.isKycRequired
+              ? user.kyc_status === "approved"
+                ? true
+                : false
+              : true,
+            userKycStatus: user.kyc_status,
+          };
+        }
+        return null;
+      })
+    );
     filteredCourses = filteredCourses.filter(Boolean);
 
     res.status(200).json({
       success: true,
       enrolledCourses: filteredCourses,
-      message: "Ongoing courses fetched successfully"
+      message: "Ongoing courses fetched successfully",
     });
-
   } catch (error) {
     console.error("Error fetching ongoing courses:", error.message);
-    res.status(500).json({ success: false, message: "Server error", error: error.message });
+    res
+      .status(500)
+      .json({ success: false, message: "Server error", error: error.message });
   }
 };
 
 exports.getCompletedCourses = async (req, res) => {
   try {
     const { userId } = req.params;
-    const user = await User.findById(userId).populate("subscription.course_enrolled");
+    const user = await User.findById(userId).populate(
+      "subscription.course_enrolled"
+    );
     if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
-    if (user.kyc_status !== "approved") return res.status(200).json({ success: true, enrolledCourses: [], message: "Please complete kyc to view Course" });
-    if (!user.subscription) return res.status(200).json({ success: true, enrolledCourses: [] });
+    if (user.kyc_status !== "approved")
+      return res.status(200).json({
+        success: true,
+        enrolledCourses: [],
+        message: "Please complete kyc to view Course",
+      });
+    if (!user.subscription)
+      return res.status(200).json({ success: true, enrolledCourses: [] });
     const userProgress = await UserProgress.findOne({ user_id: userId });
-    if (!userProgress) return res.status(200).json({ success: true, enrolledCourses: [] });
+    if (!userProgress)
+      return res.status(200).json({ success: true, enrolledCourses: [] });
     let subscribedCourses = user.subscription;
-    subscribedCourses = await Promise.all(user.subscription.map(async (sub) => {
-      const course = await Course.findOne({ _id: sub.course_enrolled, courseExpiry: { $gt: new Date() }, isPublished: true });
-      if (course) {
-        return course;
-      } else {
-        return null
-      }
-    }));
+    subscribedCourses = await Promise.all(
+      user.subscription.map(async (sub) => {
+        const course = await Course.findOne({
+          _id: sub.course_enrolled,
+          courseExpiry: { $gt: new Date() },
+          isPublished: true,
+        });
+        if (course) {
+          return course;
+        } else {
+          return null;
+        }
+      })
+    );
     subscribedCourses = subscribedCourses.filter((course) => course !== null);
-    let enrolledCourses = user.subscription.map(sub => sub.course_enrolled);
+    let enrolledCourses = user.subscription.map((sub) => sub.course_enrolled);
 
-    let filteredCourses = await Promise.all(subscribedCourses.map(course => {
-      const plainCourse = course.toObject();
-      const progress = userProgress.courseProgress.find(p => p.course_id.equals(course._id));
-      if (progress && progress.status === 'completed') {
-        return {
-          ...plainCourse,
-          course_status: progress.status,
-          completePercentage: progress.completedPercentage,
-          kycStatus: course.isKycRequired ? (user.kyc_status === "approved" ? true : false) : true,
-          userKycStatus: user.kyc_status
-        };
-      }
-      return null;
-    }));
-    filteredCourses = filteredCourses.filter(Boolean)
+    let filteredCourses = await Promise.all(
+      subscribedCourses.map((course) => {
+        const plainCourse = course.toObject();
+        const progress = userProgress.courseProgress.find((p) =>
+          p.course_id.equals(course._id)
+        );
+        if (progress && progress.status === "completed") {
+          return {
+            ...plainCourse,
+            course_status: progress.status,
+            completePercentage: progress.completedPercentage,
+            kycStatus: course.isKycRequired
+              ? user.kyc_status === "approved"
+                ? true
+                : false
+              : true,
+            userKycStatus: user.kyc_status,
+          };
+        }
+        return null;
+      })
+    );
+    filteredCourses = filteredCourses.filter(Boolean);
     res.status(200).json({
       success: true,
       enrolledCourses: filteredCourses,
-      message: "Completed courses fetched successfully"
+      message: "Completed courses fetched successfully",
     });
-
   } catch (error) {
     console.error("Error fetching completed courses:", error.message);
-    res.status(500).json({ success: false, message: "Server error", error: error.message });
+    res
+      .status(500)
+      .json({ success: false, message: "Server error", error: error.message });
   }
 };
-
 
 exports.getNotStartedCourses = async (req, res) => {
   try {
     const { userId } = req.params;
-    const user = await User.findById(userId).populate("subscription.course_enrolled");
+    const user = await User.findById(userId).populate(
+      "subscription.course_enrolled"
+    );
     if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
-    if (user.kyc_status !== "approved") return res.status(200).json({ success: true, enrolledCourses: [], message: "Please complete kyc to view Course" });
-    if (!user.subscription) return res.status(200).json({ success: true, enrolledCourses: [] });
+    if (user.kyc_status !== "approved")
+      return res.status(200).json({
+        success: true,
+        enrolledCourses: [],
+        message: "Please complete kyc to view Course",
+      });
+    if (!user.subscription)
+      return res.status(200).json({ success: true, enrolledCourses: [] });
 
     const userProgress = await UserProgress.findOne({ user_id: userId });
-    let enrolledCourses = user.subscription.map(sub => sub.course_enrolled);
+    let enrolledCourses = user.subscription.map((sub) => sub.course_enrolled);
 
-    let filteredCourses = await Promise.all(enrolledCourses.map(course => {
-      const plainCourse = course.toObject();
-      const progress = userProgress?.courseProgress.find(p => p.course_id.equals(course._id));
-      if (!progress) {
-        return {
-          ...plainCourse,
-          course_status: "Not started",
-          completePercentage: 0
-        };
-      }
-      return null;
-    }));
-    filteredCourses = filteredCourses.filter(Boolean)
+    let filteredCourses = await Promise.all(
+      enrolledCourses.map((course) => {
+        const plainCourse = course.toObject();
+        const progress = userProgress?.courseProgress.find((p) =>
+          p.course_id.equals(course._id)
+        );
+        if (!progress) {
+          return {
+            ...plainCourse,
+            course_status: "Not started",
+            completePercentage: 0,
+          };
+        }
+        return null;
+      })
+    );
+    filteredCourses = filteredCourses.filter(Boolean);
     res.status(200).json({
       success: true,
       enrolledCourses: filteredCourses,
-      message: "Not started courses fetched successfully"
+      message: "Not started courses fetched successfully",
     });
-
   } catch (error) {
     console.error("Error fetching not started courses:", error.message);
-    res.status(500).json({ success: false, message: "Server error", error: error.message });
+    res
+      .status(500)
+      .json({ success: false, message: "Server error", error: error.message });
   }
 };
-
 
 exports.createStudent = async (req, res) => {
   try {
@@ -1305,7 +1416,7 @@ exports.createStudent = async (req, res) => {
       password,
       phone,
       name,
-      role = 'user',
+      role = "user",
       photo_url,
       first_name,
       last_name,
@@ -1319,15 +1430,18 @@ exports.createStudent = async (req, res) => {
       present_address,
       passing_year,
       college_name,
-      date_of_birth
+      date_of_birth,
     } = req.body;
 
     const userExists = await User.findOne({ email });
     if (userExists) {
-      return res.status(400).json({ success: false, message: "User already exists" });
+      return res
+        .status(400)
+        .json({ success: false, message: "User already exists" });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
+
     const user = new User({
       email,
       password: hashedPassword,
@@ -1337,13 +1451,14 @@ exports.createStudent = async (req, res) => {
       photo_url,
       isEmailVerified: true,
 
-       fathers_name,
-  fathers_occupation,
-  current_occupation,
-  present_address,
-  passing_year,
-  college_name,
-  date_of_birth
+      // Add these fields 👇
+      fathers_name,
+      fathers_occupation,
+      current_occupation,
+      present_address,
+      passing_year,
+      college_name,
+      date_of_birth,
     });
 
     const savedStudent = await user.save();
@@ -1366,7 +1481,7 @@ exports.createStudent = async (req, res) => {
       present_address,
       passing_year,
       college_name,
-      date_of_birth
+      date_of_birth,
     });
 
     const savedKyc = await kycDetails.save();
@@ -1382,7 +1497,9 @@ exports.createStudent = async (req, res) => {
     for (const courseId of courseIds) {
       const course = await Course.findById(courseId);
       if (!course) {
-        return res.status(404).json({ success: false, message: "Course not found" });
+        return res
+          .status(404)
+          .json({ success: false, message: "Course not found" });
       }
 
       if (!course.student_enrolled) course.student_enrolled = [];
@@ -1392,13 +1509,15 @@ exports.createStudent = async (req, res) => {
 
       await course.save();
 
-      const found = userEdit.subscription.find(sub => sub.course_enrolled.equals(course._id));
+      const found = userEdit.subscription.find((sub) =>
+        sub.course_enrolled.equals(course._id)
+      );
       if (!found) {
         userEdit.subscription.push({
           payment_id: null,
           payment_Status: "success",
           is_subscription_active: true,
-          course_enrolled: course._id
+          course_enrolled: course._id,
         });
       }
     }
@@ -1409,32 +1528,35 @@ exports.createStudent = async (req, res) => {
       success: true,
       message: "Student created successfully",
       user: userEdit,
-      kycDetails: savedKyc
+      kycDetails: savedKyc,
     });
-
   } catch (error) {
     console.error("Error creating student:", error.message);
-    res.status(500).json({ success: false, message: "Server error", error: error.message });
+    res
+      .status(500)
+      .json({ success: false, message: "Server error", error: error.message });
   }
 };
-
 
 exports.getAllStudents = async (req, res) => {
   try {
     const students = await User.find({ role: "user" })
-      .populate('wishList')
+      .populate("wishList")
       .populate({
-        path: 'subscription',
-        populate: [
-          { path: 'payment_id' },
-          { path: 'course_enrolled' }
-        ]
+        path: "subscription",
+        populate: [{ path: "payment_id" }, { path: "course_enrolled" }],
       })
       .populate("kycRef");
-    res.status(200).json({ success: true, message: "Students fetched successfully", students });
+    res.status(200).json({
+      success: true,
+      message: "Students fetched successfully",
+      students,
+    });
   } catch (error) {
     console.error("Error fetching students:", error.message);
-    res.status(500).json({ success: false, message: "Server error", error: error.message });
+    res
+      .status(500)
+      .json({ success: false, message: "Server error", error: error.message });
   }
 };
 exports.addCourseSubscriptionToStudent = async (req, res) => {
@@ -1442,7 +1564,9 @@ exports.addCourseSubscriptionToStudent = async (req, res) => {
     const { userId, courseIds } = req.body;
     const user = await User.findById(userId);
     if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
     if (!user.subscription) {
       user.subscription = []; // Initialize if undefined
@@ -1450,28 +1574,38 @@ exports.addCourseSubscriptionToStudent = async (req, res) => {
     for (const courseId of courseIds) {
       const course = await Course.findById(courseId);
       if (!course) {
-        return res.status(404).json({ success: false, message: "Course not found" });
+        return res
+          .status(404)
+          .json({ success: false, message: "Course not found" });
       }
       if (!course.student_enrolled) course.student_enrolled = [];
       if (!course.student_enrolled.includes(user._id)) {
         course.student_enrolled.push(user._id);
       }
       await course.save();
-      const found = user.subscription.find(sub => sub.course_enrolled.equals(course._id));
+      const found = user.subscription.find((sub) =>
+        sub.course_enrolled.equals(course._id)
+      );
       if (!found) {
         user.subscription.push({
           payment_id: null,
           payment_Status: "success",
           is_subscription_active: true,
-          course_enrolled: course._id
+          course_enrolled: course._id,
         });
       }
     }
     await user.save();
-    res.status(200).json({ success: true, message: "Courses added to student successfully", user: user });
+    res.status(200).json({
+      success: true,
+      message: "Courses added to student successfully",
+      user: user,
+    });
   } catch (error) {
     console.error("Error adding courses to student:", error.message);
-    res.status(500).json({ success: false, message: "Server error", error: error.message });
+    res
+      .status(500)
+      .json({ success: false, message: "Server error", error: error.message });
   }
 };
 exports.deleteUserById = async (req, res) => {
@@ -1479,47 +1613,61 @@ exports.deleteUserById = async (req, res) => {
     const { id } = req.params;
     const user = await User.findById(id);
     if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
     user.subscription.forEach(async (sub) => {
       const course = await Course.findById(sub.course_enrolled);
-      const courseProgress = await CourseProgress.findOne({ course_id: sub.course_enrolled });
-      courseProgress.progress.filter((progress) => !progress.user_id.equals(id));
+      const courseProgress = await CourseProgress.findOne({
+        course_id: sub.course_enrolled,
+      });
+      courseProgress.progress.filter(
+        (progress) => !progress.user_id.equals(id)
+      );
       await courseProgress.save();
       if (course) {
-
         course.student_enrolled = course.student_enrolled.filter(
           (studentId) => !studentId.equals(id)
         );
         await course.save();
       }
-    })
+    });
     const attempts = await UserAttempt.find({ userId: user._id });
     const deletedKyc = await KycDetails.findOneAndDelete({ userref: user._id });
     const deletedSupport = await Support.find({ userRef: user._id });
     deletedSupport.forEach(async (support) => {
       await Support.findByIdAndDelete(support._id);
-    })
-    const userProgress = await UserProgress.findOneAndDelete({ user_id: user._id });
+    });
+    const userProgress = await UserProgress.findOneAndDelete({
+      user_id: user._id,
+    });
     const payments = await Payments.find({ userRef: user._id });
     payments.forEach(async (payment) => {
       await Payments.findByIdAndDelete(payment._id);
-    })
+    });
     const certificates = await Certificate.find({ user_ref: user._id });
     certificates.forEach(async (certificate) => {
       await Certificate.findByIdAndDelete(certificate._id);
-    })
+    });
     attempts.forEach(async (attemptID) => {
       const attempt = await UserAttempt.findByIdAndDelete(attemptID._id);
-      const userRanking = await UserRanking.findOneAndDelete({ userId: attempt.userId, subject: attempt.subject, bestAttemptId: attempt._id });
-      const userAttempts = await UserAttempt.find({ userId: attempt.userId, attemptNumber: { $gt: attempt.attemptNumber }, subject: attempt.subject, });
+      const userRanking = await UserRanking.findOneAndDelete({
+        userId: attempt.userId,
+        subject: attempt.subject,
+        bestAttemptId: attempt._id,
+      });
+      const userAttempts = await UserAttempt.find({
+        userId: attempt.userId,
+        attemptNumber: { $gt: attempt.attemptNumber },
+        subject: attempt.subject,
+      });
       for (let i = 0; i < userAttempts.length; i++) {
         userAttempts[i].attemptNumber -= 1;
         await userAttempts[i].save();
       }
       const result = await updateRankings(attempt);
-
-    })
+    });
     const feedbacks = await Feedback.find({ userRef: user._id });
     feedbacks.forEach(async (feedback) => {
       const course = await Course.findById(feedback.courseRef);
@@ -1530,8 +1678,7 @@ exports.deleteUserById = async (req, res) => {
         await course.save();
       }
       await Feedback.findByIdAndDelete(feedback._id);
-
-    })
+    });
     const deletedUser = await User.findByIdAndDelete(user._id);
     res.status(200).json({
       success: true,
@@ -1544,29 +1691,32 @@ exports.deleteUserById = async (req, res) => {
       Payments: payments,
       Certificates: certificates,
       Feedbacks: feedbacks,
-
     });
   } catch (error) {
     console.error("Error deleting user:", error.message);
-    res.status(500).json({ success: false, message: "Server error", error: error.message });
+    res
+      .status(500)
+      .json({ success: false, message: "Server error", error: error.message });
   }
-
-}
+};
 async function updateRankings(attempt) {
   // Get all evaluated attempts for this user, test, and course
   const attempts = await UserAttempt.find({
     userId: attempt.userId,
     mockTestId: attempt.mockTestId,
     courseId: attempt.courseId,
-    status: 'evaluated',
-    isWithinTestWindow: true
+    status: "evaluated",
+    isWithinTestWindow: true,
   });
 
   // Find best attempt (highest score, earliest submission for ties)
   let bestAttempt = attempts.reduce((best, current) => {
     if (current.totalMarks > best.totalMarks) return current;
-    if (current.totalMarks === best.totalMarks &&
-      current.submittedAt < best.submittedAt) return current;
+    if (
+      current.totalMarks === best.totalMarks &&
+      current.submittedAt < best.submittedAt
+    )
+      return current;
     return best;
   }, attempts[0]);
 
@@ -1575,28 +1725,26 @@ async function updateRankings(attempt) {
     {
       userId: attempt.userId,
       mockTestId: attempt.mockTestId,
-      courseId: attempt.courseId
+      courseId: attempt.courseId,
     },
     { $set: { isBestAttempt: false } }
   );
   if (bestAttempt) {
-
     bestAttempt.isBestAttempt = true;
     await bestAttempt.save();
-
 
     // Update or create ranking
     const ranking = await UserRanking.findOneAndUpdate(
       {
         userId: attempt.userId,
         mockTestId: attempt.mockTestId,
-        subject: attempt.subject
+        subject: attempt.subject,
       },
       {
         bestAttemptId: bestAttempt._id,
         bestScore: bestAttempt.totalMarks,
         attemptsCount: attempts.length,
-        lastUpdated: new Date()
+        lastUpdated: new Date(),
       },
       { upsert: true, new: true }
     );
@@ -1609,7 +1757,7 @@ async function updateRankings(attempt) {
 async function recalculateTestRankings(mockTestId, subject) {
   const rankings = await UserRanking.find({
     mockTestId,
-    subject
+    subject,
   }).sort({ bestScore: -1, lastUpdated: 1 });
 
   let currentRank = 1;
@@ -1626,20 +1774,24 @@ async function recalculateTestRankings(mockTestId, subject) {
   }
 }
 
-
 exports.verifyUserRoles = async (req, res, next) => {
   try {
-    const { role, userId } = req.body
+    const { role, userId } = req.body;
     const user = await User.findById(userId);
     if (!user) {
-      return res.status(403).json({ success: false, message: 'Access denied' });
+      return res.status(403).json({ success: false, message: "Access denied" });
     } else {
-      return res.status(200).json({ success: true, role: user.role, message: 'Access granted', isSuperAdmin: user.isSuperAdmin, permissions: user.permissions });
+      return res.status(200).json({
+        success: true,
+        role: user.role,
+        message: "Access granted",
+        isSuperAdmin: user.isSuperAdmin,
+        permissions: user.permissions,
+      });
     }
-
   } catch (error) {
     console.error(error);
-    res.status(500).json({ success: false, message: 'Server error' });
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
@@ -1648,7 +1800,9 @@ exports.removeCourseSubscriptionToStudent = async (req, res) => {
     const { userId, courseIds } = req.body;
     const user = await User.findById(userId);
     if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
     if (!user.subscription) {
       user.subscription = []; // Initialize if undefined
@@ -1656,23 +1810,35 @@ exports.removeCourseSubscriptionToStudent = async (req, res) => {
     for (const courseId of courseIds) {
       const course = await Course.findById(courseId);
       if (!course) {
-        return res.status(404).json({ success: false, message: "Course not found" });
+        return res
+          .status(404)
+          .json({ success: false, message: "Course not found" });
       }
       if (!course.student_enrolled) course.student_enrolled = [];
       if (course.student_enrolled.includes(user._id)) {
         course.student_enrolled.pull(user._id);
       }
       await course.save();
-      const found = user.subscription.find(sub => sub.course_enrolled.equals(course._id));
+      const found = user.subscription.find((sub) =>
+        sub.course_enrolled.equals(course._id)
+      );
       if (found) {
-        user.subscription = user.subscription.filter(sub => !sub.course_enrolled.equals(course._id));
+        user.subscription = user.subscription.filter(
+          (sub) => !sub.course_enrolled.equals(course._id)
+        );
       }
     }
     await user.save();
-    res.status(200).json({ success: true, message: "Courses added to student successfully", user: user });
+    res.status(200).json({
+      success: true,
+      message: "Courses added to student successfully",
+      user: user,
+    });
   } catch (error) {
     console.error("Error adding courses to student:", error.message);
-    res.status(500).json({ success: false, message: "Server error", error: error.message });
+    res
+      .status(500)
+      .json({ success: false, message: "Server error", error: error.message });
   }
 };
 
@@ -1681,25 +1847,34 @@ exports.phoneOtpGenerate = async (req, res) => {
     const { email } = req.body;
     const user = await User.findOne({ email });
     const otp = Math.floor(100000 + Math.random() * 900000);
-    const response = await axios.post('https://control.msg91.com/api/v5/otp', {
+    const response = await axios.post("https://control.msg91.com/api/v5/otp", {
       otp_expiry: 1,
       template_id: "6835b4f2d6fc053de8172342",
       mobile: `91${user.phone}`,
       authkey: process.env.MSG91_AUTH_KEY,
       otp: otp,
-      realTimeResponse: 1
-    })
+      realTimeResponse: 1,
+    });
     if (response.data.type == "success") {
-      res.status(200).json({ success: true, message: "OTP sent successfully", data: response.data });
+      res.status(200).json({
+        success: true,
+        message: "OTP sent successfully",
+        data: response.data,
+      });
     }
     if (response.data.type == "error") {
-      return res.status(400).json({ success: false, message: response.data.message, data: response.data });
+      return res.status(400).json({
+        success: false,
+        message: response.data.message,
+        data: response.data,
+      });
     }
     // await User.updateOne({ email }, { $set: { otp: otp, otpExpiration: new Date(Date.now() + 60000) } });
-
   } catch (error) {
     console.error("Error generating OTP:", error.message);
-    res.status(500).json({ success: false, message: "Server error", error: error.message });
+    res
+      .status(500)
+      .json({ success: false, message: "Server error", error: error.message });
   }
 };
 
@@ -1738,16 +1913,21 @@ exports.phoneOtpVerify = async (req, res) => {
         accessToken,
         refreshToken,
         user: user,
-        otpData: response.data
+        otpData: response.data,
       });
       // return res.status(200).json({ success: true, message: "OTP verified successfully", data: response.data });
     } else if (response.data.type == "error") {
-      return res.status(400).json({ success: false, message: response.data.message, data: response.data });
+      return res.status(400).json({
+        success: false,
+        message: response.data.message,
+        data: response.data,
+      });
     }
-
   } catch (error) {
     console.error("Error verifying OTP:", error.message);
-    res.status(500).json({ success: false, message: "Server error", error: error.message });
+    res
+      .status(500)
+      .json({ success: false, message: "Server error", error: error.message });
   }
 };
 
@@ -1757,32 +1937,53 @@ exports.resendPhoneotp = async (req, res) => {
     const user = await User.findOne({ email });
     const otp = Math.floor(100000 + Math.random() * 900000);
     const response = await axios.get(
-      `https://control.msg91.com/api/v5/otp/retry?mobile=91${user.phone}&authkey=${process.env.MSG91_AUTH_KEY}`,
-    )
+      `https://control.msg91.com/api/v5/otp/retry?mobile=91${user.phone}&authkey=${process.env.MSG91_AUTH_KEY}`
+    );
     if (response.data.type == "success") {
-      return res.status(200).json({ success: true, message: "OTP sent successfully", data: response.data });
+      return res.status(200).json({
+        success: true,
+        message: "OTP sent successfully",
+        data: response.data,
+      });
     } else if (response.data.type == "error") {
       if (response.data.message == "otp_expired") {
-        const response = await axios.post('https://control.msg91.com/api/v5/otp', {
-          otp_expiry: 1,
-          template_id: "6835b4f2d6fc053de8172342",
-          mobile: `91${user.phone}`,
-          authkey: process.env.MSG91_AUTH_KEY,
-          otp: otp,
-          realTimeResponse: 1
-        })
+        const response = await axios.post(
+          "https://control.msg91.com/api/v5/otp",
+          {
+            otp_expiry: 1,
+            template_id: "6835b4f2d6fc053de8172342",
+            mobile: `91${user.phone}`,
+            authkey: process.env.MSG91_AUTH_KEY,
+            otp: otp,
+            realTimeResponse: 1,
+          }
+        );
         if (response.data.type == "success") {
-          res.status(200).json({ success: true, message: "OTP sent successfully", data: response.data });
+          res.status(200).json({
+            success: true,
+            message: "OTP sent successfully",
+            data: response.data,
+          });
         }
         if (response.data.type == "error") {
-          return res.status(400).json({ success: false, message: response.data.message, data: response.data });
+          return res.status(400).json({
+            success: false,
+            message: response.data.message,
+            data: response.data,
+          });
         }
       }
-      return res.status(400).json({ success: false, message: response.data.message, data: response.data });
+      return res.status(400).json({
+        success: false,
+        message: response.data.message,
+        data: response.data,
+      });
     }
   } catch (error) {
     console.error("Error generating OTP:", error.message);
-    res.status(500).json({ success: false, message: "Server error", error: error.message });
+    res
+      .status(500)
+      .json({ success: false, message: "Server error", error: error.message });
   }
 };
 
@@ -1790,7 +1991,9 @@ exports.bulkDeleteUsers = async (req, res) => {
   try {
     const { userIds } = req.body;
     if (userIds.length === 0) {
-      return res.status(400).json({ success: false, message: "No user IDs provided" });
+      return res
+        .status(400)
+        .json({ success: false, message: "No user IDs provided" });
     }
     const results = [];
     for (const id of userIds) {
@@ -1806,43 +2009,57 @@ exports.bulkDeleteUsers = async (req, res) => {
         // }
         user.subscription.forEach(async (sub) => {
           const course = await Course.findById(sub.course_enrolled);
-          const courseProgress = await CourseProgress.findOne({ course_id: sub.course_enrolled });
-          courseProgress.progress.filter((progress) => !progress.user_id.equals(id));
+          const courseProgress = await CourseProgress.findOne({
+            course_id: sub.course_enrolled,
+          });
+          courseProgress.progress.filter(
+            (progress) => !progress.user_id.equals(id)
+          );
           await courseProgress.save();
           if (course) {
-
             course.student_enrolled = course.student_enrolled.filter(
               (studentId) => !studentId.equals(id)
             );
             await course.save();
           }
-        })
+        });
         const attempts = await UserAttempt.find({ userId: user._id });
-        const deletedKyc = await KycDetails.findOneAndDelete({ userref: user._id });
+        const deletedKyc = await KycDetails.findOneAndDelete({
+          userref: user._id,
+        });
         const deletedSupport = await Support.find({ userRef: user._id });
         deletedSupport.forEach(async (support) => {
           await Support.findByIdAndDelete(support._id);
-        })
-        const userProgress = await UserProgress.findOneAndDelete({ user_id: user._id });
+        });
+        const userProgress = await UserProgress.findOneAndDelete({
+          user_id: user._id,
+        });
         const payments = await Payments.find({ userRef: user._id });
         payments.forEach(async (payment) => {
           await Payments.findByIdAndDelete(payment._id);
-        })
+        });
         const certificates = await Certificate.find({ user_ref: user._id });
         certificates.forEach(async (certificate) => {
           await Certificate.findByIdAndDelete(certificate._id);
-        })
+        });
         attempts.forEach(async (attemptID) => {
           const attempt = await UserAttempt.findByIdAndDelete(attemptID._id);
-          const userRanking = await UserRanking.findOneAndDelete({ userId: attempt.userId, subject: attempt.subject, bestAttemptId: attempt._id });
-          const userAttempts = await UserAttempt.find({ userId: attempt.userId, attemptNumber: { $gt: attempt.attemptNumber }, subject: attempt.subject, });
+          const userRanking = await UserRanking.findOneAndDelete({
+            userId: attempt.userId,
+            subject: attempt.subject,
+            bestAttemptId: attempt._id,
+          });
+          const userAttempts = await UserAttempt.find({
+            userId: attempt.userId,
+            attemptNumber: { $gt: attempt.attemptNumber },
+            subject: attempt.subject,
+          });
           for (let i = 0; i < userAttempts.length; i++) {
             userAttempts[i].attemptNumber -= 1;
             await userAttempts[i].save();
           }
           const result = await updateRankings(attempt);
-
-        })
+        });
         const feedbacks = await Feedback.find({ userRef: user._id });
         feedbacks.forEach(async (feedback) => {
           const course = await Course.findById(feedback.courseRef);
@@ -1853,8 +2070,7 @@ exports.bulkDeleteUsers = async (req, res) => {
             await course.save();
           }
           await Feedback.findByIdAndDelete(feedback._id);
-
-        })
+        });
         const deletedUser = await User.findByIdAndDelete(user._id);
         results.push({
           id,
@@ -1878,25 +2094,30 @@ exports.bulkDeleteUsers = async (req, res) => {
     res.status(200).json({
       success: true,
       message: "Bulk delete operation completed",
-      results
+      results,
     });
   } catch (error) {
     console.error("Error deleting user:", error.message);
-    res.status(500).json({ success: false, message: "Server error", error: error.message });
+    res
+      .status(500)
+      .json({ success: false, message: "Server error", error: error.message });
   }
-
-}
+};
 
 exports.deleteStudents = async (req, res) => {
   try {
     const { userId } = req.body;
     if (!userId) {
-      return res.status(400).json({ success: false, message: "No user ID provided" });
+      return res
+        .status(400)
+        .json({ success: false, message: "No user ID provided" });
     }
     const user = await User.findById(userId);
 
     if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
     // const user = await User.findById(id);
     // if (!user) {
@@ -1904,43 +2125,55 @@ exports.deleteStudents = async (req, res) => {
     // }
     user.subscription.forEach(async (sub) => {
       const course = await Course.findById(sub.course_enrolled);
-      const courseProgress = await CourseProgress.findOne({ course_id: sub.course_enrolled });
-      courseProgress?.progress.filter((progress) => !progress.user_id.equals(id));
+      const courseProgress = await CourseProgress.findOne({
+        course_id: sub.course_enrolled,
+      });
+      courseProgress?.progress.filter(
+        (progress) => !progress.user_id.equals(id)
+      );
       await courseProgress.save();
       if (course) {
-
         course.student_enrolled = course.student_enrolled.filter(
           (studentId) => !studentId.equals(id)
         );
         await course.save();
       }
-    })
+    });
     const attempts = await UserAttempt.find({ userId: user._id });
     const deletedKyc = await KycDetails.findOneAndDelete({ userref: user._id });
     const deletedSupport = await Support.find({ userRef: user._id });
     deletedSupport.forEach(async (support) => {
       await Support.findByIdAndDelete(support._id);
-    })
-    const userProgress = await UserProgress.findOneAndDelete({ user_id: user._id });
+    });
+    const userProgress = await UserProgress.findOneAndDelete({
+      user_id: user._id,
+    });
     const payments = await Payments.find({ userRef: user._id });
     payments.forEach(async (payment) => {
       await Payments.findByIdAndDelete(payment._id);
-    })
+    });
     const certificates = await Certificate.find({ user_ref: user._id });
     certificates.forEach(async (certificate) => {
       await Certificate.findByIdAndDelete(certificate._id);
-    })
+    });
     attempts.forEach(async (attemptID) => {
       const attempt = await UserAttempt.findByIdAndDelete(attemptID._id);
-      const userRanking = await UserRanking.findOneAndDelete({ userId: attempt.userId, subject: attempt.subject, bestAttemptId: attempt._id });
-      const userAttempts = await UserAttempt.find({ userId: attempt.userId, attemptNumber: { $gt: attempt.attemptNumber }, subject: attempt.subject, });
+      const userRanking = await UserRanking.findOneAndDelete({
+        userId: attempt.userId,
+        subject: attempt.subject,
+        bestAttemptId: attempt._id,
+      });
+      const userAttempts = await UserAttempt.find({
+        userId: attempt.userId,
+        attemptNumber: { $gt: attempt.attemptNumber },
+        subject: attempt.subject,
+      });
       for (let i = 0; i < userAttempts.length; i++) {
         userAttempts[i].attemptNumber -= 1;
         await userAttempts[i].save();
       }
       const result = await updateRankings(attempt);
-
-    })
+    });
     const feedbacks = await Feedback.find({ userRef: user._id });
     feedbacks.forEach(async (feedback) => {
       const course = await Course.findById(feedback.courseRef);
@@ -1951,11 +2184,11 @@ exports.deleteStudents = async (req, res) => {
         await course.save();
       }
       await Feedback.findByIdAndDelete(feedback._id);
-
-    })
+    });
     const deletedUser = await User.findByIdAndDelete(user._id);
     res.status(200).json({
-      success: true, message: "User deleted successfully",
+      success: true,
+      message: "User deleted successfully",
 
       user: deletedUser,
       kyc: deletedKyc,
@@ -1966,149 +2199,216 @@ exports.deleteStudents = async (req, res) => {
       Certificates: certificates.length,
       Feedbacks: feedbacks.length,
     });
-
-
-
   } catch (error) {
     console.error("Error deleting user:", error.message);
-    res.status(500).json({ success: false, message: "Server error", error: error.message });
+    res
+      .status(500)
+      .json({ success: false, message: "Server error", error: error.message });
   }
-
-}
+};
 
 exports.checkUserRefreshToken = async (req, res) => {
   try {
     const { userId, refreshToken } = req.body;
     if (!refreshToken) {
-      return res.status(400).json({ success: false, message: "No refresh token provided" });
+      return res
+        .status(400)
+        .json({ success: false, message: "No refresh token provided" });
     }
     const user = await User.findOne({ userId, refreshToken });
     if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
     res.status(200).json({ success: true, message: "User found", user });
   } catch (error) {
     console.error("Error checking user:", error.message);
-    res.status(500).json({ success: false, message: "Server error", error: error.message });
+    res
+      .status(500)
+      .json({ success: false, message: "Server error", error: error.message });
   }
-}
+};
 
 exports.blockAndUnblockUser = async (req, res) => {
   try {
     const { userId } = req.body;
     if (!userId) {
-      return res.status(400).json({ success: false, message: "No user ID provided" });
+      return res
+        .status(400)
+        .json({ success: false, message: "No user ID provided" });
     }
     const user = await User.findById(userId);
     if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
     user.isBlocked = !user.isBlocked;
     await user.save();
-    res.status(200).json({ success: true, message: user.isBlocked ? "User blocked successfully" : "User unblocked successfully", user });
+    res.status(200).json({
+      success: true,
+      message: user.isBlocked
+        ? "User blocked successfully"
+        : "User unblocked successfully",
+      user,
+    });
   } catch (error) {
     console.error("Error blocking user:", error.message);
-    res.status(500).json({ success: false, message: "Server error", error: error.message });
+    res
+      .status(500)
+      .json({ success: false, message: "Server error", error: error.message });
   }
-}
+};
 
 exports.enableDisableMasterOtp = async (req, res) => {
   try {
     const { userId } = req.body;
     if (!userId) {
-      return res.status(400).json({ success: false, message: "No user ID provided" });
+      return res
+        .status(400)
+        .json({ success: false, message: "No user ID provided" });
     }
     const user = await User.findById(userId);
     if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
     user.isMasterOtpEnabled = !user.isMasterOtpEnabled;
     await user.save();
-    res.status(200).json({ success: true, message: user.isMasterOtpEnabled ? "Master OTP enabled successfully" : "Master OTP disabled successfully", user });
+    res.status(200).json({
+      success: true,
+      message: user.isMasterOtpEnabled
+        ? "Master OTP enabled successfully"
+        : "Master OTP disabled successfully",
+      user,
+    });
   } catch (error) {
     console.error("Error blocking user:", error.message);
-    res.status(500).json({ success: false, message: "Server error", error: error.message });
+    res
+      .status(500)
+      .json({ success: false, message: "Server error", error: error.message });
   }
-}
+};
 
 exports.sendChangePasswordOtp = async (req, res) => {
   try {
     const { userId } = req.body;
     if (!userId) {
-      return res.status(400).json({ success: false, message: "No user ID provided" });
+      return res
+        .status(400)
+        .json({ success: false, message: "No user ID provided" });
     }
     const user = await User.findById(userId);
     if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
     const otp = Math.floor(100000 + Math.random() * 900000);
-    const response = await axios.post('https://control.msg91.com/api/v5/otp', {
+    const response = await axios.post("https://control.msg91.com/api/v5/otp", {
       otp_expiry: 1,
       template_id: "6835b4f2d6fc053de8172342",
       mobile: `91${user.phone}`,
       authkey: process.env.MSG91_AUTH_KEY,
       otp: otp,
-      realTimeResponse: 1
-    })
+      realTimeResponse: 1,
+    });
     if (response.data.type == "success") {
-      res.status(200).json({ success: true, message: "OTP sent successfully", data: response.data });
+      res.status(200).json({
+        success: true,
+        message: "OTP sent successfully",
+        data: response.data,
+      });
     }
   } catch (error) {
     console.error("Error sending OTP:", error.message);
-    res.status(500).json({ success: false, message: "Server error", error: error.message });
+    res
+      .status(500)
+      .json({ success: false, message: "Server error", error: error.message });
   }
-}
+};
 
 exports.resendChangePasswordOtp = async (req, res) => {
   try {
     const { userId } = req.body;
     if (!userId) {
-      return res.status(400).json({ success: false, message: "No user ID provided" });
+      return res
+        .status(400)
+        .json({ success: false, message: "No user ID provided" });
     }
     const user = await User.findById(userId);
     if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
     const otp = Math.floor(100000 + Math.random() * 900000);
     const response = await axios.get(
-      `https://control.msg91.com/api/v5/otp/retry?mobile=91${user.phone}&authkey=${process.env.MSG91_AUTH_KEY}`,
-    )
+      `https://control.msg91.com/api/v5/otp/retry?mobile=91${user.phone}&authkey=${process.env.MSG91_AUTH_KEY}`
+    );
     if (response.data.type == "success") {
-      return res.status(200).json({ success: true, message: "OTP sent successfully", data: response.data });
+      return res.status(200).json({
+        success: true,
+        message: "OTP sent successfully",
+        data: response.data,
+      });
     } else if (response.data.type == "error") {
       if (response.data.message == "otp_expired") {
-        const response = await axios.post('https://control.msg91.com/api/v5/otp', {
-          otp_expiry: 1,
-          template_id: "6835b4f2d6fc053de8172342",
-          mobile: `91${user.phone}`,
-          authkey: process.env.MSG91_AUTH_KEY,
-          otp: otp,
-          realTimeResponse: 1
-        })
+        const response = await axios.post(
+          "https://control.msg91.com/api/v5/otp",
+          {
+            otp_expiry: 1,
+            template_id: "6835b4f2d6fc053de8172342",
+            mobile: `91${user.phone}`,
+            authkey: process.env.MSG91_AUTH_KEY,
+            otp: otp,
+            realTimeResponse: 1,
+          }
+        );
         if (response.data.type == "success") {
-          res.status(200).json({ success: true, message: "OTP sent successfully", data: response.data });
+          res.status(200).json({
+            success: true,
+            message: "OTP sent successfully",
+            data: response.data,
+          });
         }
         if (response.data.type == "error") {
-          return res.status(400).json({ success: false, message: response.data.message, data: response.data });
+          return res.status(400).json({
+            success: false,
+            message: response.data.message,
+            data: response.data,
+          });
         }
       }
-      return res.status(400).json({ success: false, message: response.data.message, data: response.data });
+      return res.status(400).json({
+        success: false,
+        message: response.data.message,
+        data: response.data,
+      });
     }
   } catch (error) {
     console.error("Error generating OTP:", error.message);
-    res.status(500).json({ success: false, message: "Server error", error: error.message });
+    res
+      .status(500)
+      .json({ success: false, message: "Server error", error: error.message });
   }
-}
+};
 
 exports.verifyChangePasswordOtp = async (req, res) => {
   try {
     const { userId, Otp } = req.body;
     if (!userId || !Otp) {
-      return res.status(400).json({ success: false, message: "missing required fields" });
+      return res
+        .status(400)
+        .json({ success: false, message: "missing required fields" });
     }
     const user = await User.findById(userId);
     if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
     const response = await axios.get(
       `https://control.msg91.com/api/v5/otp/verify?mobile=91${user.phone}&otp=${Otp}`,
@@ -2119,19 +2419,29 @@ exports.verifyChangePasswordOtp = async (req, res) => {
       }
     );
     if (response.data.type == "success") {
-
-      res.status(200).json({ success: true, message: "OTP verified successfully", data: response.data });
-
-
+      res.status(200).json({
+        success: true,
+        message: "OTP verified successfully",
+        data: response.data,
+      });
     } else if (response.data.type == "error") {
       if (response.data.message == "Mobile no. already verified") {
-        return res.status(400).json({ success: false, message: "OTP already verified Please generate new OTP" });
+        return res.status(400).json({
+          success: false,
+          message: "OTP already verified Please generate new OTP",
+        });
       }
-      return res.status(400).json({ success: false, message: response.data.message, data: response.data });
+      return res.status(400).json({
+        success: false,
+        message: response.data.message,
+        data: response.data,
+      });
     }
   } catch (error) {
     console.error("Error verifying OTP:", error.message);
-    res.status(500).json({ success: false, message: "Server error", error: error.message });
+    res
+      .status(500)
+      .json({ success: false, message: "Server error", error: error.message });
   }
 };
 
@@ -2139,11 +2449,15 @@ exports.changePassword = async (req, res) => {
   try {
     const { userId, currentPassword, newPassword, confirmPassword } = req.body;
     if (!userId || !currentPassword || !newPassword || !confirmPassword) {
-      return res.status(400).json({ success: false, message: "missing required fields" });
+      return res
+        .status(400)
+        .json({ success: false, message: "missing required fields" });
     }
     const user = await User.findById(userId);
     if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
     if (!user || !(await bcrypt.compare(currentPassword, user.password))) {
       return res
@@ -2169,22 +2483,37 @@ exports.changePassword = async (req, res) => {
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     user.password = hashedPassword;
     await user.save();
-    return res.status(200).json({ success: true, message: "Password changed successfully" });
+    return res
+      .status(200)
+      .json({ success: true, message: "Password changed successfully" });
   } catch (error) {
     console.error("Error changing password:", error.message);
-    res.status(500).json({ success: false, message: "Server error", error: error.message });
+    res
+      .status(500)
+      .json({ success: false, message: "Server error", error: error.message });
   }
-}
+};
 
 exports.verifyChangePassword = async (req, res) => {
   try {
-    const { userId, Otp, currentPassword, newPassword, confirmPassword } = req.body;
-    if (!userId || !currentPassword || !newPassword || !confirmPassword || !Otp) {
-      return res.status(400).json({ success: false, message: "missing required fields" });
+    const { userId, Otp, currentPassword, newPassword, confirmPassword } =
+      req.body;
+    if (
+      !userId ||
+      !currentPassword ||
+      !newPassword ||
+      !confirmPassword ||
+      !Otp
+    ) {
+      return res
+        .status(400)
+        .json({ success: false, message: "missing required fields" });
     }
     const user = await User.findById(userId);
     if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
     if (!user || !(await bcrypt.compare(currentPassword, user.password))) {
       return res
@@ -2216,73 +2545,94 @@ exports.verifyChangePassword = async (req, res) => {
       }
     );
     if (response.data.type == "success") {
-
       const hashedPassword = await bcrypt.hash(newPassword, 10);
       user.password = hashedPassword;
       await user.save();
-
-
     } else if (response.data.type == "error") {
       if (response.data.message == "Mobile no. already verified") {
-        return res.status(400).json({ success: false, message: "OTP already verified Please generate new OTP" });
+        return res.status(400).json({
+          success: false,
+          message: "OTP already verified Please generate new OTP",
+        });
       }
-      return res.status(400).json({ success: false, message: response.data.message, data: response.data });
+      return res.status(400).json({
+        success: false,
+        message: response.data.message,
+        data: response.data,
+      });
     }
 
-    res.status(200).json({ success: true, message: "Password changed successfully", user });
+    res
+      .status(200)
+      .json({ success: true, message: "Password changed successfully", user });
   } catch (error) {
     console.error("Error changing password:", error);
-    res.status(500).json({ success: false, message: "Server error", error: error.message });
+    res
+      .status(500)
+      .json({ success: false, message: "Server error", error: error.message });
   }
-}
+};
 
 exports.collectDetailsOnQuestionPaperDownload = async (req, res) => {
   try {
     const { name, email, phoneNumber } = req.body;
     const userAdmins = await User.find({ role: "admin" });
-    Promise.all(userAdmins.map(async (admin) => {
-      await sendQuestionPaperDownloadAlert(name, email, phoneNumber, admin.email)
-    }))
-    res.status(200).json({ success: true, message: "Details collected successfully" });
-
+    Promise.all(
+      userAdmins.map(async (admin) => {
+        await sendQuestionPaperDownloadAlert(
+          name,
+          email,
+          phoneNumber,
+          admin.email
+        );
+      })
+    );
+    res
+      .status(200)
+      .json({ success: true, message: "Details collected successfully" });
   } catch (error) {
     console.error("Error collecting details:", error);
-    res.status(500).json({ success: false, message: "Server error", error: error.message });
+    res
+      .status(500)
+      .json({ success: false, message: "Server error", error: error.message });
   }
-}
+};
 
 exports.getAllStudentsByCourse = async (req, res) => {
   try {
     const { courseId } = req.query;
     let students;
     if (courseId) {
-      students = await User.find({ role: "user", "subscription.course_enrolled": courseId })
-        .populate('wishList')
+      students = await User.find({
+        role: "user",
+        "subscription.course_enrolled": courseId,
+      })
+        .populate("wishList")
         .populate({
-          path: 'subscription',
-          populate: [
-            { path: 'payment_id' },
-            { path: 'course_enrolled' }
-          ]
+          path: "subscription",
+          populate: [{ path: "payment_id" }, { path: "course_enrolled" }],
         })
         .populate("kycRef");
     } else {
       students = await User.find({ role: "user" })
-        .populate('wishList')
+        .populate("wishList")
         .populate({
-          path: 'subscription',
-          populate: [
-            { path: 'payment_id' },
-            { path: 'course_enrolled' }
-          ]
+          path: "subscription",
+          populate: [{ path: "payment_id" }, { path: "course_enrolled" }],
         })
         .populate("kycRef");
     }
 
-    res.status(200).json({ success: true, message: "Students fetched successfully", students });
+    res.status(200).json({
+      success: true,
+      message: "Students fetched successfully",
+      students,
+    });
   } catch (error) {
     console.error("Error fetching students:", error.message);
-    res.status(500).json({ success: false, message: "Server error", error: error.message });
+    res
+      .status(500)
+      .json({ success: false, message: "Server error", error: error.message });
   }
 };
 
@@ -2302,7 +2652,6 @@ exports.createSubAdmin = async (req, res) => {
       staticPageManagement = { access: false, readOnly: false },
     } = req.body;
 
-
     // Validate required fields
     if (!email || !password || !displayName) {
       return res.status(400).json({
@@ -2314,7 +2663,9 @@ exports.createSubAdmin = async (req, res) => {
     // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(409).json({ success: false, message: "Email already exists" });
+      return res
+        .status(409)
+        .json({ success: false, message: "Email already exists" });
     }
 
     // Hash the password
@@ -2341,7 +2692,11 @@ exports.createSubAdmin = async (req, res) => {
     });
 
     await newAdmin.save();
-    res.status(201).json({ success: true, message: "Admin created successfully", admin: newAdmin });
+    res.status(201).json({
+      success: true,
+      message: "Admin created successfully",
+      admin: newAdmin,
+    });
   } catch (error) {
     console.error("Create Admin Error:", error);
     res.status(500).json({ success: false, message: "Server error" });
@@ -2366,7 +2721,9 @@ exports.updateSubAdmin = async (req, res) => {
     // Find the admin by ID
     const user = await User.findById(id);
     if (!user || user.role !== "admin") {
-      return res.status(404).json({ success: false, message: "Admin not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Admin not found" });
     }
 
     // Update fields if present
@@ -2381,12 +2738,16 @@ exports.updateSubAdmin = async (req, res) => {
     // }
 
     // Update permissions if provided
-    if (studentManagement) user.permissions.studentManagement = studentManagement;
+    if (studentManagement)
+      user.permissions.studentManagement = studentManagement;
     if (courseManagement) user.permissions.courseManagement = courseManagement;
-    if (paymentManagement) user.permissions.paymentManagement = paymentManagement;
+    if (paymentManagement)
+      user.permissions.paymentManagement = paymentManagement;
     if (webManagement) user.permissions.webManagement = webManagement;
-    if (mockTestManagement) user.permissions.mockTestManagement = mockTestManagement;
-    if (staticPageManagement) user.permissions.staticPageManagement = staticPageManagement;
+    if (mockTestManagement)
+      user.permissions.mockTestManagement = mockTestManagement;
+    if (staticPageManagement)
+      user.permissions.staticPageManagement = staticPageManagement;
 
     await user.save();
 
@@ -2407,7 +2768,9 @@ exports.deleteSubAdmin = async (req, res) => {
 
     const user = await User.findById(id);
     if (!user || user.role !== "admin") {
-      return res.status(404).json({ success: false, message: "Admin not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Admin not found" });
     }
 
     await User.findByIdAndDelete(id);
@@ -2429,7 +2792,9 @@ exports.resetAdminPassword = async (req, res) => {
 
     const user = await User.findById(id);
     if (!user || user.role !== "admin") {
-      return res.status(404).json({ success: false, message: "Admin not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Admin not found" });
     }
 
     user.password = await bcrypt.hash(password, 10);
@@ -2448,7 +2813,9 @@ exports.resetAdminPassword = async (req, res) => {
 exports.getAllAdmins = async (req, res) => {
   try {
     const admins = await User.find({ role: "admin", isSuperAdmin: false });
-    return res.status(200).json({ success: true, message: "Admins fetched successfully", admins });
+    return res
+      .status(200)
+      .json({ success: true, message: "Admins fetched successfully", admins });
   } catch (error) {
     console.error("Get Admins Error:", error);
     return res.status(500).json({ success: false, message: "Server error" });
@@ -2460,7 +2827,9 @@ exports.forgotPasswordSendOtp = async (req, res) => {
     const { email } = req.body;
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
 
     const otp = generateOTP();
@@ -2488,11 +2857,9 @@ exports.forgotPasswordSendOtp = async (req, res) => {
       }
       res.status(200).json({
         success: true,
-        message:
-          "OTP sent successfully. Please check your email for the OTP.",
+        message: "OTP sent successfully. Please check your email for the OTP.",
       });
     });
-
   } catch (error) {
     console.error("Forgot Password Error:", error);
     return res.status(500).json({ success: false, message: "Server error" });
@@ -2503,10 +2870,14 @@ exports.resendForgotPasswordOtp = async (req, res) => {
     const { email } = req.body;
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
     if (user.forgotOtpExpiration && user.forgotOtpExpiration > new Date()) {
-      return res.status(400).json({ success: false, message: "OTP already sent" });
+      return res
+        .status(400)
+        .json({ success: false, message: "OTP already sent" });
     }
 
     const otp = generateOTP();
@@ -2533,34 +2904,37 @@ exports.resendForgotPasswordOtp = async (req, res) => {
       }
       res.status(200).json({
         success: true,
-        message:
-          "OTP sent successfully. Please check your email for the OTP.",
+        message: "OTP sent successfully. Please check your email for the OTP.",
       });
     });
-
   } catch (error) {
     console.error("Forgot Password Error:", error);
     return res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
-
 exports.verifyForgotPasswordOtp = async (req, res) => {
   try {
     const { email, otp } = req.body;
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
     if (!user.forgotOtpExpiration || user.forgotOtpExpiration < new Date()) {
-      return res.status(400).json({ success: false, message: "OTP has expired" });
+      return res
+        .status(400)
+        .json({ success: false, message: "OTP has expired" });
     }
     if (user.forgotOtp !== otp) {
       return res.status(400).json({ success: false, message: "Invalid OTP" });
     }
     user.forgotOtpVerified = true;
     await user.save();
-    return res.status(200).json({ success: true, message: "OTP verified successfully" });
+    return res
+      .status(200)
+      .json({ success: true, message: "OTP verified successfully" });
   } catch (error) {
     console.error("Verify OTP Error:", error);
     return res.status(500).json({ success: false, message: "Server error" });
@@ -2572,7 +2946,9 @@ exports.resetPassword = async (req, res) => {
     const { email, password, confirmPassword } = req.body;
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
     if (password !== confirmPassword) {
       return res.status(400).json({
@@ -2591,14 +2967,18 @@ exports.resetPassword = async (req, res) => {
       });
     }
     if (user.forgotOtpVerified !== true) {
-      return res.status(400).json({ success: false, message: "OTP not verified" });
+      return res
+        .status(400)
+        .json({ success: false, message: "OTP not verified" });
     }
     user.password = await bcrypt.hash(password, 10);
     user.forgotOtpVerified = false;
     user.forgotOtp = null;
     user.forgotOtpExpiration = null;
     await user.save();
-    return res.status(200).json({ success: true, message: "Password reset successfully" });
+    return res
+      .status(200)
+      .json({ success: true, message: "Password reset successfully" });
   } catch (error) {
     console.error("Reset Password Error:", error);
     return res.status(500).json({ success: false, message: "Server error" });

@@ -4,30 +4,39 @@ const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema({
   phone: { type: String, required: false },
-  displayName: { type: String, required: false ,default:"User"},
-  subscription: [{
-    payment_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Payment",
+  displayName: { type: String, required: false, default: "User" },
+      fathers_name: { type: String },
+    fathers_occupation: { type: String },
+    current_occupation: { type: String },
+    present_address: { type: String },
+    passing_year: { type: String },
+    college_name: { type: String },
+    date_of_birth: { type: Date },
+  subscription: [
+    {
+      payment_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Payment",
+      },
+      payment_Status: {
+        type: String,
+        // enum: ["pending", "success", "failed", "refunded"],
+        // default: "pending",
+      },
+      course_enrolled: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Course",
+      },
+      is_subscription_active: {
+        type: Boolean,
+        default: false,
+      },
+      created_at: {
+        type: Date,
+        default: Date.now,
+      },
     },
-    payment_Status: {
-      type: String,
-      // enum: ["pending", "success", "failed", "refunded"],
-      // default: "pending",
-    },
-    course_enrolled: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Course",
-    },
-    is_subscription_active: {
-      type: Boolean,
-      default: false,
-    },
-    created_at: {
-      type: Date,
-      default: Date.now,
-    },
-  }],
+  ],
   photo_url: {
     type: String,
     required: false,
@@ -87,15 +96,15 @@ const userSchema = new mongoose.Schema({
     default: null,
   },
   signedUpAt: { type: Date, default: Date.now },
-  lastLogin: { type: Date,  },
+  lastLogin: { type: Date },
   isActive: { type: Boolean, default: true },
-  lastActive: { type: Date,  },
+  lastActive: { type: Date },
   device: {
     deviceId: { type: String, required: false },
     deviceType: {
       type: String,
       enum: ["web", "android", "ios"],
-      required: false
+      required: false,
     },
     browser_name: { type: String },
 
@@ -103,70 +112,40 @@ const userSchema = new mongoose.Schema({
     ipAddress: String,
     lastLogin: { type: Date, default: Date.now },
     refreshTokenExpiry: { type: Date, default: Date.now },
-    isCurrent: { type: Boolean, default: false }
+    isCurrent: { type: Boolean, default: false },
   },
   isBlocked: { type: Boolean, default: false },
-  masterOtp: { type: String , default: "000000"},
+  masterOtp: { type: String, default: "000000" },
   isMasterOtpEnabled: { type: Boolean, default: false },
   isSuperAdmin: { type: Boolean, default: false },
   permissions: {
-    studentManagement:{
-      access:{type: Boolean, default: false},
-      readOnly:{type: Boolean, default: false},
+    studentManagement: {
+      access: { type: Boolean, default: false },
+      readOnly: { type: Boolean, default: false },
     },
-    courseManagement:{
-      access:{type: Boolean, default: false},
-      readOnly:{type: Boolean, default: false},
+    courseManagement: {
+      access: { type: Boolean, default: false },
+      readOnly: { type: Boolean, default: false },
     },
-    paymentManagement:{
-      access:{type: Boolean, default: false},
-      readOnly:{type: Boolean, default: false},
+    paymentManagement: {
+      access: { type: Boolean, default: false },
+      readOnly: { type: Boolean, default: false },
     },
-    webManagement:{
-      access:{type: Boolean, default: false},
-      readOnly:{type: Boolean, default: false},
+    webManagement: {
+      access: { type: Boolean, default: false },
+      readOnly: { type: Boolean, default: false },
     },
-    mockTestManagement:{
-      access:{type: Boolean, default: false},
-      readOnly:{type: Boolean, default: false},
+    mockTestManagement: {
+      access: { type: Boolean, default: false },
+      readOnly: { type: Boolean, default: false },
     },
-    staticPageManagement:{
-      access:{type: Boolean, default: false},
-      readOnly:{type: Boolean, default: false},
+    staticPageManagement: {
+      access: { type: Boolean, default: false },
+      readOnly: { type: Boolean, default: false },
     },
 
-    
-   fathers_name:{
-     type: String,
-     required: false
-   },
-   fathers_occupation:{
-    type: String,
-    required: false
-   },
-   current_occupation:{
-    type: String,
-    required: false
-   },
-   present_address:{
-    type: String,
-    required: false
-   },
-   passing_year:{
-    type: String,
-    required: false
-   },
-   college_name:{
-    type: String,
-    required: false
-   },
-   date_of_birth:{
-    type: String,
-    required: false
-   }
 
-  }
-  
+  },
 });
 
 // Create and export the User model
