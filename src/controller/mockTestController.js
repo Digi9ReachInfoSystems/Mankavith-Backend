@@ -652,3 +652,86 @@ exports.getMocktestsBySubjectName = async (req, res) => {
     });
   }
 };
+
+
+module.exports.rearrangeMocktest = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  
+  try {
+    const { mocktestIds } = req.body;
+
+    // Validate input
+    if (!mocktestIds || !Array.isArray(mocktestIds) || mocktestIds.length === 0) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(400).json({
+        success: false,
+        message: "Mock test IDs array is required",
+      });
+    }
+
+    // Validate ObjectIds
+    const invalidIds = mocktestIds.filter(id => !mongoose.Types.ObjectId.isValid(id));
+    if (invalidIds.length > 0) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(400).json({
+        success: false,
+        message: "Invalid mock test IDs found",
+        invalidIds
+      });
+    }
+
+    // Prepare bulk operations
+    const bulkOps = mocktestIds.map((id, index) => ({
+      updateOne: {
+        filter: { _id: new mongoose.Types.ObjectId(id) },
+        update: { $set: { order: index + 1 } }
+      }
+    }));
+
+    // Execute bulk write
+    const MockTest = mongoose.model('MockTest');
+    const result = await MockTest.bulkWrite(bulkOps, { session });
+
+    // Verify all updates were successful
+    if (result.matchedCount !== mocktestIds.length) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(404).json({
+        success: false,
+        message: 'Some mock tests not found',
+        found: result.matchedCount,
+        requested: mocktestIds.length,
+        missing: mocktestIds.length - result.matchedCount
+      });
+    }
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Mock tests reordered successfully',
+      data: {
+        updatedCount: result.modifiedCount,
+        newOrder: mocktestIds.map((id, index) => ({
+          mocktestId: id,
+          position: index + 1
+        }))
+      }
+    });
+
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    
+    console.error('Error reordering mock tests:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to reorder mock tests',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};

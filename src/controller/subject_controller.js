@@ -555,6 +555,10 @@ module.exports.getSubjectsByCourseId = async (req, res) => {
     });
   }
 }
+
+
+
+
 module.exports.rearrangeSubjects = async (req, res) => {
   try {
     const rawIds = req.body.subjectIds;
