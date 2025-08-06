@@ -1336,6 +1336,14 @@ exports.createStudent = async (req, res) => {
       role,
       photo_url,
       isEmailVerified: true,
+
+       fathers_name,
+  fathers_occupation,
+  current_occupation,
+  present_address,
+  passing_year,
+  college_name,
+  date_of_birth
     });
 
     const savedStudent = await user.save();
