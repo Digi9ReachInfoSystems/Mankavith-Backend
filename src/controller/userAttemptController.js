@@ -834,12 +834,10 @@ exports.evaluateSingleQuestion = async (req, res) => {
     }
 
     if (attempt.status !== "submitted" && attempt.status !== "evaluating") {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Attempt is not ready for evaluation",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "Attempt is not ready for evaluation",
+      });
     }
 
     const mockTest = await MockTest.findById(attempt.mockTestId);
@@ -951,13 +949,11 @@ exports.completeUserAttemptsEvaluation = async (req, res) => {
       await updateRankings(attempt);
     }
 
-    res
-      .status(200)
-      .json({
-        success: true,
-        message: "Evaluation marked as complete",
-        data: attempt,
-      });
+    res.status(200).json({
+      success: true,
+      message: "Evaluation marked as complete",
+      data: attempt,
+    });
   } catch (err) {
     console.error("Error:", err);
     res.status(500).json({ success: false, message: "Internal error" });
@@ -1009,7 +1005,7 @@ exports.getAttemptsByUserId = async (req, res) => {
 };
 exports.getAllAttempts = async (req, res) => {
   try {
-    const attempts = await UserAttempt.find({
+    let attempts = await UserAttempt.find({
       $or: [
         { status: "submitted" },
         { status: "evaluated" },
@@ -1024,6 +1020,20 @@ exports.getAllAttempts = async (req, res) => {
       })
       .populate("subject")
       .populate("userId");
+    attempts =await Promise.all(
+      attempts.map(async (attempt) => {
+        const ranking = await UserRanking.findOne({
+          userId: attempt.userId._id, //req.params.user_id,
+          mockTestId: attempt.mockTestId._id, // req.params.mockTestId,
+          subject: attempt.subject._id,
+        }).populate("subject");
+
+        return {
+          ...attempt._doc,
+          ranking: ranking,
+        };
+      })
+    );
     res.status(200).json({ success: true, data: attempts });
   } catch (err) {
     console.error("Error:", err);
@@ -1055,13 +1065,11 @@ exports.deleteUserAttempt = async (req, res) => {
         .status(404)
         .json({ success: false, message: "Attempt not found" });
     const result = await updateRankings(attempt);
-    res
-      .status(200)
-      .json({
-        success: true,
-        message: "Attempt deleted successfully",
-        data: attempt,
-      });
+    res.status(200).json({
+      success: true,
+      message: "Attempt deleted successfully",
+      data: attempt,
+    });
   } catch (err) {
     console.error("Error:", err);
     res.status(500).json({ success: false, message: "Internal error" });
@@ -1120,15 +1128,13 @@ exports.getUserResults = async (req, res) => {
           questionDetails: questionMap[answer.questionId.toString()],
         })),
       };
-      res
-        .status(200)
-        .json({
-          success: true,
-          totalAttempts,
-          remainigAttempts,
-          result: enhancedAttempts,
-          ranking,
-        });
+      res.status(200).json({
+        success: true,
+        totalAttempts,
+        remainigAttempts,
+        result: enhancedAttempts,
+        ranking,
+      });
     }
   } catch (err) {
     console.error("Error:", err);

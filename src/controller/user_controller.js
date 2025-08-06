@@ -1296,15 +1296,37 @@ exports.getNotStartedCourses = async (req, res) => {
     res.status(500).json({ success: false, message: "Server error", error: error.message });
   }
 };
+
+
 exports.createStudent = async (req, res) => {
   try {
-    const { email, password, phone, name, role = 'user', photo_url, first_name, last_name, age, id_proof, passport_photo, courseIds } = req.body;
+    const {
+      email,
+      password,
+      phone,
+      name,
+      role = 'user',
+      photo_url,
+      first_name,
+      last_name,
+      age,
+      id_proof,
+      passport_photo,
+      courseIds,
+      fathers_name,
+      fathers_occupation,
+      current_occupation,
+      present_address,
+      passing_year,
+      college_name,
+      date_of_birth
+    } = req.body;
+
     const userExists = await User.findOne({ email });
     if (userExists) {
-      return res
-        .status(400)
-        .json({ success: false, message: "User already exists" });
+      return res.status(400).json({ success: false, message: "User already exists" });
     }
+
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = new User({
       email,
@@ -1315,6 +1337,7 @@ exports.createStudent = async (req, res) => {
       photo_url,
       isEmailVerified: true,
     });
+
     const savedStudent = await user.save();
 
     const kycDetails = new KycDetails({
@@ -1326,26 +1349,42 @@ exports.createStudent = async (req, res) => {
       mobile_number: phone,
       id_proof,
       passport_photo,
-      status: "approved"
-    })
+      status: "approved",
+
+      // 🔽 Newly added fields
+      fathers_name,
+      fathers_occupation,
+      current_occupation,
+      present_address,
+      passing_year,
+      college_name,
+      date_of_birth
+    });
+
     const savedKyc = await kycDetails.save();
+
     const userEdit = await User.findById(savedStudent._id);
     userEdit.kycRef = kycDetails._id;
     userEdit.kyc_status = "approved";
+
     if (!userEdit.subscription) {
-      userEdit.subscription = []; // Initialize if undefined
+      userEdit.subscription = [];
     }
+
     for (const courseId of courseIds) {
       const course = await Course.findById(courseId);
       if (!course) {
         return res.status(404).json({ success: false, message: "Course not found" });
       }
+
       if (!course.student_enrolled) course.student_enrolled = [];
       if (!course.student_enrolled.includes(userEdit._id)) {
         course.student_enrolled.push(userEdit._id);
       }
+
       await course.save();
-      const found = user.subscription.find(sub => sub.course_enrolled.equals(course._id));
+
+      const found = userEdit.subscription.find(sub => sub.course_enrolled.equals(course._id));
       if (!found) {
         userEdit.subscription.push({
           payment_id: null,
@@ -1355,17 +1394,22 @@ exports.createStudent = async (req, res) => {
         });
       }
     }
+
     await userEdit.save();
 
+    res.status(200).json({
+      success: true,
+      message: "Student created successfully",
+      user: userEdit,
+      kycDetails: savedKyc
+    });
 
-    res
-      .status(200)
-      .json({ success: true, message: "Student created successfully", user: userEdit, kycDetails: savedKyc });
   } catch (error) {
     console.error("Error creating student:", error.message);
     res.status(500).json({ success: false, message: "Server error", error: error.message });
   }
 };
+
 
 exports.getAllStudents = async (req, res) => {
   try {

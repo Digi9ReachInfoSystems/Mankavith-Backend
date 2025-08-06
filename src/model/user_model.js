@@ -134,8 +134,36 @@ const userSchema = new mongoose.Schema({
       access:{type: Boolean, default: false},
       readOnly:{type: Boolean, default: false},
     },
-   
 
+    
+   fathers_name:{
+     type: String,
+     required: false
+   },
+   fathers_occupation:{
+    type: String,
+    required: false
+   },
+   current_occupation:{
+    type: String,
+    required: false
+   },
+   present_address:{
+    type: String,
+    required: false
+   },
+   passing_year:{
+    type: String,
+    required: false
+   },
+   college_name:{
+    type: String,
+    required: false
+   },
+   date_of_birth:{
+    type: String,
+    required: false
+   }
 
   }
   
