@@ -22,4 +22,5 @@ router.get("/get/userAllAttempts/:user_id", attemptController.getAttemptsByUserI
 router.get("/get/getAll/userAttempts", attemptController.getAllAttempts);
 router.delete("/delete/attempts", attemptController.deleteUserAttempt);
 router.post("/get/userAttemptsByUser", attemptController.getUserResults);
+router.delete("/deleteAttempts/attempts/bulkdelete", attemptController.bulkDeleteUserAttempts);
 module.exports = router;
