@@ -7,7 +7,7 @@ exports.getRankings = async (req, res) => {
       { 
         $match: { 
           mockTestId:new  mongoose.Types.ObjectId(req.params.mockTestId),
-          subject:new mongoose.Types.ObjectId(req.params.subject)
+          // subject:new mongoose.Types.ObjectId(req.params.subject)
         } 
       },
       {
