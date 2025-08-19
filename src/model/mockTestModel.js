@@ -25,7 +25,7 @@ const questionSchema = new mongoose.Schema({
 const mockTestSchema = new mongoose.Schema({
   title: { type: String, required: true },
   description: { type: String },
-  subject: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Subject', required: true }], // Changed from courseId to subject
+  subject: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Subject', required: false }], // Changed from courseId to subject
   duration: { type: Number, required: true, min: 1 }, // in minutes
   totalMarks: { type: Number, required: false },
   passingMarks: { type: Number, required: false },

@@ -5,13 +5,14 @@ const mongoose = require("mongoose");
 const userSchema = new mongoose.Schema({
   phone: { type: String, required: false },
   displayName: { type: String, required: false, default: "User" },
-      fathers_name: { type: String },
-    fathers_occupation: { type: String },
-    current_occupation: { type: String },
-    present_address: { type: String },
-    passing_year: { type: String },
-    college_name: { type: String },
-    date_of_birth: { type: Date },
+  fathers_name: { type: String },
+  fathers_occupation: { type: String },
+  current_occupation: { type: String },
+  present_address: { type: String },
+  passing_year: { type: String },
+  college_name: { type: String },
+  date_of_birth: { type: Date },
+
   subscription: [
     {
       payment_id: {
@@ -143,8 +144,6 @@ const userSchema = new mongoose.Schema({
       access: { type: Boolean, default: false },
       readOnly: { type: Boolean, default: false },
     },
-
-
   },
 });
 
