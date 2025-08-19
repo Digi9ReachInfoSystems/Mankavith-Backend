@@ -12,7 +12,7 @@ const mongoose = require('mongoose');
 // Admin: Create a new mock test
 exports.createMockTest = async (req, res) => {
   try {
-    const { title, description, duration, passingMarks, questions, subject, startDate, endDate } = req.body;
+    const { title, description, duration, passingMarks, questions, subject, startDate, endDate,maxAttempts } = req.body;
 
     // Validate test window
     if (new Date(startDate) >= new Date(endDate)) {
@@ -37,7 +37,8 @@ exports.createMockTest = async (req, res) => {
       passingMarks,
       questions,
       startDate,
-      endDate
+      endDate,
+      maxAttempts
     });
 
     const savedTest = await mockTest.save();
