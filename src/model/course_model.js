@@ -35,7 +35,7 @@ const courseSchema = new mongoose.Schema(
     shortDescription: {
       type: String,
       required: false,
-      maxlength: 160 // Good for SEO meta descriptions
+      // maxlength: 160 // Good for SEO meta descriptions
     },
     description: {
       type: String,
