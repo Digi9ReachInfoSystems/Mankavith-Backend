@@ -253,94 +253,205 @@ exports.getMockTestBysubjectId = async (req, res) => {
 
 
 
+// exports.editMockTest = async (req, res) => {
+//   try {
+//     const { id } = req.params;
+//     const updates = req.body;
+
+//     // Prevent certain fields from being updated
+//     const forbiddenUpdates = ['createdAt', '_id', 'questions._id'];
+//     forbiddenUpdates.forEach(field => delete updates[field]);
+
+//     // Validate test exists and user has permission to edit
+//     let existingTest = await MockTest.findById(id);
+//     if (!existingTest) {
+//       return res.status(404).json({
+//         success: false,
+//         message: 'Mock test not found'
+//       });
+//     }
+//     await Promise.all(existingTest.subject.map(async (subject) => {
+//       const sub = await Subject.findById(subject);
+//       await sub.updateOne({ $pull: { mockTests: id } });
+//     }))
+//     await Promise.all(updates.subject.map(async (subject) => {
+//       const sub = await Subject.findById(subject);
+//       await sub.updateOne({ $push: { mockTests: id } });
+//     }))
+
+//     // Additional permission check (example)
+//     // if (existingTest.createdBy.toString() !== req.user.id) {
+//     //   return res.status(403).json({
+//     //     success: false,
+//     //     message: 'Not authorized to edit this test'
+//     //   });
+//     // }
+//     existingTest.title = updates.title || existingTest.title;
+//     existingTest.description = updates.description || existingTest.description;
+//     existingTest.subject = updates.subject || existingTest.subject;
+//     existingTest.duration = updates.duration || existingTest.duration;
+//     existingTest.totalMarks = updates.totalMarks || existingTest.totalMarks;
+//     existingTest.passingMarks = updates.passingMarks || existingTest.passingMarks;
+//     existingTest.startDate = updates.startDate || existingTest.startDate;
+//     existingTest.endDate = updates.endDate || existingTest.endDate;
+//     existingTest.isActive = updates.isActive || existingTest.isActive;
+//     existingTest.maxAttempts = updates.maxAttempts || existingTest.maxAttempts;
+//     existingTest.isPublished = updates.isPublished || existingTest.isPublished;
+//     if (updates.questions) {
+//       const existingQuestionsMap = new Map();
+//       existingTest.questions.forEach(q => existingQuestionsMap.set(q._id.toString(), q));
+
+
+//       const mergedQuestions = updates.questions.map(question => {
+//         if (!question._id) {
+//           return question;
+//         }
+
+//         const existingQuestion = existingQuestionsMap.get(question._id.toString());
+
+//         if (existingQuestion) {
+//           return {
+//             ...existingQuestion.toObject(),
+//             ...question
+//           };
+//         }
+//         return question;
+//       });
+
+//       existingTest.questions = mergedQuestions;
+
+//       existingTest.totalMarks = mergedQuestions.reduce(
+//         (sum, question) => sum + question.marks, 0
+//       );
+//     }
+
+//     const updatedTest = await existingTest.save();
+
+
+//     res.status(200).json({
+//       success: true,
+//       message: 'Mock test updated successfully',
+//       data: updatedTest
+//     });
+//   } catch (err) {
+//     console.log(err);
+//     res.status(500).json({
+//       success: false,
+//       message: err.message
+//     });
+//   }
+// };
 exports.editMockTest = async (req, res) => {
   try {
     const { id } = req.params;
-    const updates = req.body;
+    const updates = req.body || {};
 
     // Prevent certain fields from being updated
     const forbiddenUpdates = ['createdAt', '_id', 'questions._id'];
     forbiddenUpdates.forEach(field => delete updates[field]);
 
-    // Validate test exists and user has permission to edit
+    // Load existing test
     let existingTest = await MockTest.findById(id);
     if (!existingTest) {
-      return res.status(404).json({
-        success: false,
-        message: 'Mock test not found'
-      });
+      return res.status(404).json({ success: false, message: 'Mock test not found' });
     }
-    await Promise.all(existingTest.subject.map(async (subject) => {
-      const sub = await Subject.findById(subject);
-      await sub.updateOne({ $pull: { mockTests: id } });
-    }))
-    await Promise.all(updates.subject.map(async (subject) => {
-      const sub = await Subject.findById(subject);
-      await sub.updateOne({ $push: { mockTests: id } });
-    }))
 
-    // Additional permission check (example)
-    // if (existingTest.createdBy.toString() !== req.user.id) {
-    //   return res.status(403).json({
-    //     success: false,
-    //     message: 'Not authorized to edit this test'
-    //   });
-    // }
-    existingTest.title = updates.title || existingTest.title;
-    existingTest.description = updates.description || existingTest.description;
-    existingTest.subject = updates.subject || existingTest.subject;
-    existingTest.duration = updates.duration || existingTest.duration;
-    existingTest.totalMarks = updates.totalMarks || existingTest.totalMarks;
-    existingTest.passingMarks = updates.passingMarks || existingTest.passingMarks;
-    existingTest.startDate = updates.startDate || existingTest.startDate;
-    existingTest.endDate = updates.endDate || existingTest.endDate;
-    existingTest.isActive = updates.isActive || existingTest.isActive;
-    existingTest.maxAttempts = updates.maxAttempts || existingTest.maxAttempts;
-    existingTest.isPublished = updates.isPublished || existingTest.isPublished;
-    if (updates.questions) {
+    // ---- SUBJECTS: make optional & safe ----
+    // Only touch subject backlinks if caller actually sent "subject" (even if empty array).
+    const hasSubjectUpdate = Object.prototype.hasOwnProperty.call(updates, 'subject');
+
+    if (hasSubjectUpdate) {
+      // Normalize shapes to arrays of strings
+      const normalizeIds = (val) => {
+        if (!val) return [];
+        if (Array.isArray(val)) return val.filter(Boolean).map(String);
+        return [String(val)];
+      };
+
+      const currentSubjectIds = normalizeIds(existingTest.subject);
+      const incomingSubjectIds = normalizeIds(updates.subject);
+
+      // Compute diffs
+      const currentSet = new Set(currentSubjectIds);
+      const incomingSet = new Set(incomingSubjectIds);
+
+      const toRemove = currentSubjectIds.filter(x => !incomingSet.has(x));
+      const toAdd    = incomingSubjectIds.filter(x => !currentSet.has(x));
+
+      // Update backlinks
+      if (toRemove.length) {
+        await Subject.updateMany(
+          { _id: { $in: toRemove } },
+          { $pull: { mockTests: id } }
+        );
+      }
+      if (toAdd.length) {
+        await Subject.updateMany(
+          { _id: { $in: toAdd } },
+          { $addToSet: { mockTests: id } }
+        );
+      }
+
+      // Persist subject on the mock test
+      existingTest.subject = incomingSubjectIds;
+    }
+
+    // ---- BASIC FIELDS (use ?? so 0/false work) ----
+    if ('title' in updates)         existingTest.title         = updates.title ?? existingTest.title;
+    if ('description' in updates)   existingTest.description   = updates.description ?? existingTest.description;
+    if ('duration' in updates)      existingTest.duration      = updates.duration ?? existingTest.duration;
+    if ('totalMarks' in updates)    existingTest.totalMarks    = updates.totalMarks ?? existingTest.totalMarks;
+    if ('passingMarks' in updates)  existingTest.passingMarks  = updates.passingMarks ?? existingTest.passingMarks;
+    if ('isActive' in updates)      existingTest.isActive      = updates.isActive ?? existingTest.isActive;
+    if ('maxAttempts' in updates)   existingTest.maxAttempts   = updates.maxAttempts ?? existingTest.maxAttempts;
+    if ('isPublished' in updates)   existingTest.isPublished   = updates.isPublished ?? existingTest.isPublished;
+
+    // ---- DATES are optional; only validate if both provided ----
+    if ('startDate' in updates) existingTest.startDate = updates.startDate ?? existingTest.startDate;
+    if ('endDate'   in updates) existingTest.endDate   = updates.endDate ?? existingTest.endDate;
+
+    if (existingTest.startDate && existingTest.endDate) {
+      const s = new Date(existingTest.startDate);
+      const e = new Date(existingTest.endDate);
+      if (isNaN(s) || isNaN(e)) {
+        return res.status(400).json({ success: false, message: 'Invalid startDate or endDate format' });
+      }
+      if (s >= e) {
+        return res.status(400).json({ success: false, message: 'End date must be after start date' });
+      }
+    }
+
+    // ---- QUESTIONS (optional merge logic) ----
+    if (Array.isArray(updates.questions)) {
       const existingQuestionsMap = new Map();
-      existingTest.questions.forEach(q => existingQuestionsMap.set(q._id.toString(), q));
+      (existingTest.questions || []).forEach(q =>
+        existingQuestionsMap.set(String(q._id), q)
+      );
 
-
-      const mergedQuestions = updates.questions.map(question => {
-        if (!question._id) {
-          return question;
-        }
-
-        const existingQuestion = existingQuestionsMap.get(question._id.toString());
-
-        if (existingQuestion) {
-          return {
-            ...existingQuestion.toObject(),
-            ...question
-          };
-        }
-        return question;
+      const mergedQuestions = updates.questions.map(q => {
+        if (!q._id) return q; // new question
+        const prev = existingQuestionsMap.get(String(q._id));
+        return prev ? { ...prev.toObject(), ...q } : q;
       });
 
       existingTest.questions = mergedQuestions;
-
-      existingTest.totalMarks = mergedQuestions.reduce(
-        (sum, question) => sum + question.marks, 0
-      );
+      existingTest.totalMarks = mergedQuestions.reduce((sum, q) => sum + Number(q.marks || 0), 0);
     }
 
     const updatedTest = await existingTest.save();
 
-
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: 'Mock test updated successfully',
       data: updatedTest
     });
   } catch (err) {
-    console.log(err);
-    res.status(500).json({
-      success: false,
-      message: err.message
-    });
+    console.error(err);
+    return res.status(500).json({ success: false, message: err.message });
   }
 };
+
+
 
 exports.softDeleteMockTest = async (req, res) => {
   try {
