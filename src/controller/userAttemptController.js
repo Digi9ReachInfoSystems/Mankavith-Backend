@@ -128,10 +128,108 @@ exports.startAttempt = async (req, res) => {
 };
 
 // Save an answer
+// exports.saveAnswer = async (req, res) => {
+//   try {
+//     const { attemptId, questionId, answer, user_id, userAnswerIndex, status } =
+//       req.body;
+
+//     const attempt = await UserAttempt.findOne({
+//       _id: attemptId,
+//       userId: user_id,
+//       status: "in-progress",
+//     });
+
+//     if (!attempt) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "Attempt not found or already submitted",
+//       });
+//     }
+
+//     const mockTest = await MockTest.findById(attempt.mockTestId);
+//     const question = mockTest.questions.id(questionId);
+
+//     if (!question) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "Question not found",
+//       });
+//     }
+//     const validateStatus = [
+//       "answered",
+//       "not-answered",
+//       "not-answered-marked-for-review",
+//       "answered-marked-for-review",
+//       "unattempted",
+//     ];
+//     const isValid = validateStatus.includes(status);
+//     if (!isValid) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Invalid status",
+//       });
+//     }
+
+//     // Find and update the answer
+//     const answerIndex = attempt.answers.findIndex((a) =>
+//       a.questionId.equals(questionId)
+//     );
+
+//     if (answerIndex === -1) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "Answer not found",
+//       });
+//     }
+//     if (
+//       status === "unattempted" ||
+//       status === "not-answered-marked-for-review"
+//     ) {
+//       attempt.answers[answerIndex].status = status;
+//       await attempt.save();
+//       return res.status(200).json({
+//         success: true,
+//         data: attempt.answers[answerIndex],
+//       });
+//     }
+//     // For MCQ, check correctness immediately
+//     let isCorrect = false;
+//     if (question.type === "mcq") {
+//       isCorrect = question.correctAnswer === userAnswerIndex;
+//     }
+
+//     attempt.answers[answerIndex] = {
+//       questionId,
+//       answer,
+//       answerIndex: question.type === "mcq" ? userAnswerIndex : null,
+//       isCorrect,
+//       marksAwarded:
+//         question.type === "mcq"
+//           ? isCorrect
+//             ? question.marks
+//             : question.options[userAnswerIndex].marks
+//           : 0,
+//       status,
+//     };
+
+//     await attempt.save();
+
+//     res.status(200).json({
+//       success: true,
+//       data: attempt.answers[answerIndex],
+//     });
+//   } catch (err) {
+//     res.status(500).json({
+//       success: false,
+//       message: err.message,
+//     });
+//   }
+// };
+
+
 exports.saveAnswer = async (req, res) => {
   try {
-    const { attemptId, questionId, answer, user_id, userAnswerIndex, status } =
-      req.body;
+    const { attemptId, questionId, answer, user_id, userAnswerIndex, status } = req.body;
 
     const attempt = await UserAttempt.findOne({
       _id: attemptId,
@@ -147,84 +245,124 @@ exports.saveAnswer = async (req, res) => {
     }
 
     const mockTest = await MockTest.findById(attempt.mockTestId);
-    const question = mockTest.questions.id(questionId);
+    if (!mockTest) {
+      return res.status(404).json({ success: false, message: "Mock test not found" });
+    }
 
+    const question = mockTest.questions.id(questionId);
     if (!question) {
       return res.status(404).json({
         success: false,
         message: "Question not found",
       });
     }
-    const validateStatus = [
+
+    const VALID = new Set([
       "answered",
       "not-answered",
       "not-answered-marked-for-review",
       "answered-marked-for-review",
       "unattempted",
-    ];
-    const isValid = validateStatus.includes(status);
-    if (!isValid) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid status",
-      });
+    ]);
+    if (!VALID.has(status)) {
+      return res.status(400).json({ success: false, message: "Invalid status" });
     }
 
-    // Find and update the answer
-    const answerIndex = attempt.answers.findIndex((a) =>
-      a.questionId.equals(questionId)
-    );
-
-    if (answerIndex === -1) {
-      return res.status(404).json({
-        success: false,
-        message: "Answer not found",
+    // find or create answer slot
+    let idx = attempt.answers.findIndex((a) => a.questionId.equals(questionId));
+    if (idx === -1) {
+      attempt.answers.push({
+        questionId,
+        answer: "",
+        answerIndex: null,
+        isCorrect: false,
+        marksAwarded: 0,
+        status: "unattempted",
       });
-    }
-    if (
-      status === "unattempted" ||
-      status === "not-answered-marked-for-review"
-    ) {
-      attempt.answers[answerIndex].status = status;
-      await attempt.save();
-      return res.status(200).json({
-        success: true,
-        data: attempt.answers[answerIndex],
-      });
-    }
-    // For MCQ, check correctness immediately
-    let isCorrect = false;
-    if (question.type === "mcq") {
-      isCorrect = question.correctAnswer === userAnswerIndex;
+      idx = attempt.answers.length - 1;
     }
 
-    attempt.answers[answerIndex] = {
-      questionId,
-      answer,
-      answerIndex: question.type === "mcq" ? userAnswerIndex : null,
-      isCorrect,
-      marksAwarded:
-        question.type === "mcq"
-          ? isCorrect
-            ? question.marks
-            : question.options[userAnswerIndex].marks
-          : 0,
-      status,
+    // Helper: wipe answer (used for "clear" and "unattempted")
+    const wipeTo = (newStatus) => {
+      attempt.answers[idx] = {
+        questionId,
+        answer: "",
+        answerIndex: null,
+        isCorrect: false,
+        marksAwarded: 0,
+        status: newStatus,
+      };
     };
 
-    await attempt.save();
+    // Case 1: clearing or just visited
+    if (status === "not-answered" || status === "unattempted") {
+      wipeTo(status);
+      await attempt.save();
+      return res.status(200).json({ success: true, data: attempt.answers[idx] });
+    }
 
-    res.status(200).json({
-      success: true,
-      data: attempt.answers[answerIndex],
-    });
+    // Case 2: Marked for review without answer change
+    if (status === "not-answered-marked-for-review") {
+      // Keep any existing content, just flip status
+      attempt.answers[idx].status = status;
+      await attempt.save();
+      return res.status(200).json({ success: true, data: attempt.answers[idx] });
+    }
+
+    // Case 3: answered / answered-marked-for-review
+    if (question.type === "mcq") {
+      // validate index when answering
+      const hasIndex = userAnswerIndex !== null && userAnswerIndex !== undefined;
+      if (!hasIndex) {
+        // Treat as not-answered if no choice is provided
+        wipeTo("not-answered");
+        await attempt.save();
+        return res.status(200).json({ success: true, data: attempt.answers[idx] });
+      }
+
+      const isCorrect = question.correctAnswer === userAnswerIndex;
+
+      // optional per-option marks (e.g., negative marking) — guard safely
+      const optionMarks = question.options?.[userAnswerIndex]?.marks;
+      const marksAwarded = isCorrect
+        ? (question.marks ?? 0)
+        : (typeof optionMarks === "number" ? optionMarks : 0);
+
+      attempt.answers[idx] = {
+        questionId,
+        answer: typeof answer === "string" ? answer : "", // front-end passes label; ok to store
+        answerIndex: userAnswerIndex,
+        isCorrect,
+        marksAwarded,
+        status,
+      };
+    } else {
+      // subjective
+      const hasText = typeof answer === "string" && answer.trim() !== "";
+      if (!hasText) {
+        wipeTo("not-answered");
+        await attempt.save();
+        return res.status(200).json({ success: true, data: attempt.answers[idx] });
+      }
+
+      attempt.answers[idx] = {
+        questionId,
+        answer,
+        answerIndex: null,
+        isCorrect: false,      // evaluated later by admin
+        marksAwarded: 0,       // evaluated later by admin
+        status,
+      };
+    }
+
+    await attempt.save();
+    return res.status(200).json({ success: true, data: attempt.answers[idx] });
   } catch (err) {
-    res.status(500).json({
-      success: false,
-      message: err.message,
-    });
+    console.error(err);
+    return res.status(500).json({ success: false, message: err.message });
   }
 };
+
 
 // Submit attempt (updated)
 exports.submitAttempt = async (req, res) => {
