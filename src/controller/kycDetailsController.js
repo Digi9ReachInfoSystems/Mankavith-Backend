@@ -6,26 +6,43 @@ const User = require("../model/user_model");
 exports.createKyc = async (req, res) => {
   try {
     const {
-      first_name,
-      last_name,
-      age,
-      email,
-      mobile_number,
+      // first_name,
+      // last_name,
+      // age,
+      // email,
+      // mobile_number,
       id_proof,
       passport_photo,
       userref,
+      date_of_birth,
+      fathers_name,
+      fathers_occupation,
+      present_address,
+      current_occupation,
+      how_did_you_get_to_know_us
+
+
+
     } = req.body;
     console.log("req.body", req.body);
     // Validate required fields
     if (
-      !first_name ||
-      !last_name ||
-      !age ||
-      !email ||
-      !mobile_number ||
+      // !first_name ||
+      // !last_name ||
+      // !age ||
+      // !email ||
+      // !mobile_number ||
       !id_proof ||
       !passport_photo ||
-      !userref
+      !userref ||
+       !date_of_birth ||
+      !fathers_name ||
+      !fathers_occupation ||
+      !present_address ||
+     !current_occupation ||
+      !how_did_you_get_to_know_us
+
+
     ) {
       return res.status(400).json({
         success: false,
@@ -36,13 +53,19 @@ exports.createKyc = async (req, res) => {
     // Check if KYC already exists for this user
     const existingKyc = await Kyc.findOne({ userref });
     if (existingKyc) {
-      existingKyc.first_name = first_name;
-      existingKyc.last_name = last_name;
-      existingKyc.age = age;
-      existingKyc.email = email;
-      existingKyc.mobile_number = mobile_number;
+      // existingKyc.first_name = first_name;
+      // existingKyc.last_name = last_name;
+      // existingKyc.age = age;
+      // existingKyc.email = email;
+      // existingKyc.mobile_number = mobile_number;
       existingKyc.id_proof = id_proof;
       existingKyc.passport_photo = passport_photo;
+      existingKyc.date_of_birth = date_of_birth;
+      existingKyc.fathers_name = fathers_name;
+      existingKyc.fathers_occupation = fathers_occupation;
+      existingKyc.present_address = present_address;
+      existingKyc.current_occupation = current_occupation;
+      existingKyc.how_did_you_get_to_know_us = how_did_you_get_to_know_us;
       const updatedKyc = await existingKyc.save();
       const user = await User.findById(userref);
       if (!user) {
@@ -71,14 +94,20 @@ exports.createKyc = async (req, res) => {
     }
 
     const newKyc = new Kyc({
-      first_name,
-      last_name,
-      age,
-      email,
-      mobile_number,
+      // first_name,
+      // last_name,
+      // age,
+      // email,
+      // mobile_number,
       id_proof,
       passport_photo,
       userref,
+      date_of_birth,
+      fathers_name,
+      fathers_occupation,
+      present_address,
+      current_occupation,
+      how_did_you_get_to_know_us,
       status: "pending",
     });
 
