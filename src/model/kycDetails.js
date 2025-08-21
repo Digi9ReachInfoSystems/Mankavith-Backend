@@ -51,6 +51,19 @@ const KycSchema = new mongoose.Schema({
 
     current_occupation: { type: String },
     how_did_you_get_to_know_us: { type: String },
+
+},
+  { toJSON: { virtuals: true }, toObject: { virtuals: true } }
+);
+
+KycSchema.virtual("age").get(function () {
+  if (!this.date_of_birth) return undefined;
+  const dob = new Date(this.date_of_birth);
+  const today = new Date();
+  let age = today.getFullYear() - dob.getFullYear();
+  const m = today.getMonth() - dob.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
+  return age;
 });
 
 module.exports = mongoose.model("Kyc", KycSchema);
