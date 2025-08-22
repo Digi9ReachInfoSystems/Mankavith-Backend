@@ -1,10 +1,10 @@
 const Achiever = require("../model/achieverModel");
 
 exports.createAchievers = async (req, res) => {
-    const { name, rank,image,exam_name } = req.body;
+    const { name, rank,image,exam_name,sequence } = req.body;
 
     try {
-        const achiever = new Achiever({ name, rank, exam_name, image});
+        const achiever = new Achiever({ name, rank, exam_name, image, sequence });
         await achiever.save();
         res.status(201).json(achiever);
     } catch (error) {
@@ -29,7 +29,7 @@ exports.getAchieversById = async (req, res) => {
 
 exports.getAllAchievers = async (req, res) => {
     try {
-        const achievers = await Achiever.find();
+        const achievers = await Achiever.find().sort({sequence: 1});
         res.status(200).json(achievers);
     } catch (error) {
         console.log(error);
@@ -39,9 +39,9 @@ exports.getAllAchievers = async (req, res) => {
 
 exports.updateAchiever = async (req, res) => {
     const { id } = req.params;
-    const { name, rank, image,exam_name } = req.body;
+    const { name, rank, image,exam_name ,sequence} = req.body;
     try {
-        const achiever = await Achiever.findByIdAndUpdate(id, { name, rank, image,exam_name }, { new: true });
+        const achiever = await Achiever.findByIdAndUpdate(id, { name, rank, image,exam_name ,sequence}, { new: true });
         if (!achiever) {
             return res.status(404).json({ error: "Achiever not found" });
         }
