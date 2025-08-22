@@ -458,13 +458,15 @@ exports.updateKyc = async (req, res) => {
   try {
     const kycId = req.params.id;
     const {
-      first_name,
-      last_name,
-      age,
-      email,
-      mobile_number,
-      id_proof,
+    id_proof,
       passport_photo,
+      userref,
+      date_of_birth,
+      fathers_name,
+      fathers_occupation,
+      present_address,
+      current_occupation,
+      how_did_you_get_to_know_us
     } = req.body;
 
     // Validate required fields
@@ -475,15 +477,20 @@ exports.updateKyc = async (req, res) => {
         message: "KYC record not found",
       });
     }
-    kyc.first_name = first_name || kyc.first_name;
-    kyc.last_name = last_name || kyc.last_name;
-    kyc.age = age || kyc.age;
-    kyc.email = email || kyc.email;
-    kyc.mobile_number = mobile_number || kyc.mobile_number;
+    // kyc.first_name = first_name || kyc.first_name;
+    // kyc.last_name = last_name || kyc.last_name;
+    // kyc.age = age || kyc.age;
+    // kyc.email = email || kyc.email;
+    // kyc.mobile_number = mobile_number || kyc.mobile_number;
     kyc.id_proof = id_proof || kyc.id_proof;
     kyc.passport_photo = passport_photo || kyc.passport_photo;
-
-
+    kyc.fathers_name = fathers_name || kyc.fathers_name;
+    kyc.fathers_occupation = fathers_occupation || kyc.fathers_occupation;
+    kyc.present_address = present_address || kyc.present_address;
+    kyc.current_occupation = current_occupation || kyc.current_occupation;
+    kyc.how_did_you_get_to_know_us = how_did_you_get_to_know_us || kyc.how_did_you_get_to_know_us;
+kyc.date_of_birth = date_of_birth || kyc.date_of_birth;
+kyc.userref = userref || kyc.userref;
     const updatedKyc = await kyc.save();
 
 
