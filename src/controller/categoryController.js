@@ -245,3 +245,19 @@ exports.bulkDeleteCategory = async (req, res) => {
     });
   }
 };
+exports.getNonFeaturedCategories = async (req, res) => {
+  try {
+    const categories = await Category.find({ featured: false });
+    return res.status(200).json({
+      success: true,
+      data: categories,
+    });
+  } catch (error) {
+    console.error("Error fetching categories:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Server error. Could not fetch categories.",
+      error: error.message,
+    });
+  }
+};

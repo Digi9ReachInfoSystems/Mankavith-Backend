@@ -8,5 +8,5 @@ router.get("/:id", categoryController.getCategoryById);
 router.put("/:id", categoryController.updateCategory);
 router.delete("/:id", categoryController.deleteCategory);
 router.delete("/bulk/delete", categoryController.bulkDeleteCategory);
-
+router.get("/get/nonFeatured", categoryController.getNonFeaturedCategories);
 module.exports = router;

@@ -38,4 +38,5 @@ router.post("/coursebyId/withUserProgress", courseController.getCourseWithProgre
 router.post("/subjectbyId/withUserProgress", courseController.getCourseandSubjectWithProgress);
 router.delete("/bulk/delete", courseController.bulkDeleteCourse);
 router.get("/get/allCourses/admin", courseController.getAllCourseAdmin);
+router.get("/get/all/featured-courses", courseController.getCategoriesWithCourses);
 module.exports = router;
