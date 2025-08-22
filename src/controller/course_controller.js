@@ -1354,3 +1354,83 @@ exports.getAllCourseAdmin = async (req, res) => {
     });
   }
 }
+
+exports.getCategoriesWithCourses = async (req, res) => {
+  try {
+    // Get all categories (or only featured if specified)
+    const filter = {};
+   
+      filter.featured = true;
+    
+    
+    const categories = await Category.find(filter);
+    
+    if (!categories || categories.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No categories found"
+      });
+    }
+    const allCourses = await Course.find({ isPublished: true })
+      .populate("subjects",)
+      .populate("category",)
+      .populate("student_feedback")
+      .populate("student_enrolled")
+      .populate("mockTests")
+      .populate("recorded_sessions")
+      .lean();
+    
+    const categoriesWithCourses = await Promise.all(
+      categories.map(async (category) => {
+        const courses = await Course.find({
+          category: category._id,
+          isPublished: true,
+        })
+        .populate("subjects",)
+        .populate("category",)
+        .populate("student_feedback")
+        .populate("student_enrolled")
+        .populate("mockTests")
+        .populate("recorded_sessions")
+        // .select("courseName courseDisplayName shortDescription price discountPrice discountActive image rating course_rating duration no_of_videos instructors student_enrolled")
+        .limit(parseInt(req.query.limit) || 5) // Default to 5 courses per category
+        .lean(); // Return plain JavaScript objects
+        
+        // Add student count to each course
+        const coursesWithStudentCount = courses.map(course => ({
+          ...course,
+          student_enrolled_count: course.student_enrolled ? course.student_enrolled.length : 0
+        }));
+        
+        return {
+          category: {
+            _id: category._id,
+            title: category.title,
+            featured: category.featured
+          },
+          courses: coursesWithStudentCount
+        };
+      })
+    );
+    
+    // // Filter out categories with no courses
+    // const filteredCategories = categoriesWithCourses.filter(
+    //   item => item.courses && item.courses.length > 0
+    // );
+    
+    res.status(200).json({
+      success: true,
+      data: {
+        featuredCategories: categories,
+        coursesWithCategories: categoriesWithCourses,
+        allCourses: allCourses
+      }
+    });
+  } catch (error) {
+    console.error("Error fetching categories with courses:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error while fetching categories with courses"
+    });
+  }
+};

@@ -49,10 +49,10 @@ exports.addPaper = async (req, res) => {
   }
 };
 
-exports.getQuestionPaperById = async (req, res) => {
-    const { id } = req.params;
+exports.getQuestionPaperByTitle = async (req, res) => {
+    const { title } = req.params;
     try {
-        const question = await Question.findById(id);
+        const question = await Question.findOne({ title });
         if (!question) {
             return res.status(404).json({ error: "Question not found" });
         }
@@ -61,6 +61,68 @@ exports.getQuestionPaperById = async (req, res) => {
         res.status(500).json({ error: "Failed to retrieve question" });
     }
 };
+
+exports.getQuestionPaperByTitleAndYear = async (req, res) => {
+    const { title, year } = req.params;
+    try {
+        const question = await Question.findOne({ title, "papers.year": Number(year) });
+        if (!question) {
+            return res.status(404).json({ error: "Question not found" });
+        }
+        const paper = question.papers.find((paper) => paper.year === Number(year));
+        if (!paper) {
+            return res.status(404).json({ error: "Paper not found" });
+        }
+        res.status(200).json({
+            title: question.title,
+            year: paper.year,
+            description: paper.description,
+            question_url: paper.question_url,
+        });
+    } catch (error) {
+        res.status(500).json({ error: "Failed to retrieve question" });
+    }
+};
+
+exports.removeQuestionPaper = async (req, res) => {
+    const { title, year } = req.params;
+    try {
+        const question = await Question.findOneAndUpdate(
+            { title },
+            { $pull: { papers: { year: Number(year) } } },
+            { new: true }
+        );
+        if (!question) {
+            return res.status(404).json({ error: "Question not found" });
+        }
+        res.status(200).json(question);
+    } catch (error) {
+        res.status(500).json({ error: "Failed to remove question" });
+    }
+}
+
+exports.addQuestionPaper = async (req, res) => {
+    const { title } = req.params;
+    const { year , question_url } = req.body;
+    try {
+        const questionData= await Question.findOne({title,"papers.year":Number(year)});
+        if(questionData){
+            return res.status(409).json({ message: "This title already has a paper for that year." });
+        }
+        const question = await Question.findOneAndUpdate(
+            { title },
+            { $push: { papers: { year: Number(year), question_url: question_url } } },
+            { new: true }
+        );
+        
+        if (!question) {
+            return res.status(404).json({ error: "Question not found" });
+        }
+        res.status(200).json(question);
+    } catch (error) {
+        res.status(500).json({ error: "Failed to add question" });
+    }
+}
 
 exports.getAllQuestionpapers = async (req, res) => {
     try {
@@ -72,10 +134,22 @@ exports.getAllQuestionpapers = async (req, res) => {
 };
 
 exports.updateQuestionPaper = async (req, res) => {
-    const { id } = req.params;
-    const { title, year, description, question_url } = req.body;
+    const { title ,year} = req.params;
+    const {  description, question_url } = req.body;
     try {
-        const question = await Question.findByIdAndUpdate(id, { title, year, description, question_url }, { new: true });
+      const question = await Question.findOne(
+        {
+          title,
+          "papers.year": Number(year),
+        }
+      )
+
+        if (!question) {
+            return res.status(404).json({ error: "Question not found" });
+        }
+        question.papers[0].description = description;
+        question.papers[0].question_url = question_url;
+        await question.save();
         if (!question) {
             return res.status(404).json({ error: "Question not found" });
         }
@@ -86,9 +160,9 @@ exports.updateQuestionPaper = async (req, res) => {
 };
 
 exports.deleteQuestionPaper = async (req, res) => {
-    const { id } = req.params;
+    const { title } = req.params;
     try {
-        const question = await Question.findByIdAndDelete(id);
+        const question = await Question.findOneAndDelete({ title });
         if (!question) {
             return res.status(404).json({ error: "Question not found" });
         }

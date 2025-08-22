@@ -5,8 +5,11 @@ const QuestionController = require("../controller/questionController");
 
 router.post("/create",  QuestionController.addPaper);
 router.get("/getAllQuestionpapers", QuestionController.getAllQuestionpapers);
-router.get("/getQuestionPaperById/:id", QuestionController.getQuestionPaperById);
-router.put("/updateQuestionPaper/:id", QuestionController.updateQuestionPaper);
-router.delete("/deleteQuestionPaper/:id", QuestionController.deleteQuestionPaper);
+router.get("/getByTitle/:title", QuestionController.getQuestionPaperByTitle);
+router.get("/getByTitleAndYear/:title/:year", QuestionController.getQuestionPaperByTitleAndYear);
+router.put("/addQuestionPaper/:title", QuestionController.addQuestionPaper);
+router.put("/removeQuestionPaper/:title/:year", QuestionController.removeQuestionPaper);
+router.put("/updateQuestionPaper/:title/:year", QuestionController.updateQuestionPaper);
+router.delete("/deleteQuestionPaper/:title", QuestionController.deleteQuestionPaper);
 
 module.exports = router;
