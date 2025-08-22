@@ -489,8 +489,8 @@ exports.updateKyc = async (req, res) => {
     kyc.present_address = present_address || kyc.present_address;
     kyc.current_occupation = current_occupation || kyc.current_occupation;
     kyc.how_did_you_get_to_know_us = how_did_you_get_to_know_us || kyc.how_did_you_get_to_know_us;
-
-
+kyc.date_of_birth = date_of_birth || kyc.date_of_birth;
+kyc.userref = userref || kyc.userref;
     const updatedKyc = await kyc.save();
 
 
