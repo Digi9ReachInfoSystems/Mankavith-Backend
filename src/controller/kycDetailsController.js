@@ -452,6 +452,8 @@ exports.getKycByUser = async (req, res) => {
     });
   }
 };
+
+
 exports.updateKyc = async (req, res) => {
   try {
     const kycId = req.params.id;
