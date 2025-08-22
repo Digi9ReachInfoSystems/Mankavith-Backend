@@ -1,7 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const courseController = require("../controller/course_controller");
-
+const authenticateJWT = require("../middleware/authenticator");
+const allowedRoles = require("../middleware/roleMiddleware");
 // Course Routes
 
 router.get("/total", courseController.getNoOfCourses);
