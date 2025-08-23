@@ -180,6 +180,7 @@ exports.handleWebhook = async (req, res) => {
     payment.razorpay_payment_id = payId;
     await payment.save();
     console.log("✅  Payment doc updated:", payment._id);
+    const courseData = await Course.findById(payment.courseRef);
 
     await User.findByIdAndUpdate(payment.userRef, {
       $push: {
@@ -188,6 +189,7 @@ exports.handleWebhook = async (req, res) => {
           payment_Status: "success",
           course_enrolled: payment.courseRef,
           is_subscription_active: true,
+          expires_at: new Date(new Date().setDate(new Date().getDate() + courseData.duration)),
           created_at: new Date(),
         }
       }

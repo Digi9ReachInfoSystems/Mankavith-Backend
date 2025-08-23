@@ -47,7 +47,7 @@ const courseSchema = new mongoose.Schema(
       min: 0
     },
     duration: {
-      type: String,
+      type: Number,
       required: false,
     },
     no_of_videos: {

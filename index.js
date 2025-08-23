@@ -17,6 +17,10 @@ const { decryptRequestBody, encryptResponseBody } = encryptionMiddleware(
 );
 connectDB();
 const webhookController = require("./src/controller/razor_pay_webhook");
+const { removeExpiredSubscriptions } = require("./src/jobs/courseExpiryJobs");
+
+// Start cron
+removeExpiredSubscriptions.start();
 
 app.post(
   "/api/webhooks/razorpay-webhook",
@@ -72,6 +76,7 @@ const socialMedialinksRoutes = require("./src/routes/socialMediaLinksRoutes");
 const notificationRoutes = require("./src/routes/notificationRoutes");
 const couponRoutes = require("./src/routes/couponRoutes");
 const masterOtpRoutes= require("./src/routes/masterOtpRoutes");
+const  jobRoutes = require("./src/routes/jobsRoute");
 
 
 app.use("/user", userRoutes);
@@ -114,7 +119,7 @@ app.use("/socialMediaLinks", socialMedialinksRoutes);
 app.use("/notifications", notificationRoutes);
 app.use("/coupon", couponRoutes);
 app.use("/masterOtp", masterOtpRoutes);
-
+app.use("/job", jobRoutes);
 
 
 

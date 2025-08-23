@@ -89,7 +89,7 @@ exports.searchCourses = async (req, res) => {
     const { name, category } = req.query;
     let query = {};
     query.isPublished = true; // Only fetch published courses
-    query.courseExpiry = { $gte: new Date() }; // Only fetch courses that are not expired
+    // query.courseExpiry = { $gte: new Date() }; // Only fetch courses that are not expired
     // Add name filter if provided (case-insensitive search)
     if (name) {
       query.courseName = { $regex: name, $options: "i" };
@@ -137,7 +137,7 @@ exports.getAllCourses = async (req, res) => {
     const { category } = req.query;
     let query = {};
     query.isPublished = true; // Only fetch published courses
-    query.courseExpiry = { $gte: new Date() }; // Only fetch courses that are not expired
+    // query.courseExpiry = { $gte: new Date() }; // Only fetch courses that are not expired
     if (category) {
       const categoryExists = await Category.findById(category);
       if (!categoryExists) {
@@ -657,7 +657,9 @@ exports.getAllUserCourses = async (req, res) => {
         message: "User not found",
       });
     }
-    let courses = await Course.find({ isPublished: true ,courseExpiry: { $gte: new Date() }}).populate("subjects").populate("category");
+    let courses = await Course.find({ isPublished: true ,
+      // courseExpiry: { $gte: new Date() }
+    }).populate("subjects").populate("category");
     courses = courses.map(course => {
       if (user.subscription.find(sub => sub.course_enrolled.equals(course._id))) {
         return ({
@@ -701,7 +703,9 @@ exports.getAllUserCoursesByCategory = async (req, res) => {
         message: "Category not found",
       });
     }
-    let courses = await Course.find({ category: categoryExists._id, isPublished: true, courseExpiry: { $gte: new Date() } }).populate("subjects").populate("category");
+    let courses = await Course.find({ category: categoryExists._id, isPublished: true,
+      //  courseExpiry: { $gte: new Date() } 
+      }).populate("subjects").populate("category");
     courses = courses.map(course => {
       if (user.subscription.find(sub => sub.course_enrolled.equals(course._id))) {
         return ({
@@ -735,7 +739,7 @@ exports.searchUserCourses = async (req, res) => {
     const { user_id, categoryName } = req.params
     let query = {};
     query.isPublished = true; // Only fetch published courses
-    query.courseExpiry = { $gte: new Date() }; // Only fetch courses that are not expired
+    // query.courseExpiry = { $gte: new Date() }; // Only fetch courses that are not expired
     const user = await User.findById(user_id);
     if (!user) {
       return res.status(404).json({

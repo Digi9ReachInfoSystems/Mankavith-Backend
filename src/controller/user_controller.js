@@ -1592,6 +1592,11 @@ exports.addCourseSubscriptionToStudent = async (req, res) => {
           payment_Status: "success",
           is_subscription_active: true,
           course_enrolled: course._id,
+          is_subscription_active: true,
+          expires_at: new Date(
+            new Date().setDate(new Date().getDate() + course.duration)
+          ),
+          created_at: new Date(),
         });
       }
     }

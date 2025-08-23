@@ -61,6 +61,7 @@ router.post("/send/forgotPasswordOtp", userController.forgotPasswordSendOtp);
 router.post("/verify/forgotPasswordOtp", userController.verifyForgotPasswordOtp);
 router.post("/resend/forgotPasswordOtp", userController.resendForgotPasswordOtp);
 router.put("/reset/password", userController.resetPassword);
+router.post("/check/token", userController.changePassword);
 module.exports = router;
 
 module.exports = router;
