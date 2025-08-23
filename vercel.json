@@ -11,5 +11,11 @@
       "src": "/(.*)",
       "dest": "index.js"
     }
+  ],
+   "crons": [
+    {
+      "path": "/job/subscriptionExpiry",
+      "schedule": "0 0 * * *"
+    }
   ]
 }

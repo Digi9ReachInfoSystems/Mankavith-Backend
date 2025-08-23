@@ -226,10 +226,10 @@ exports.startAttempt = async (req, res) => {
 //   }
 // };
 
-
 exports.saveAnswer = async (req, res) => {
   try {
-    const { attemptId, questionId, answer, user_id, userAnswerIndex, status } = req.body;
+    const { attemptId, questionId, answer, user_id, userAnswerIndex, status } =
+      req.body;
 
     const attempt = await UserAttempt.findOne({
       _id: attemptId,
@@ -246,7 +246,9 @@ exports.saveAnswer = async (req, res) => {
 
     const mockTest = await MockTest.findById(attempt.mockTestId);
     if (!mockTest) {
-      return res.status(404).json({ success: false, message: "Mock test not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Mock test not found" });
     }
 
     const question = mockTest.questions.id(questionId);
@@ -265,7 +267,9 @@ exports.saveAnswer = async (req, res) => {
       "unattempted",
     ]);
     if (!VALID.has(status)) {
-      return res.status(400).json({ success: false, message: "Invalid status" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid status" });
     }
 
     // find or create answer slot
@@ -298,7 +302,9 @@ exports.saveAnswer = async (req, res) => {
     if (status === "not-answered" || status === "unattempted") {
       wipeTo(status);
       await attempt.save();
-      return res.status(200).json({ success: true, data: attempt.answers[idx] });
+      return res
+        .status(200)
+        .json({ success: true, data: attempt.answers[idx] });
     }
 
     // Case 2: Marked for review without answer change
@@ -306,18 +312,23 @@ exports.saveAnswer = async (req, res) => {
       // Keep any existing content, just flip status
       attempt.answers[idx].status = status;
       await attempt.save();
-      return res.status(200).json({ success: true, data: attempt.answers[idx] });
+      return res
+        .status(200)
+        .json({ success: true, data: attempt.answers[idx] });
     }
 
     // Case 3: answered / answered-marked-for-review
     if (question.type === "mcq") {
       // validate index when answering
-      const hasIndex = userAnswerIndex !== null && userAnswerIndex !== undefined;
+      const hasIndex =
+        userAnswerIndex !== null && userAnswerIndex !== undefined;
       if (!hasIndex) {
         // Treat as not-answered if no choice is provided
         wipeTo("not-answered");
         await attempt.save();
-        return res.status(200).json({ success: true, data: attempt.answers[idx] });
+        return res
+          .status(200)
+          .json({ success: true, data: attempt.answers[idx] });
       }
 
       const isCorrect = question.correctAnswer === userAnswerIndex;
@@ -325,8 +336,10 @@ exports.saveAnswer = async (req, res) => {
       // optional per-option marks (e.g., negative marking) — guard safely
       const optionMarks = question.options?.[userAnswerIndex]?.marks;
       const marksAwarded = isCorrect
-        ? (question.marks ?? 0)
-        : (typeof optionMarks === "number" ? optionMarks : 0);
+        ? question.marks ?? 0
+        : typeof optionMarks === "number"
+        ? optionMarks
+        : 0;
 
       attempt.answers[idx] = {
         questionId,
@@ -342,15 +355,17 @@ exports.saveAnswer = async (req, res) => {
       if (!hasText) {
         wipeTo("not-answered");
         await attempt.save();
-        return res.status(200).json({ success: true, data: attempt.answers[idx] });
+        return res
+          .status(200)
+          .json({ success: true, data: attempt.answers[idx] });
       }
 
       attempt.answers[idx] = {
         questionId,
         answer,
         answerIndex: null,
-        isCorrect: false,      // evaluated later by admin
-        marksAwarded: 0,       // evaluated later by admin
+        isCorrect: false, // evaluated later by admin
+        marksAwarded: 0, // evaluated later by admin
         status,
       };
     }
@@ -362,7 +377,6 @@ exports.saveAnswer = async (req, res) => {
     return res.status(500).json({ success: false, message: err.message });
   }
 };
-
 
 // Submit attempt (updated)
 exports.submitAttempt = async (req, res) => {
@@ -1158,7 +1172,7 @@ exports.getAllAttempts = async (req, res) => {
       })
       .populate("subject")
       .populate("userId");
-    attempts =await Promise.all(
+    attempts = await Promise.all(
       attempts.map(async (attempt) => {
         const ranking = await UserRanking.findOne({
           userId: attempt.userId._id, //req.params.user_id,
@@ -1340,5 +1354,38 @@ exports.bulkDeleteUserAttempts = async (req, res) => {
       message: "Internal server error during mock test deletion",
       error: error.message,
     });
+  }
+};
+
+exports.checkAccessToken = async (req, res) => {
+  try {
+    const { token, userId,deviceId} = req.body;
+
+    if (!token) {
+      return res
+        .status(400)
+        .json({ success: false, message: "No token provided" });
+    }
+    const user = await User.findOne({ userId, });
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+    if (user.accessToken !== token) {
+      return res
+        .status(401)
+        .json({ success: false, message: "Token expired" });
+    }else if(user.device.deviceId !== deviceId``){
+       return res
+        .status(401)
+        .json({ success: false, message: "Device not found" });
+    }else{
+      res.status(200).json({ success: true, message: "No Device logged in", user });
+    }
+   
+  } catch (err) {
+    console.error("Error:", err);
+    res.status(500).json({ success: false, message: "Internal error" });
   }
 };
