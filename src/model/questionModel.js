@@ -4,7 +4,7 @@ const mongoose = require("mongoose");
 const paperSchema = new mongoose.Schema(
   {
     year: { type: Number, required: true, min: 1900 },
-    description: { type: String, required: true, trim: true },
+    // description: { type: String, required: true, trim: true },
     question_url: { type: String, required: true, trim: true },
   },
   { _id: false }

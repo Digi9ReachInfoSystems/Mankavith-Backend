@@ -2,8 +2,8 @@ const Question = require("../model/questionModel");
 
 exports.addPaper = async (req, res) => {
   try {
-    const { title, year, description, question_url } = req.body;
-    if (!title || !year || !description || !question_url) {
+    const { title, year,  question_url } = req.body;
+    if (!title || !year  || !question_url) {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
@@ -17,7 +17,7 @@ exports.addPaper = async (req, res) => {
         papers: [
           {
             year: Number(year),
-            description: description.trim(),
+            // description: description.trim(),
             question_url: question_url.trim(),
           },
         ],
@@ -34,7 +34,7 @@ exports.addPaper = async (req, res) => {
 
     set.papers.push({
       year: Number(year),
-      description: description.trim(),
+    //   description: description.trim(),
       question_url: question_url.trim(),
     });
     await set.save();
@@ -76,7 +76,7 @@ exports.getQuestionPaperByTitleAndYear = async (req, res) => {
         res.status(200).json({
             title: question.title,
             year: paper.year,
-            description: paper.description,
+            // description: paper.description,
             question_url: paper.question_url,
         });
     } catch (error) {
@@ -135,7 +135,7 @@ exports.getAllQuestionpapers = async (req, res) => {
 
 exports.updateQuestionPaper = async (req, res) => {
     const { title ,year} = req.params;
-    const {  description, question_url } = req.body;
+    const {   question_url } = req.body;
     try {
       const question = await Question.findOne(
         {
@@ -147,7 +147,7 @@ exports.updateQuestionPaper = async (req, res) => {
         if (!question) {
             return res.status(404).json({ error: "Question not found" });
         }
-        question.papers[0].description = description;
+        // question.papers[0].description = description;
         question.papers[0].question_url = question_url;
         await question.save();
         if (!question) {
