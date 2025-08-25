@@ -20,6 +20,9 @@ const {
   sendWelcomeEmail,
   sendAdminNotification,
   sendQuestionPaperDownloadAlert,
+  sendAdminPaperDownloadMail,
+  sendwelcomeMailtoStudentAdminCreated,
+  admincreateStudentMailtoadmins,
 } = require("../middleware/mailService");
 const MasterOtp = require("../model/masterOTPModel");
 const generateOTP = () => {
@@ -1524,6 +1527,30 @@ exports.createStudent = async (req, res) => {
 
     await userEdit.save();
 
+    await sendwelcomeMailtoStudentAdminCreated(
+      savedStudent.displayName,
+      savedStudent.email,
+      password
+    );
+    const admins = await User.find({ role: "admin" });
+    await Promise.all(
+      admins.map(async (admin) => {
+        await admincreateStudentMailtoadmins(
+          savedStudent.displayName,
+          savedStudent.email,
+          phone,
+          date_of_birth,
+          age,
+          college_name,
+          passing_year,
+          current_occupation,
+          fathers_name,
+          fathers_occupation,
+          present_address,
+          admin.email
+        );
+      })
+    );
     res.status(200).json({
       success: true,
       message: "Student created successfully",
@@ -2987,5 +3014,26 @@ exports.resetPassword = async (req, res) => {
   } catch (error) {
     console.error("Reset Password Error:", error);
     return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+exports.sendPaperDownloadMail = async (req, res) => {
+  try {
+    const { email, name, phone } = req.body;
+    const admins = await User.find({ role: "admin" });
+
+    await Promise.all(
+      admins.map(async (admin) => {
+        await sendAdminPaperDownloadMail(name, email, phone, admin.email);
+      })
+    );
+    return res
+      .status(200)
+      .json({ success: true, message: "Email sent successfully" });
+  } catch (error) {
+    console.error("Error sending email:", error);
+    return res
+      .status(500)
+      .json({ success: false, message: "Error sending email" });
   }
 };
