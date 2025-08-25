@@ -62,6 +62,8 @@ router.post("/verify/forgotPasswordOtp", userController.verifyForgotPasswordOtp)
 router.post("/resend/forgotPasswordOtp", userController.resendForgotPasswordOtp);
 router.put("/reset/password", userController.resetPassword);
 router.post("/check/token", userController.changePassword);
+router.post("/send/paperDownloadMail", userController.sendPaperDownloadMail);
+
 module.exports = router;
 
 module.exports = router;

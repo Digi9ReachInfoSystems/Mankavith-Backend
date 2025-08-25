@@ -492,9 +492,11 @@ exports.submitAttempt = async (req, res) => {
         user.displayName,
         user.email,
         attempt.mockTestId.title,
+        attempt.attemptNumber,
         attempt.mcqScore,
-        attempt.totalMarks,
-        admin.email
+        // attempt.totalMarks,
+        admin.email,
+        attempt._id
       );
     });
 
@@ -1359,31 +1361,30 @@ exports.bulkDeleteUserAttempts = async (req, res) => {
 
 exports.checkAccessToken = async (req, res) => {
   try {
-    const { token, userId,deviceId} = req.body;
+    const { token, userId, deviceId } = req.body;
 
     if (!token) {
       return res
         .status(400)
         .json({ success: false, message: "No token provided" });
     }
-    const user = await User.findOne({ userId, });
+    const user = await User.findOne({ userId });
     if (!user) {
       return res
         .status(404)
         .json({ success: false, message: "User not found" });
     }
     if (user.accessToken !== token) {
+      return res.status(401).json({ success: false, message: "Token expired" });
+    } else if (user.device.deviceId !== deviceId``) {
       return res
         .status(401)
-        .json({ success: false, message: "Token expired" });
-    }else if(user.device.deviceId !== deviceId``){
-       return res
-        .status(401)
         .json({ success: false, message: "Device not found" });
-    }else{
-      res.status(200).json({ success: true, message: "No Device logged in", user });
+    } else {
+      res
+        .status(200)
+        .json({ success: true, message: "No Device logged in", user });
     }
-   
   } catch (err) {
     console.error("Error:", err);
     res.status(500).json({ success: false, message: "Internal error" });

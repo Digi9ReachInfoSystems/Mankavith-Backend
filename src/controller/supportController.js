@@ -1,4 +1,6 @@
+const { sendContactUsMailToAdmin } = require("../middleware/mailService");
 const Support = require("../model/supportModel");
+const User = require("../model/user_model");
 
 exports.createSupport = async (req, res) => {
     try {
@@ -11,6 +13,13 @@ exports.createSupport = async (req, res) => {
         });
 
         const savedSupport = await newSupport.save();
+        const admins= await User.find({ role: "admin" });
+
+        Promise.all(
+            admins.map(async (admin) => {
+                await sendContactUsMailToAdmin(name, email, description, admin.email);
+            })
+        );
         
         // Populate after saving
         const populatedSupport = await Support.findById(savedSupport._id)
