@@ -1250,7 +1250,7 @@ exports.admincreateStudentMailtoadmins = async (name,email,phone,date_of_birth,a
     const mailOptions = {
       from: fromMail,
       to: adminEmail,
-      subject: `New 'Previous Year Questions' page visitor`,
+      subject: `New Student Created By Admin`,
       html: `
         <!DOCTYPE html>
 <html lang="en">
