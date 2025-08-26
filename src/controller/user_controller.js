@@ -41,13 +41,14 @@ const transporter = nodemailer.createTransport({
 exports.register = async (req, res) => {
   const { email, password, confirmPassword, phone, name, role } = req.body;
   try {
-    const validMail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    const Email = req.body.email.toLowerCase();
+    const validMail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(Email);
     if (!validMail) {
       return res
         .status(400)
         .json({ success: false, message: "Invalid email format" });
     }
-    const existingUser = await User.findOne({ email: email });
+    const existingUser = await User.findOne({ email: Email });
     if (existingUser) {
       return res
         .status(400)
@@ -84,7 +85,7 @@ exports.register = async (req, res) => {
     otpExpiration.setMinutes(otpExpiration.getMinutes() + 1);
 
     const newUser = new User({
-      email,
+      email:Email,
       password: hashedPassword,
       phone,
       displayName: name,
@@ -128,7 +129,7 @@ exports.register = async (req, res) => {
     //   });
     // });
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email:Email });
     const otpPhone = Math.floor(100000 + Math.random() * 900000);
     const response = await axios.post("https://control.msg91.com/api/v5/otp", {
       otp_expiry: 1,
@@ -173,15 +174,16 @@ exports.register = async (req, res) => {
 };
 exports.login = async (req, res) => {
   const { email, password, device } = req.body;
-  console.log(email, password, device);
+  // console.log(email, password, device);
+  const Email = email.toLowerCase();
   try {
-    if (email == undefined || email == "" || email == null) {
+    if (Email == undefined || Email == "" || Email == null) {
       return res
         .status(400)
         .json({ success: false, message: "email cannot be empty " });
     }
 
-    const validMail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    const validMail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(Email);
     if (!validMail) {
       return res
         .status(400)
@@ -192,7 +194,7 @@ exports.login = async (req, res) => {
         .status(400)
         .json({ success: false, message: "password cannot be empty " });
     }
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email:Email });
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -385,9 +387,10 @@ exports.forceLogin = async (req, res) => {
 };
 exports.verifyOTP = async (req, res) => {
   const { email, otp } = req.body;
+  const Email=email.toLowerCase();
 
   try {
-    const validMail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    const validMail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(Email);
     if (!validMail) {
       return res
         .status(400)
@@ -398,7 +401,7 @@ exports.verifyOTP = async (req, res) => {
         .status(400)
         .json({ success: false, message: "OTP is required" });
     }
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: Email });
 
     if (!user) {
       return res
@@ -449,15 +452,16 @@ exports.verifyOTP = async (req, res) => {
 };
 exports.resendOTP = async (req, res) => {
   const { email } = req.body;
+  const Email=email.toLowerCase();
 
   try {
-    const validMail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    const validMail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(Email);
     if (!validMail) {
       return res
         .status(400)
         .json({ success: false, message: "Invalid email format" });
     }
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: Email });
     if (!user) {
       return res
         .status(404)
@@ -488,7 +492,7 @@ exports.resendOTP = async (req, res) => {
 
     const mailOptions = {
       from: "mankavit.clatcoaching11@gmail.com",
-      to: email,
+      to: Email,
       subject: "Email Verification OTP",
       text: `Your new OTP is: ${otp}. It will expire in 10 minutes.`,
     };
@@ -565,13 +569,14 @@ exports.refreshToken = async (req, res) => {
 exports.loginSendOtp = async (req, res) => {
   try {
     const { email } = req.body;
-    const validMail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    const Email = email.toLowerCase();
+    const validMail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(Email);
     if (!validMail) {
       return res
         .status(400)
         .json({ success: false, message: "Invalid email format" });
     }
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: Email });
 
     if (!user) {
       return res.status(401).json({
@@ -590,7 +595,7 @@ exports.loginSendOtp = async (req, res) => {
 
     const mailOptions = {
       from: "mankavit.clatcoaching11@gmail.com",
-      to: email,
+      to: Email,
       subject: "Login Verification OTP",
       text: `Your login OTP is: ${loginOtp}. It will expire in 2 minutes.`,
     };
@@ -619,15 +624,16 @@ exports.loginSendOtp = async (req, res) => {
 
 exports.verifyLoginOtp = async (req, res) => {
   const { email, loginOtp, device } = req.body;
+  const Email = email.toLowerCase();
   try {
     const masterOtp = await MasterOtp.findOne();
-    const validMail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    const validMail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(Email);
     if (!validMail) {
       return res
         .status(400)
         .json({ success: false, message: "Invalid email format" });
     }
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: Email });
 
     if (!user) {
       return res.status(401).json({
@@ -768,15 +774,16 @@ exports.verifyLoginOtp = async (req, res) => {
 
 exports.resendLoginOtp = async (req, res) => {
   const { email } = req.body;
+  const Email=email.toLowerCase();
 
   try {
-    const validMail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    const validMail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(Email);
     if (!validMail) {
       return res
         .status(400)
         .json({ success: false, message: "Invalid email format" });
     }
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: Email });
 
     if (!user) {
       return res.status(401).json({
@@ -795,7 +802,7 @@ exports.resendLoginOtp = async (req, res) => {
 
     const mailOptions = {
       from: "mankavit.clatcoaching11@gmail.com",
-      to: email,
+      to: Email,
       subject: "Login Verification OTP",
       text: `Your login OTP is: ${loginOtp}. It will expire in 2 minutes.`,
     };
@@ -824,13 +831,14 @@ exports.resendLoginOtp = async (req, res) => {
 exports.logout = async (req, res) => {
   try {
     const { email } = req.body;
-    const validMail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    const Email=email.toLowerCase();
+    const validMail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(Email);
     if (!validMail) {
       return res
         .status(400)
         .json({ success: false, message: "Invalid email format" });
     }
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: Email });
     if (!user) {
       return res.status(401).json({
         success: false,
