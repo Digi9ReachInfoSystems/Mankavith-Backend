@@ -20,6 +20,7 @@ exports.sendNotification = async (req, res) => {
         time,
         // image,
         user_ref: user._id,
+         read: false 
       });
       await userNotification.save();
 
@@ -61,21 +62,23 @@ exports.getNotificationById = async (req, res) => {
 //  */
 exports.getUserNotifications = async (req, res) => {
   try {
-    // const userId = req.params.userId || (req.user && req.user._id);
-    const  userId = req.params.userId;
-    if (!userId) {
-      return res.status(400).json({ message: 'User ID is required' });
+    const userId = req.params.userId;
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: 'Invalid User ID' });
     }
 
     const notifications = await UserNotification.find({ user_ref: userId })
-      .sort({ created_on: -1 });
+      .sort({ createdAt: -1 })  // use createdAt from timestamps
+      .select('-__v');          // optional: clean up response
 
-    return res.status(200).json({ notifications });
+    return res.status(200).json(notifications); // ← Just send the array
   } catch (err) {
     console.error(err);
     return res.status(500).json({ message: 'Error fetching notifications' });
   }
 };
+
+
 
 exports.clearUserNotification = async (req, res) => {
   const { userNotificationId } = req.params;
@@ -101,5 +104,31 @@ exports.clearUserNotification = async (req, res) => {
   } catch (err) {
     console.error("Error clearing user notification:", err);
     return res.status(500).json({ message: err.message });
+  }
+};
+
+
+
+// controllers/notificationController.js
+
+exports.markNotificationsAsRead = async (req, res) => {
+  const { userId } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    return res.status(400).json({ message: 'Invalid User ID' });
+  }
+
+  try {
+    const result = await UserNotification.updateMany(
+      { user_ref: userId, read: false },
+      { $set: { read: true } }
+    );
+
+    return res.status(200).json({
+      message: `${result.modifiedCount} notification(s) marked as read`
+    });
+  } catch (err) {
+    console.error("Error marking as read:", err);
+    return res.status(500).json({ message: 'Server error' });
   }
 };
