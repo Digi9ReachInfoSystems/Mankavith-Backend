@@ -12,5 +12,5 @@ router.delete(
   notificationController.clearUserNotification
 );
 
-router.get("getAllNotifications", notificationController.getAllNotifications);
+router.get("/getAllNotifications", notificationController.getAllNotifications);
 module.exports = router;
