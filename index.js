@@ -15,7 +15,7 @@ const { decryptRequestBody, encryptResponseBody } = encryptionMiddleware(
   encrypt,
   decrypt
 );
-connectDB();
+// connectDB();
 const webhookController = require("./src/controller/razor_pay_webhook");
 const { removeExpiredSubscriptions } = require("./src/jobs/courseExpiryJobs");
 
