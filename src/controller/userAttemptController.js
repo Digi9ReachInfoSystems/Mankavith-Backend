@@ -1339,7 +1339,7 @@ exports.getAllAttempts = async (req, res) => {
       attempts.map(async (attempt) => {
         const ranking = await UserRanking.findOne({
           userId: attempt.userId._id, //req.params.user_id,
-          mockTestId: attempt.mockTestId._id, // req.params.mockTestId,
+          mockTestId: attempt.mockTestId?._id, // req.params.mockTestId,
           subject: attempt.subject._id,
         }).populate("subject");
 
