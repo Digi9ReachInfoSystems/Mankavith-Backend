@@ -132,3 +132,17 @@ exports.markNotificationsAsRead = async (req, res) => {
     return res.status(500).json({ message: 'Server error' });
   }
 };
+
+
+exports.getAllNotifications = async (req, res) => {
+  try {
+    const notifications = await Notification.find()
+      .sort({ createdAt: -1 })
+      .select('-__v'); 
+
+    return res.status(200).json(notifications);
+  } catch (err) {
+    console.error("Error fetching notifications:", err);
+    return res.status(500).json({ message: 'Server error' });
+  }
+};
