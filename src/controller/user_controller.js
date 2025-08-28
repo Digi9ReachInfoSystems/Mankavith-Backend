@@ -1444,6 +1444,7 @@ exports.createStudent = async (req, res) => {
       date_of_birth,
     } = req.body;
 
+    
     const userExists = await User.findOne({ email });
     if (userExists) {
       return res
@@ -1456,7 +1457,7 @@ exports.createStudent = async (req, res) => {
     const user = new User({
       email,
       password: hashedPassword,
-      phone: phone.substring(3),
+      phone: phone,
       displayName: name,
       role,
       photo_url,
