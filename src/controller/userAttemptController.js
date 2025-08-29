@@ -580,15 +580,10 @@ exports.submitAttempt = async (req, res) => {
             };
           }
           const isCorrect = question.correctAnswer === answer.answerIndex;
-          console.log("answer: ", answer);
-          console.log("isCorrect: ", isCorrect);
-          console.log("marks: ", question);
-          console.log("isCorrect: ", question.options[answer.answerIndex].marks);
           const marks = isCorrect
             ? question.marks
             : question.options[answer.answerIndex].marks;
           mcqScore += marks;
-console.log(" marks: ", marks);
           return {
             ...answer.toObject(),
             isCorrect,
@@ -600,7 +595,6 @@ console.log(" marks: ", marks);
     });
 
     attempt.mcqScore = mcqScore;
-
 
      const { newTimeSpent, remainingTime } = await updateLastSavedTime(
       attempt.mockTestId.duration,
