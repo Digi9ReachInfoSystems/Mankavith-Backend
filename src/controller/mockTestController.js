@@ -465,20 +465,16 @@ exports.editMockTest = async (req, res) => {
       const s = new Date(existingTest.startDate);
       const e = new Date(existingTest.endDate);
       if (isNaN(s) || isNaN(e)) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message: "Invalid startDate or endDate format",
-          });
+        return res.status(400).json({
+          success: false,
+          message: "Invalid startDate or endDate format",
+        });
       }
       if (s >= e) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message: "End date must be after start date",
-          });
+        return res.status(400).json({
+          success: false,
+          message: "End date must be after start date",
+        });
       }
     }
 
@@ -789,6 +785,8 @@ exports.bulkDeleteMocktests = async (req, res) => {
         }
 
         const deletedMockTest = await MockTest.findByIdAndDelete(id);
+        const userRanking = await UserRanking.deleteMany({ mockTestId: id });
+        const userAttempt = await UserAttempt.deleteMany({ mockTestId: id });
 
         if (!deletedMockTest) {
           results.push({
