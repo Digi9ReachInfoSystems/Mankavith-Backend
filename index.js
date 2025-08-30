@@ -28,7 +28,8 @@ app.post(
   paymentController.handleWebhook
 );
 
-app.use(bodyParser.json({ limit: '1024mb' }));
+app.use(bodyParser.json({ limit: '2024mb' }));
+app.use(express.urlencoded({ limit: '2024mb', extended: true }));
 app.use(cors());
 app.use(express.json());
 
