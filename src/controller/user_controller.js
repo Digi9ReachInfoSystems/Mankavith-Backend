@@ -1048,7 +1048,6 @@ exports.getWishlist = async (req, res) => {
 
     const user = await User.findById(userId).populate(
       "wishList",
-      "courseName price image duration"
     );
 
     if (!user) {
