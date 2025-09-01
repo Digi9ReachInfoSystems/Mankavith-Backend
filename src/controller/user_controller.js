@@ -2702,7 +2702,7 @@ exports.createSubAdmin = async (req, res) => {
       paymentManagement = { access: false, readOnly: false },
       webManagement = { access: false, readOnly: false },
       mockTestManagement = { access: false, readOnly: false },
-      staticPageManagement = { access: false, readOnly: false },
+      staticPageManagement = { access: false, readOnly: false }
     } = req.body;
 
     // Validate required fields
@@ -3056,5 +3056,38 @@ exports.sendPaperDownloadMail = async (req, res) => {
     return res
       .status(500)
       .json({ success: false, message: "Error sending email" });
+  }
+};
+
+
+exports.bulkDeleteSubAdmins = async (req, res) => {
+  try {
+    const { adminIds } = req.body;
+    const results = [];
+    for (const id of adminIds) {
+      try {
+        const user = await User.findById(id);
+        if (!user || user.role !== "admin") {
+          results.push({ id, success: false, message: "Admin not found" });
+          continue;
+        }
+
+        await User.findByIdAndDelete(id);
+
+        results.push({ id, success: true, message: "Admin deleted successfully" });
+      } catch (error) {
+        console.error(`Error deleting admin ${id}:`, error.message);
+        results.push({ id, success: false, message: error.message });
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Admin deleted successfully",
+      results,
+    });
+  } catch (error) {
+    console.error("Delete Admin Error:", error);
+    return res.status(500).json({ success: false, message: "Server error" });
   }
 };

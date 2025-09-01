@@ -63,7 +63,7 @@ router.post("/resend/forgotPasswordOtp", userController.resendForgotPasswordOtp)
 router.put("/reset/password", userController.resetPassword);
 router.post("/check/token", userController.changePassword);
 router.post("/send/paperDownloadMail", userController.sendPaperDownloadMail);
-
+router.delete("/bulkdelete/subadmin", userController.bulkDeleteSubAdmins);
 module.exports = router;
 
 module.exports = router;
