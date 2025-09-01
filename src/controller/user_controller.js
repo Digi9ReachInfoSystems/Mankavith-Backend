@@ -85,7 +85,7 @@ exports.register = async (req, res) => {
     otpExpiration.setMinutes(otpExpiration.getMinutes() + 1);
 
     const newUser = new User({
-      email:Email,
+      email: Email,
       password: hashedPassword,
       phone,
       displayName: name,
@@ -129,7 +129,7 @@ exports.register = async (req, res) => {
     //   });
     // });
 
-    const user = await User.findOne({ email:Email });
+    const user = await User.findOne({ email: Email });
     const otpPhone = Math.floor(100000 + Math.random() * 900000);
     const response = await axios.post("https://control.msg91.com/api/v5/otp", {
       otp_expiry: 1,
@@ -194,7 +194,7 @@ exports.login = async (req, res) => {
         .status(400)
         .json({ success: false, message: "password cannot be empty " });
     }
-    const user = await User.findOne({ email:Email });
+    const user = await User.findOne({ email: Email });
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -387,7 +387,7 @@ exports.forceLogin = async (req, res) => {
 };
 exports.verifyOTP = async (req, res) => {
   const { email, otp } = req.body;
-  const Email=email.toLowerCase();
+  const Email = email.toLowerCase();
 
   try {
     const validMail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(Email);
@@ -452,7 +452,7 @@ exports.verifyOTP = async (req, res) => {
 };
 exports.resendOTP = async (req, res) => {
   const { email } = req.body;
-  const Email=email.toLowerCase();
+  const Email = email.toLowerCase();
 
   try {
     const validMail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(Email);
@@ -774,7 +774,7 @@ exports.verifyLoginOtp = async (req, res) => {
 
 exports.resendLoginOtp = async (req, res) => {
   const { email } = req.body;
-  const Email=email.toLowerCase();
+  const Email = email.toLowerCase();
 
   try {
     const validMail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(Email);
@@ -831,7 +831,7 @@ exports.resendLoginOtp = async (req, res) => {
 exports.logout = async (req, res) => {
   try {
     const { email } = req.body;
-    const Email=email.toLowerCase();
+    const Email = email.toLowerCase();
     const validMail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(Email);
     if (!validMail) {
       return res
@@ -1013,7 +1013,7 @@ exports.updateWishlist = async (req, res) => {
 
     const updatedUser = await User.findByIdAndUpdate(userId, update, {
       new: true,
-    }).populate("wishList", "courseName price image");
+    }).populate("wishList");
 
     return res.status(200).json({
       success: true,
@@ -1046,10 +1046,7 @@ exports.getWishlist = async (req, res) => {
       });
     }
 
-    const user = await User.findById(userId).populate(
-      "wishList",
-      "courseName price image duration"
-    );
+    const user = await User.findById(userId).populate("wishList");
 
     if (!user) {
       return res.status(404).json({
@@ -1057,11 +1054,27 @@ exports.getWishlist = async (req, res) => {
         message: "User not found",
       });
     }
+    let wishList = await Promise.all(
+      user.wishList.map(async (item) => {
+        const course = await Course.findById({
+          _id: item._id,
+          isPublished: true,
+        });
+        if (course && course.isPublished) {
+          return course;
+        } else {
+          return null;
+        }
+      })
+    );
+    wishList = wishList.filter((course) => course !== null);
+    user.wishList = wishList.map((item) => item._id);
+    await user.save();
 
     return res.status(200).json({
       success: true,
-      count: user.wishList.length,
-      data: user.wishList,
+      count: wishList.length,
+      data: wishList,
     });
   } catch (error) {
     console.error("Error fetching wishlist:", error.message);
@@ -1444,7 +1457,6 @@ exports.createStudent = async (req, res) => {
       date_of_birth,
     } = req.body;
 
-    
     const userExists = await User.findOne({ email });
     if (userExists) {
       return res
