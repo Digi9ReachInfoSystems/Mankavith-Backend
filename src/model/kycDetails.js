@@ -27,11 +27,11 @@ const KycSchema = new mongoose.Schema({
 
   id_proof: {
     type: String,
-    required: true,
+    required: false,
   },
   passport_photo: {
     type: String,
-    required: true,
+    required: false,
   },
   userref: {
     type: mongoose.Schema.Types.ObjectId,
