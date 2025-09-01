@@ -148,6 +148,10 @@ const userSchema = new mongoose.Schema({
       access: { type: Boolean, default: false },
       readOnly: { type: Boolean, default: false },
     },
+    paymentManagement: {
+      access: { type: Boolean, default: false },
+      readOnly: { type: Boolean, default: false },
+    },
   },
 });
 
