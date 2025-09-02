@@ -26,4 +26,5 @@ router.delete("/deleteAttempts/attempts/bulkdelete", attemptController.bulkDelet
 router.post("/saveForLater", attemptController.saveForLater);
 router.post("/updateLastSavedTime", attemptController.updateLastSavedTime);
 router.post("/checkForPausedMockTest", attemptController.checkForPausedMockTest);
+router.post("/get/mocktest/attemptStats", attemptController.getUserMockTestStats);
 module.exports = router;

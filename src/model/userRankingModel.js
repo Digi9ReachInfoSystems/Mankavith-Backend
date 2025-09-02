@@ -9,7 +9,7 @@ const userRankingSchema = new mongoose.Schema({
   subject: { 
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'Subject', 
-    required: true 
+    required: false 
   }, // Changed from courseId to subject
   userId: { 
     type: mongoose.Schema.Types.ObjectId, 
