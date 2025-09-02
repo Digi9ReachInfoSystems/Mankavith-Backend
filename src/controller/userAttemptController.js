@@ -137,7 +137,7 @@ exports.startAttempt = async (req, res) => {
     let attemptExists = await UserAttempt.findOne({
       userId: user_id,
       mockTestId,
-      subject,
+      // subject,
       status: "in-progress",
     }).populate("mockTestId");
 
@@ -205,7 +205,7 @@ exports.startAttempt = async (req, res) => {
     const attemptCount = await UserAttempt.countDocuments({
       userId: user_id,
       mockTestId,
-      subject,
+      // subject,
     });
 
     const mockTest = await MockTest.findById(mockTestId);
@@ -215,16 +215,21 @@ exports.startAttempt = async (req, res) => {
         message: "Test not found",
       });
     }
-    if (attemptCount >= mockTest.maxAttempts) {
-      return res.status(200).json({
-        success: false,
-        message: "Maximum attempts reached for this course",
-      });
+    let isWithinWindow = true;
+      const now = new Date();
+    if (mockTest.startDate !== null && mockTest.endDate !== null) {
+      if (attemptCount >= mockTest.maxAttempts) {
+        return res.status(200).json({
+          success: false,
+          message: "Maximum attempts reached for this course",
+        });
+      }
+    
+      isWithinWindow =
+        now >= new Date(mockTest.startDate) && now <= new Date(mockTest.endDate);
     }
 
-    const now = new Date();
-    const isWithinWindow =
-      now >= new Date(mockTest.startDate) && now <= new Date(mockTest.endDate);
+
 
     // Initialize answers array
     const answers = mockTest.questions.map((question) => ({
@@ -476,8 +481,8 @@ exports.saveAnswer = async (req, res) => {
       const marksAwarded = isCorrect
         ? question.marks ?? 0
         : typeof optionMarks === "number"
-        ? optionMarks
-        : 0;
+          ? optionMarks
+          : 0;
 
       attempt.answers[idx] = {
         questionId,
@@ -572,7 +577,7 @@ exports.submitAttempt = async (req, res) => {
             marksAwarded: marks,
           };
         } else {
-          if(answer.answerIndex === null){
+          if (answer.answerIndex === null) {
             return {
               ...answer.toObject(),
               isCorrect: false,
@@ -596,7 +601,7 @@ exports.submitAttempt = async (req, res) => {
 
     attempt.mcqScore = mcqScore;
 
-     const { newTimeSpent, remainingTime } = await updateLastSavedTime(
+    const { newTimeSpent, remainingTime } = await updateLastSavedTime(
       attempt.mockTestId.duration,
       attempt.lastSavedAt,
       attempt.timeSpent
@@ -777,8 +782,8 @@ exports.getAttempt = async (req, res) => {
         answer.questionId.type === "mcq"
           ? answer.answerIndex !== null && answer.answerIndex !== undefined
           : answer.answer !== null &&
-            answer.answer !== "" &&
-            answer.answer !== undefined;
+          answer.answer !== "" &&
+          answer.answer !== undefined;
 
       return {
         ...answer,
@@ -875,7 +880,7 @@ async function updateRankings(attempt) {
   const attempts = await UserAttempt.find({
     userId: attempt.userId,
     mockTestId: attempt.mockTestId,
-    courseId: attempt.courseId,
+    // courseId: attempt.courseId,
     status: "evaluated",
     isWithinTestWindow: true,
   });
@@ -896,7 +901,7 @@ async function updateRankings(attempt) {
     {
       userId: attempt.userId,
       mockTestId: attempt.mockTestId,
-      courseId: attempt.courseId,
+      // courseId: attempt.courseId,
     },
     { $set: { isBestAttempt: false } }
   );
@@ -924,7 +929,7 @@ async function updateRankings(attempt) {
   const recentAttempts = await UserAttempt.find({
     userId: attempt.userId,
     mockTestId: attempt.mockTestId,
-    courseId: attempt.courseId,
+    // courseId: attempt.courseId,
     status: "evaluated",
     isWithinTestWindow: true,
   }).sort({ submittedAt: -1 });
@@ -932,14 +937,14 @@ async function updateRankings(attempt) {
   const recentRanking = await UserRanking.findOne({
     userId: attempt.userId,
     mockTestId: attempt.mockTestId,
-    subject: attempt.subject,
+    // subject: attempt.subject,
   });
   if (recentRanking) {
     const ranking = await UserRanking.findOneAndUpdate(
       {
         userId: attempt.userId,
         mockTestId: attempt.mockTestId,
-        subject: attempt.subject,
+        // subject: attempt.subject,
       },
       {
         bestAttemptId: recentAttempts[0]._id,
@@ -958,7 +963,7 @@ async function updateRankings(attempt) {
 async function recalculateTestRankings(mockTestId, subject) {
   const rankings = await UserRanking.find({
     mockTestId,
-    subject,
+    // subject,
   }).sort({ bestScore: -1, lastUpdated: 1 });
 
   let currentRank = 1;
@@ -1773,12 +1778,54 @@ exports.checkForPausedMockTest = async (req, res) => {
         data: attemptExists,
         remainingTime,
       });
-    }else {
+    } else {
       return res.status(200).json({
         success: false,
         message: "Attempt does not exist",
       });
     }
+  } catch (err) {
+    return res
+      .status(500)
+      .json({ success: false, message: "Server error", error: err.message });
+  }
+};
+
+exports.getUserMockTestStats = async (req, res) => {
+  try {
+    const { user_id, mockTestId } = req.body;
+    const user = await User.findById(user_id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+    const pausedAttempt = await UserAttempt.findOne({
+      userId: user_id,
+      mockTestId,
+      status: "in-progress",
+    });
+
+    const mockTest = await MockTest.findById(mockTestId);
+    if (!mockTest) {
+      return res
+        .status(404)
+        .json({ success: false, message: "MockTest not found" });
+    }
+    const totalAttempts = await UserAttempt.countDocuments({
+      userId: user_id,
+      mockTestId,
+    });
+    return res.status(200).json({
+      success: true,
+      data: {
+        user: user,
+        mockTest: mockTest,
+        attemptCount: totalAttempts,
+        maxAttempts: mockTest.maxAttempts,
+        isUnlimited:(mockTest.startDate==null && mockTest.endDate==null) ?true:false,
+        resume: pausedAttempt ? true : false,
+        start:(mockTest.startDate==null && mockTest.endDate==null)? true : (totalAttempts < mockTest.maxAttempts) ? true : false
+      }
+    });
   } catch (err) {
     return res
       .status(500)
