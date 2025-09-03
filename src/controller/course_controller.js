@@ -800,7 +800,7 @@ exports.getCourseWithProgress = async (req, res) => {
     console.log("Fetching course with progress for user:", userId, "and course:", courseId);
 
     // Fetch course with nested subjects and lectures
-    let course = await Course.findOne({ _id: courseId, isPublished: true, courseExpiry: { $gte: new Date() } })
+    let course = await Course.findOne({ _id: courseId, isPublished: true})
       .populate({
         path: "subjects",
         populate: [{
@@ -822,6 +822,7 @@ exports.getCourseWithProgress = async (req, res) => {
 
     // Fetch user progress for this course
     const userProgress = await UserProgress.findOne({ user_id: userId });
+    console.log("User progress:", userProgress);
     if (!userProgress) {
 
       course = {
