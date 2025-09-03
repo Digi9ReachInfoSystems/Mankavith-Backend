@@ -1163,7 +1163,7 @@ exports.getAllEnrolledCourses = async (req, res) => {
       user.subscription.map(async (sub) => {
         const course = await Course.findOne({
           _id: sub.course_enrolled,
-          courseExpiry: { $gt: new Date() },
+          // courseExpiry: { $gt: new Date() },
           isPublished: true,
         });
         if (course) {
@@ -1254,7 +1254,7 @@ exports.getOngoingCourses = async (req, res) => {
       user.subscription.map(async (sub) => {
         const course = await Course.findOne({
           _id: sub.course_enrolled,
-          courseExpiry: { $gt: new Date() },
+          // courseExpiry: { $gt: new Date() },
           isPublished: true,
         });
         if (course) {
@@ -1331,7 +1331,7 @@ exports.getCompletedCourses = async (req, res) => {
       user.subscription.map(async (sub) => {
         const course = await Course.findOne({
           _id: sub.course_enrolled,
-          courseExpiry: { $gt: new Date() },
+          // courseExpiry: { $gt: new Date() },
           isPublished: true,
         });
         if (course) {
