@@ -207,7 +207,7 @@ exports.getCoursesByCategory = async (req, res) => {
     }
 
     // Find courses that reference this category
-    const courses = await Course.find({ category: category._id, isPublished: true ,courseExpiry: { $gte: new Date() }})
+    const courses = await Course.find({ category: category._id, isPublished: true })
       .populate("subjects",)
       .populate("category",)
       .populate("student_feedback")
