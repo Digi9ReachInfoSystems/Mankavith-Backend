@@ -10,10 +10,10 @@ const transporter = nodemailer.createTransport({
 });
 const fromMail = "mankavit.clatcoaching11@gmail.com";
 const supportMail = "mankavit.clatcoaching11@gmail.com";
-const  siteUrl = "https://mankavit-frontend.vercel.app/";
+const siteUrl = "https://mankavit-frontend.vercel.app/";
 const contactNumber = "+91-7979700796";
-const playStoreLink=""
-const appStoreLink=""
+const playStoreLink = ""
+const appStoreLink = ""
 exports.sendWelcomeEmail = async (studentName, studentEmail) => {
     const mailOptions = {
         from: fromMail,
@@ -182,11 +182,11 @@ exports.sendAdminNotification = async (studentName, studentEmail, adminEmail) =>
 };
 
 exports.sendStudentKYCAcknowledgment = async (studentName, studentEmail) => {
-  const mailOptions = {
-    from: fromMail,
-    to: studentEmail,
-    subject: 'KYC Submitted Successfully | Mankavit Law Academy',
-    html: `
+    const mailOptions = {
+        from: fromMail,
+        to: studentEmail,
+        subject: 'KYC Submitted Successfully | Mankavit Law Academy',
+        html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #2d3748;">Dear ${studentName},</h2>
         <p>Thank you for submitting your <strong>KYC documents</strong> to Mankavit Law Academy. We have received your details and will verify them shortly.</p>
@@ -205,22 +205,22 @@ exports.sendStudentKYCAcknowledgment = async (studentName, studentEmail) => {
         <a href=${siteUrl}">${siteUrl}</a></p>
       </div>
     `,
-  };
+    };
 
-  try {
-    await transporter.sendMail(mailOptions);
-    console.log('KYC acknowledgment sent to student:', studentEmail);
-  } catch (error) {
-    console.error('Error sending student email:', error);
-  }
+    try {
+        await transporter.sendMail(mailOptions);
+        console.log('KYC acknowledgment sent to student:', studentEmail);
+    } catch (error) {
+        console.error('Error sending student email:', error);
+    }
 };
 
 exports.sendAdminKYCNofification = async (studentName, studentEmail, adminEmail) => {
-  const mailOptions = {
-    from: supportMail,
-    to: adminEmail,
-    subject: `New KYC Submission – ${studentName} | ${studentEmail}`,
-    html: `
+    const mailOptions = {
+        from: supportMail,
+        to: adminEmail,
+        subject: `New KYC Submission – ${studentName} | ${studentEmail}`,
+        html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h3 style="color: #2d3748;">Hello Admin,</h3>
         <p>A student has submitted <strong>KYC documents</strong> for verification:</p>
@@ -234,23 +234,23 @@ exports.sendAdminKYCNofification = async (studentName, studentEmail, adminEmail)
         <strong>Mankavit System</strong></p>
       </div>
     `,
-  };
+    };
 
-  try {
-    await transporter.sendMail(mailOptions);
-    console.log('KYC alert sent to admin:', adminEmail);
-  } catch (error) {
-    console.error('Error sending admin email:', error);
-  }
+    try {
+        await transporter.sendMail(mailOptions);
+        console.log('KYC alert sent to admin:', adminEmail);
+    } catch (error) {
+        console.error('Error sending admin email:', error);
+    }
 };
 
 
 exports.sendKYCApprovalEmail = async (studentName, studentEmail) => {
-  const mailOptions = {
-    from: fromMail,
-    to: studentEmail,
-    subject: 'Congratulations! Your KYC Has Been Approved',
-    html: `
+    const mailOptions = {
+        from: fromMail,
+        to: studentEmail,
+        subject: 'Congratulations! Your KYC Has Been Approved',
+        html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #2d3748;">Dear ${studentName},</h2>
         
@@ -273,22 +273,22 @@ exports.sendKYCApprovalEmail = async (studentName, studentEmail) => {
         </p>
       </div>
     `,
-  };
+    };
 
-  try {
-    await transporter.sendMail(mailOptions);
-    console.log('KYC approval email sent to:', studentEmail);
-  } catch (error) {
-    console.error('Error sending KYC approval email:', error);
-  }
+    try {
+        await transporter.sendMail(mailOptions);
+        console.log('KYC approval email sent to:', studentEmail);
+    } catch (error) {
+        console.error('Error sending KYC approval email:', error);
+    }
 };
 
 exports.sendKYCRejectionEmail = async (studentName, studentEmail) => {
-  const mailOptions = {
-    from: fromMail,
-    to: studentEmail,
-    subject: 'KYC Verification - Action Required',
-    html: `
+    const mailOptions = {
+        from: fromMail,
+        to: studentEmail,
+        subject: 'KYC Verification - Action Required',
+        html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #2d3748;">Dear ${studentName},</h2>
         
@@ -311,22 +311,22 @@ exports.sendKYCRejectionEmail = async (studentName, studentEmail) => {
         </p>
       </div>
     `,
-  };
+    };
 
-  try {
-    await transporter.sendMail(mailOptions);
-    console.log('KYC rejection email sent to:', studentEmail);
-  } catch (error) {
-    console.error('Error sending KYC rejection email:', error);
-  }
+    try {
+        await transporter.sendMail(mailOptions);
+        console.log('KYC rejection email sent to:', studentEmail);
+    } catch (error) {
+        console.error('Error sending KYC rejection email:', error);
+    }
 };
 
 exports.sendCoursePurchaseEmail = async (studentName, studentEmail, courseName, amount, paymentId) => {
-  const mailOptions = {
-    from: fromMail,
-    to: studentEmail,
-    subject: `Course Purchase Confirmation - ${courseName}`,
-    html: `
+    const mailOptions = {
+        from: fromMail,
+        to: studentEmail,
+        subject: `Course Purchase Confirmation - ${courseName}`,
+        html: `
       <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -534,22 +534,22 @@ exports.sendCoursePurchaseEmail = async (studentName, studentEmail, courseName, 
 </body>
 </html>
     `,
-  };
+    };
 
-  try {
-    await transporter.sendMail(mailOptions);
-    console.log('Course purchase email sent to:', studentEmail);
-  } catch (error) {
-    console.error('Error sending course purchase email:', error);
-  }
+    try {
+        await transporter.sendMail(mailOptions);
+        console.log('Course purchase email sent to:', studentEmail);
+    } catch (error) {
+        console.error('Error sending course purchase email:', error);
+    }
 };
 
 exports.sendAdminCoursePurchaseNotification = async (studentName, studentEmail, courseName, amount, adminEmail) => {
-  const mailOptions = {
-    from: fromMail,
-    to: adminEmail,
-    subject: `New Course Purchase - ${courseName} by ${studentName}`,
-    html: `
+    const mailOptions = {
+        from: fromMail,
+        to: adminEmail,
+        subject: `New Course Purchase - ${courseName} by ${studentName}`,
+        html: `
     <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -727,22 +727,22 @@ exports.sendAdminCoursePurchaseNotification = async (studentName, studentEmail, 
 </body>
 </html>
     `,
-  };
+    };
 
-  try {
-    await transporter.sendMail(mailOptions);
-    console.log('Admin notification sent for course purchase');
-  } catch (error) {
-    console.error('Error sending admin notification:', error);
-  }
+    try {
+        await transporter.sendMail(mailOptions);
+        console.log('Admin notification sent for course purchase');
+    } catch (error) {
+        console.error('Error sending admin notification:', error);
+    }
 };
 
-exports.sendMockTestSubmissionAlert = async (studentName, studentEmail, testName, attemptNumber, MCQscore, adminEmail,attemptId) => {
-  const mailOptions = {
-    from: fromMail,
-    to: adminEmail,
-    subject: `Mock Test Submitted: ${studentName} - Attempt ${attemptNumber}`,
-    html: `
+exports.sendMockTestSubmissionAlert = async (studentName, studentEmail, testName, attemptNumber, MCQscore, adminEmail, attemptId) => {
+    const mailOptions = {
+        from: fromMail,
+        to: adminEmail,
+        subject: `Mock Test Submitted: ${studentName} - Attempt ${attemptNumber}`,
+        html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
         <h2 style="color: #2d3748; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">Mock Test Submission Alert</h2>
         
@@ -793,22 +793,22 @@ exports.sendMockTestSubmissionAlert = async (studentName, studentEmail, testName
         </div>
       </div>
     `,
-  };
+    };
 
-  try {
-    await transporter.sendMail(mailOptions);
-    console.log(`Mock test alert sent to admin for ${studentName}'s attempt ${attemptNumber}`);
-  } catch (error) {
-    console.error('Error sending mock test alert:', error);
-  }
+    try {
+        await transporter.sendMail(mailOptions);
+        console.log(`Mock test alert sent to admin for ${studentName}'s attempt ${attemptNumber}`);
+    } catch (error) {
+        console.error('Error sending mock test alert:', error);
+    }
 };
 
-exports.sendQuestionPaperDownloadAlert = async (userName, userEmail, userPhone,adminEmail) => {
-  const mailOptions = {
-    from: fromMail,
-    to: adminEmail,
-    subject: `Question Paper Downloaded`,
-    html: `
+exports.sendQuestionPaperDownloadAlert = async (userName, userEmail, userPhone, adminEmail) => {
+    const mailOptions = {
+        from: fromMail,
+        to: adminEmail,
+        subject: `Question Paper Downloaded`,
+        html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
         <h2 style="color: #2d3748; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">Question Paper Download Alert</h2>
         
@@ -841,24 +841,24 @@ exports.sendQuestionPaperDownloadAlert = async (userName, userEmail, userPhone,a
         
       </div>
     `,
-  };
+    };
 
-  try {
-    await transporter.sendMail(mailOptions);
-    console.log(`Download alert sent to admin for ${userName}'s download of Question Paper `);
-  } catch (error) {
-    console.error('Error sending download alert:', error);
-    throw error; // Optional: rethrow if you want calling code to handle it
-  }
+    try {
+        await transporter.sendMail(mailOptions);
+        console.log(`Download alert sent to admin for ${userName}'s download of Question Paper `);
+    } catch (error) {
+        console.error('Error sending download alert:', error);
+        throw error; // Optional: rethrow if you want calling code to handle it
+    }
 };
 
 
-exports.sendContactUsMailToAdmin = async (name, email, message,adminEmail) => {
-  const mailOptions = {
-    from: fromMail,
-    to: adminEmail,
-    subject: `Contact Us Form Submission`,
-    html: `
+exports.sendContactUsMailToAdmin = async (name, email, message, adminEmail) => {
+    const mailOptions = {
+        from: fromMail,
+        to: adminEmail,
+        subject: `Contact Us Form Submission`,
+        html: `
      <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1036,24 +1036,24 @@ exports.sendContactUsMailToAdmin = async (name, email, message,adminEmail) => {
 </body>
 </html>
     `,
-  };
+    };
 
-  try {
-    await transporter.sendMail(mailOptions);
-    console.log(`Contact us form sent to admin for ${name}`);
-  } catch (error) {
-    console.error('Error sending contact us form:', error);
-    throw error; // Optional: rethrow if you want calling code to handle it
-  }
+    try {
+        await transporter.sendMail(mailOptions);
+        console.log(`Contact us form sent to admin for ${name}`);
+    } catch (error) {
+        console.error('Error sending contact us form:', error);
+        throw error; // Optional: rethrow if you want calling code to handle it
+    }
 };
 
-exports.sendAdminPaperDownloadMail = async (name, email, phone,adminEmail) => {
-  try{
-    const mailOptions = {
-      from: fromMail,
-      to: adminEmail,
-      subject: `New 'Previous Year Questions' page visitor`,
-      html: `
+exports.sendAdminPaperDownloadMail = async (name, email, phone, adminEmail) => {
+    try {
+        const mailOptions = {
+            from: fromMail,
+            to: adminEmail,
+            subject: `New 'Previous Year Questions' page visitor`,
+            html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h3 style="color: #2d3748;">Hi,</h3>
           <p>the following user visited the 'Previous Year Questions' page of Mankavit website:</p>
@@ -1067,22 +1067,22 @@ exports.sendAdminPaperDownloadMail = async (name, email, phone,adminEmail) => {
           <strong>Mankavit System</strong></p>
         </div>
       `,
-    };
-    await transporter.sendMail(mailOptions);
-    console.log(`Contact us form sent to admin for ${name}`);
-  }catch (error) {
-    console.error('Error sending contact us form:', error);
-    throw error; // Optional: rethrow if you want calling code to handle it
-  }
+        };
+        await transporter.sendMail(mailOptions);
+        console.log(`Contact us form sent to admin for ${name}`);
+    } catch (error) {
+        console.error('Error sending contact us form:', error);
+        throw error; // Optional: rethrow if you want calling code to handle it
+    }
 }
 
-exports.sendwelcomeMailtoStudentAdminCreated = async (studentName, email,password, ) => {
-  try {
-    const mailOptions = {
-      from: fromMail,
-      to: email,
-      subject: `New Student Registered`,
-      html: `
+exports.sendwelcomeMailtoStudentAdminCreated = async (studentName, email, password,) => {
+    try {
+        const mailOptions = {
+            from: fromMail,
+            to: email,
+            subject: `New Student Registered`,
+            html: `
         <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1236,22 +1236,22 @@ exports.sendwelcomeMailtoStudentAdminCreated = async (studentName, email,passwor
 </body>
 </html>
       `,
-    };
-    await transporter.sendMail(mailOptions);
-    console.log(`Contact us form sent to admin for ${studentName}`);
-  } catch (error) {
-    console.error('Error sending contact us form:', error);
-    throw error; // Optional: rethrow if you want calling code to handle it
-  }
+        };
+        await transporter.sendMail(mailOptions);
+        console.log(`Contact us form sent to admin for ${studentName}`);
+    } catch (error) {
+        console.error('Error sending contact us form:', error);
+        throw error; // Optional: rethrow if you want calling code to handle it
+    }
 }
 
-exports.admincreateStudentMailtoadmins = async (name,email,phone,date_of_birth,age,college_name,passing_year,current_occupation,fathers_name,fathers_occupation,present_address,adminEmail) => {
-  try{
-    const mailOptions = {
-      from: fromMail,
-      to: adminEmail,
-      subject: `New Student Created By Admin`,
-      html: `
+exports.admincreateStudentMailtoadmins = async (name, email, phone, date_of_birth, age, college_name, passing_year, current_occupation, fathers_name, fathers_occupation, present_address, adminEmail) => {
+    try {
+        const mailOptions = {
+            from: fromMail,
+            to: adminEmail,
+            subject: `New Student Created By Admin`,
+            html: `
         <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1480,11 +1480,144 @@ exports.admincreateStudentMailtoadmins = async (name,email,phone,date_of_birth,a
 </body>
 </html>
       `,
-    };
-    await transporter.sendMail(mailOptions);
-    console.log(`Contact us form sent to admin for ${name}`);
-  } catch (error) {
-    console.error('Error sending contact us form:', error);
-    throw error; // Optional: rethrow if you want calling code to handle it
-  }
+        };
+        await transporter.sendMail(mailOptions);
+        console.log(`Contact us form sent to admin for ${name}`);
+    } catch (error) {
+        console.error('Error sending contact us form:', error);
+        throw error; // Optional: rethrow if you want calling code to handle it
+    }
 }
+
+exports.meetingScheduledMail = async (meeting, hostEmail, studentEmails) => {
+    try {
+        const formattedDate = new Date(meeting.meeting_time).toLocaleString();
+        console.log("hostEmail", hostEmail,"studentEmails",studentEmails);
+        // Mail to Host
+        const hostMail = {
+            from: fromMail,
+            to: hostEmail,
+            subject: `Meeting Scheduled: ${meeting.meeting_title}`,
+            html: `
+      <div style="font-family: Arial, sans-serif; line-height:1.6;">
+        <h2>📅 Meeting Scheduled</h2>
+        <p>Hello,</p>
+        <p>Your meeting has been successfully scheduled. Below are the details:</p>
+        
+        <div style="padding:12px; border:1px solid #eee; border-radius:6px; background:#fafafa;">
+          <p><b>Title:</b> ${meeting.meeting_title}</p>
+          <p><b>Agenda:</b> ${meeting.meeting_agenda}</p>
+          <p><b>Time:</b> ${formattedDate}</p>
+          <p><b>Duration:</b> ${meeting.meeting_duration} minutes</p>
+        </div>
+        <p>
+         Regards,<br>
+         <strong>Team Mankavit Law Academy</strong><br>
+         <a href="${siteUrl}">${siteUrl}</a>
+        </p>
+        
+      </div>
+      `
+        };
+
+        // Mail to Students
+        const studentMail = {
+            from: fromMail,
+            bcc: studentEmails, // bcc so all don’t see each other
+            subject: `Join Meeting: ${meeting.meeting_title}`,
+            html: `
+      <div style="font-family: Arial, sans-serif; line-height:1.6;">
+        <h2>🎓 Meeting Invitation</h2>
+        <p>Dear Student,</p>
+        <p>You are invited to join the scheduled meeting. Please find the details below:</p>
+
+        <div style="padding:12px; border:1px solid #eee; border-radius:6px; background:#fafafa;">
+          <p><b>Title:</b> ${meeting.meeting_title}</p>
+          <p><b>Agenda:</b> ${meeting.meeting_agenda}</p>
+          <p><b>Time:</b> ${formattedDate}</p>
+          <p><b>Duration:</b> ${meeting.meeting_duration} minutes</p>
+        </div>
+
+        <p>
+         Regards,<br>
+         <strong>Team Mankavit Law Academy</strong><br>
+         <a href="${siteUrl}">${siteUrl}</a>
+        </p>
+        
+      </div>
+      `
+        };
+
+        await transporter.sendMail(hostMail);
+        await transporter.sendMail(studentMail);
+
+        console.log(`Meeting scheduled emails sent for: ${meeting.meeting_title}`);
+    } catch (error) {
+        console.error("Error sending meeting scheduled mail:", error);
+        throw error;
+    }
+};
+
+exports.meetingCancelledMail = async (meeting, hostEmail, studentEmails) => {
+    try {
+        const formattedDate = new Date(meeting.meeting_time).toLocaleString();
+
+        // Mail to Host
+        const hostMail = {
+            from: fromMail,
+            to: "jayanthbychana@gmail.com",
+            subject: `Meeting Cancelled: ${meeting.meeting_title}`,
+            html: `
+      <div style="font-family: Arial, sans-serif; line-height:1.6;">
+        <h2>⚠️ Meeting Cancelled</h2>
+        <p>The following meeting has been cancelled:</p>
+        
+        <div style="padding:12px; border:1px solid #eee; border-radius:6px; background:#fafafa;">
+          <p><b>Title:</b> ${meeting.meeting_title}</p>
+          <p><b>Agenda:</b> ${meeting.meeting_agenda}</p>
+          <p><b>Originally Scheduled At:</b> ${formattedDate}</p>
+        </div>
+      </div>
+       <p>
+         Regards,<br>
+         <strong>Team Mankavit Law Academy</strong><br>
+         <a href="${siteUrl}">${siteUrl}</a>
+        </p>
+      `
+        };
+
+        // Mail to Students
+        const studentMail = {
+            from: fromMail,
+            bcc: studentEmails,
+            subject: `Meeting Cancelled: ${meeting.meeting_title}`,
+            html: `
+      <div style="font-family: Arial, sans-serif; line-height:1.6;">
+        <h2>⚠️ Meeting Cancelled</h2>
+        <p>Dear Student,</p>
+        <p>The following meeting has been cancelled. Please stay tuned for updates:</p>
+
+        <div style="padding:12px; border:1px solid #eee; border-radius:6px; background:#fafafa;">
+          <p><b>Title:</b> ${meeting.meeting_title}</p>
+          <p><b>Agenda:</b> ${meeting.meeting_agenda}</p>
+          <p><b>Originally Scheduled At:</b> ${formattedDate}</p>
+        </div>
+      </div>
+       <p>
+         Regards,<br>
+         <strong>Team Mankavit Law Academy</strong><br>
+         <a href="${siteUrl}">${siteUrl}</a>
+        </p>
+      `
+        };
+
+        await transporter.sendMail(hostMail);
+        await transporter.sendMail(studentMail);
+
+        console.log(`Meeting cancelled emails sent for: ${meeting.meeting_title}`);
+    } catch (error) {
+        console.error("Error sending meeting cancelled mail:", error);
+        throw error;
+    }
+};
+

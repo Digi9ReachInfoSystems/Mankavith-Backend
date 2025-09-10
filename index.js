@@ -18,10 +18,13 @@ const { decryptRequestBody, encryptResponseBody } = encryptionMiddleware(
 // connectDB();
 const webhookController = require("./src/controller/razor_pay_webhook");
 const { removeExpiredSubscriptions } = require("./src/jobs/courseExpiryJobs");
+const { removeOldMeetings } = require("./src/jobs/oldMeetingJobs");
+
 const { Vimeo } = require('@vimeo/vimeo');
 const axios = require('axios');
 // Start cron
 removeExpiredSubscriptions.start();
+removeOldMeetings.start();
 
 app.post(
   "/api/webhooks/razorpay-webhook",

@@ -243,7 +243,7 @@ courseSchema.post('findOneAndUpdate', async function (doc) {
 });
 
 // Indexes for better performance
-courseSchema.index({ courseName: 1 });
+// courseSchema.index({ courseName: 1 });
 courseSchema.index({ category: 1 });
 courseSchema.index({ rating: -1 });
 courseSchema.index({ price: 1 });
