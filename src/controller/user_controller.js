@@ -2702,7 +2702,8 @@ exports.createSubAdmin = async (req, res) => {
       paymentManagement = { access: false, readOnly: false },
       webManagement = { access: false, readOnly: false },
       mockTestManagement = { access: false, readOnly: false },
-      staticPageManagement = { access: false, readOnly: false }
+      staticPageManagement = { access: false, readOnly: false },
+      meetingManagement = { access: false, readOnly: false }
     } = req.body;
 
     // Validate required fields
@@ -2738,6 +2739,7 @@ exports.createSubAdmin = async (req, res) => {
         webManagement,
         mockTestManagement,
         staticPageManagement,
+        meetingManagement
       },
       isSuperAdmin,
       isEmailVerified: true,
@@ -2769,6 +2771,7 @@ exports.updateSubAdmin = async (req, res) => {
       webManagement,
       mockTestManagement,
       staticPageManagement,
+      meetingManagement,
     } = req.body;
 
     // Find the admin by ID
@@ -2801,6 +2804,8 @@ exports.updateSubAdmin = async (req, res) => {
       user.permissions.mockTestManagement = mockTestManagement;
     if (staticPageManagement)
       user.permissions.staticPageManagement = staticPageManagement;
+    if (meetingManagement)
+      user.permissions.meetingManagement = meetingManagement;
 
     await user.save();
 
@@ -3088,6 +3093,16 @@ exports.bulkDeleteSubAdmins = async (req, res) => {
     });
   } catch (error) {
     console.error("Delete Admin Error:", error);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+exports.getMeetingHosts = async (req, res) => {
+  try {
+    const hosts = await User.find({ role: "admin", 'permissions.meetingManagement.access': true })
+    return res.status(200).json({ success: true, hosts });
+  } catch (error) {
+    console.error("Get Meeting Hosts Error:", error);
     return res.status(500).json({ success: false, message: "Server error" });
   }
 };

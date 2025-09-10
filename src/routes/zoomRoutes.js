@@ -6,7 +6,7 @@ const zoomController = require("../controller/meetingController");
 router.post("/create", zoomController.createZoomMeeting);
 
 router.get("/getAllZoomMeetings", zoomController.getAllmeetings);
-router.get("/getZoomMeetingById/:id", zoomController.getmeetingById);
+router.get("/getZoomMeetingById/:id", zoomController.getMeetingById);
 router.get(
   "/getZoomMeetingByStudentId/:studentId",
   zoomController.getmeetingBystudent
