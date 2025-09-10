@@ -14,4 +14,5 @@ router.patch("/update/Meeting/:id", meetingController.updateMeetingById);
 router.get("/getMeetingById/:id", meetingController.getMeetingById);
 router.post("/getMeetngs/byHost", meetingController.getmeetingByHostEmail);
 router.delete("/bulk/delete/meetings", meetingController.bulkDeleteMeetings);
+router.get("/getupcoming/meeting/mobile/:courseId",meetingController.getOngoingMeetingsByCourse);
 module.exports = router;

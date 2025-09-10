@@ -1,7 +1,7 @@
 const User = require("../model/user_model");
 const UserProgress = require("../model/userProgressModel");
 const Course = require("../model/course_model");
-
+const Meeting = require("../model/meetingsModel");
 exports.removeExpiredSubscriptions = async (req, res) => {
   const now = new Date();
 
@@ -51,5 +51,32 @@ exports.removeExpiredSubscriptions = async (req, res) => {
       "❌ Error while removing expired subscriptions:",
       err.message
     );
+  }
+};
+
+
+
+
+exports.cleanOldMeetings = async (req, res) => {
+  try {
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+
+    const result = await Meeting.deleteMany({
+      meeting_time: { $lt: oneMonthAgo }
+    });
+
+    return res.status(200).json({
+      success: true,
+      deletedCount: result.deletedCount,
+      message: `Deleted ${result.deletedCount} meetings older than 1 month`
+    });
+  } catch (error) {
+    console.error("Error cleaning old meetings:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Error cleaning old meetings",
+      error: error.message
+    });
   }
 };

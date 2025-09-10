@@ -8,7 +8,7 @@ const KJUR = require("jsrsasign");
 const Course = require("../model/course_model");
 const User = require("../model/user_model");
 const { inNumberArray, isBetween, isRequiredAllOrNone, validateRequest } = require("../utils/validations");
-
+const Notification = require("../model/userNotificationModel");
 const zoomAccountId = process.env.ZOOM_ACCOUNT_ID;
 const zoomClientId = process.env.ZOOM_CLIENT_ID;
 const zoomClientSecret = process.env.ZOOM_CLIENT_SECRET;
@@ -135,16 +135,16 @@ exports.createZoomMeeting = async (req, res) => {
 exports.getAllmeetings = async (req, res) => {
   try {
     // Optional filters ?courseId=…&from=2025-05-01&to=2025-05-31
-    const { courseId, from, to, hostEmail,isSuperAdmin } = req.query;
+    const { courseId, from, to, hostEmail, isSuperAdmin } = req.query;
     const filter = {};
     const currentTime = new Date();
     if (courseId) filter.course_Ref = courseId;
     if (from || to) filter.meeting_time = {};
     if (from) filter.meeting_time.$gte = new Date(from);
     if (to) filter.meeting_time.$lte = new Date(to);
-    if(!isSuperAdmin){  
+    if (!isSuperAdmin) {
       filter.host_email = hostEmail;
-      
+
     }
     // if (hostEmail) filter.host_email = hostEmail;
     console.log("filter", filter);
@@ -268,6 +268,7 @@ exports.getZoomSdkAccessToken = async (req, res) => {
 
 
 const base64 = require("base-64");
+const { meetingScheduledMail, meetingCancelledMail } = require("../middleware/mailService");
 
 
 
@@ -581,7 +582,33 @@ exports.createZoomMeetingMeOrOtherHost = async (req, res) => {
       meeting_type: meeting_type,
 
     });
-
+    let students = [];
+    for (const courseId of courseIds) {
+      const course = await Course.findById(courseId);
+      if (course) {
+        students = students.concat(course.student_enrolled);
+      }
+    }
+    let uniqueStudentIds = [...new Set(students.map(id => id))];
+    let studentEmails = [];
+    for (const studentId of uniqueStudentIds) {
+      const student = await User.findById(studentId);
+      if (student) {
+        const studentNotification = await Notification.create({
+          title:`Meeting Crea
+          ted ${topic}`,
+          description: agenda,
+          time: startTime,
+          // image,
+          notificationType: "ZOOM MEETING",
+          user_ref: student._id,
+          read: false
+        })
+        await studentNotification.save();
+        studentEmails.push(student.email);
+      }
+    }
+    meetingScheduledMail(meetingDoc, meetingDoc.host_email, studentEmails);
     res.status(201).json({
       meeting: meetingDoc,
       sdkInfo: {
@@ -620,6 +647,7 @@ exports.deleteMeetingById = async (req, res) => {
         .status(502)
         .json({ error: zoomErr?.response?.data?.message || "Zoom error" });
     }
+
 
     res
       .status(200)
@@ -826,6 +854,33 @@ exports.bulkDeleteMeetings = async (req, res) => {
             headers: { Authorization: `Bearer ${accessToken}` },
           }));
           console.log("Zoom delete response", responseData);
+          let students = [];
+          for (const courseId of meeting.course_Ref) {
+            const course = await Course.findById(courseId);
+            if (course) {
+              students = students.concat(course.student_enrolled);
+            }
+          }
+          let uniqueStudentIds = [...new Set(students.map(id => id))];
+          let studentEmails = [];
+          for (const studentId of uniqueStudentIds) {
+            const student = await User.findById(studentId);
+            if (student) {
+              const studentNotification = await Notification.create({
+                title:`Meeting Cancelled ${topic}`,
+                description: agenda,
+                time: startTime,
+                // image,
+                notificationType: "ZOOM MEETING",
+                user_ref: student._id,
+                read: false
+              })
+              await studentNotification.save();
+              studentEmails.push(student.email);
+            }
+          }
+          studentEmails.push("jayanthbr@digi9.co.in");
+          meetingCancelledMail(meeting, meeting.host_email, studentEmails);
           await Meeting.findByIdAndDelete(id);
         } catch (zoomErr) {
           console.error("Zoom 400/502 ►", zoomErr?.response?.data || zoomErr);
@@ -903,3 +958,41 @@ exports.getUpcomingAndOngoingMeetings = async (req, res) => {
     });
   }
 }
+
+
+exports.getOngoingMeetingsByCourse = async (req, res) => {
+   try {
+    const { courseId } = req.params; // pass courseId in route
+    if (!courseId) {
+      return res.status(400).json({ success: false, message: "courseId is required" });
+    }
+
+    const now = new Date();
+
+    // Step 1: fetch meetings for this course
+    const meetings = await Meeting.find({
+      course_Ref: courseId,
+    }).populate("course_Ref", "courseName");
+
+    // Step 2: filter by ongoing or upcoming (end >= now OR start >= now)
+    const activeMeetings = meetings.filter((meeting) => {
+      const start = new Date(meeting.meeting_time);
+      const end = new Date(start.getTime() + meeting.meeting_duration * 60000);
+
+      return start >= now || (start <= now && end >= now);
+    });
+
+    return res.status(200).json({
+      success: true,
+      count: activeMeetings.length,
+      data: activeMeetings,
+    });
+  }catch (error) {
+    console.error("Error fetching ongoing meetings:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error fetching ongoing meetings",
+      error: error.message,
+    });
+  }
+};
