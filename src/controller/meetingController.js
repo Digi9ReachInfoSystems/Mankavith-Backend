@@ -8,9 +8,11 @@ const KJUR = require("jsrsasign");
 const Course = require("../model/course_model");
 const User = require("../model/user_model");
 const { inNumberArray, isBetween, isRequiredAllOrNone, validateRequest } = require("../utils/validations");
-/* -------------------------------------------------------------------------- */
-/*                               Zoom token helper                            */
-/* -------------------------------------------------------------------------- */
+
+const zoomAccountId = process.env.ZOOM_ACCOUNT_ID;
+const zoomClientId = process.env.ZOOM_CLIENT_ID;
+const zoomClientSecret = process.env.ZOOM_CLIENT_SECRET;
+
 async function getZoomAccessToken() {
   const res = await axios.post("https://zoom.us/oauth/token", null, {
     params: {
@@ -25,9 +27,6 @@ async function getZoomAccessToken() {
   return res.data.access_token; // valid for 1 h
 }
 
-/* -------------------------------------------------------------------------- */
-/*                            createZoomMeeting                               */
-/* -------------------------------------------------------------------------- */
 exports.createZoomMeeting = async (req, res) => {
   try {
     const {
@@ -132,26 +131,64 @@ exports.createZoomMeeting = async (req, res) => {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                          GET /api/meetings  (all)                          */
-/* -------------------------------------------------------------------------- */
+
 exports.getAllmeetings = async (req, res) => {
   try {
     // Optional filters ?courseId=…&from=2025-05-01&to=2025-05-31
-    const { courseId, from, to } = req.query;
+    const { courseId, from, to, hostEmail,isSuperAdmin } = req.query;
     const filter = {};
-
+    const currentTime = new Date();
     if (courseId) filter.course_Ref = courseId;
     if (from || to) filter.meeting_time = {};
     if (from) filter.meeting_time.$gte = new Date(from);
     if (to) filter.meeting_time.$lte = new Date(to);
+    if(!isSuperAdmin){  
+      filter.host_email = hostEmail;
+      
+    }
+    // if (hostEmail) filter.host_email = hostEmail;
     console.log("filter", filter);
 
-    const meetings = await Meeting.find(filter)
+    let meetings = await Meeting.find(filter)
       .sort({ meeting_time: 1 }) // ascending
-      .populate("course_Ref") // return only course name
-      .populate("students") // return each student’s userRef
+      .populate("course_Ref")
       .lean();
+    const activeMeetings = meetings.filter(meeting => {
+      const endTime = new Date(meeting.meeting_time.getTime() + (meeting.meeting_duration * 60000));
+      return endTime >= currentTime;
+    });
+    meetings = meetings.map((meeting) => {
+      if (activeMeetings.indexOf(meeting) === -1) {
+        if (hostEmail && meeting.host_email == hostEmail) {
+          return {
+            ...meeting,
+            isPastMeeting: true,
+            isHostMeeting: true
+          };
+        } else {
+          return {
+            ...meeting,
+            isPastMeeting: true,
+            isHostMeeting: false
+          };
+        }
+
+      } else {
+        if (hostEmail && meeting.host_email == hostEmail) {
+          return {
+            ...meeting,
+            isPastMeeting: false,
+            isHostMeeting: true
+          };
+        } else {
+          return {
+            ...meeting,
+            isPastMeeting: false,
+            isHostMeeting: false
+          };
+        }
+      }
+    });
 
     res.json(meetings);
   } catch (err) {
@@ -160,16 +197,12 @@ exports.getAllmeetings = async (req, res) => {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                       GET /api/meetings/:id  (single)                      */
-/* -------------------------------------------------------------------------- */
-exports.getmeetingById = async (req, res) => {
+exports.getMeetingById = async (req, res) => {
   try {
     const { id } = req.params;
 
     const meeting = await Meeting.findById(id)
-      .populate("course_Ref", "name")
-      .populate("students", "userRef") // return each student’s userRef
+      .populate("course_Ref",)
       .lean();
 
     if (!meeting) return res.status(404).json({ msg: "Meeting not found" });
@@ -181,12 +214,6 @@ exports.getmeetingById = async (req, res) => {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*            GET /api/meetings/student/:studentId  (for one student)         */
-/* -------------------------------------------------------------------------- */
-/* -------------------------------------------------------------------------- */
-/*     GET /api/meetings/student/:studentId  → all (or upcoming) meetings     */
-/* -------------------------------------------------------------------------- */
 exports.getmeetingBystudent = async (req, res) => {
   try {
     const { studentId } = req.params;
@@ -228,51 +255,7 @@ exports.getmeetingBystudent = async (req, res) => {
 };
 
 
-exports.generateZoomSignature = async (req, res) => {
-  try {
-    const { meetingNumber, role } = req.body;
 
-    if (!meetingNumber || role === undefined) {
-      return res
-        .status(400)
-        .json({ error: "Missing meetingNumber or role in request body." });
-    }
-
-    const sdkKey = process.env.ZOOM_CLIENT_ID;
-    const sdkSecret = process.env.ZOOM_CLIENT_SECRET;
-
-    if (!sdkKey || !sdkSecret) {
-      return res
-        .status(500)
-        .json({ error: "Zoom SDK Key and Secret are not configured." });
-    }
-
-    const iat = Math.floor(Date.now() / 1000) - 30;
-    const exp = iat + 60 * 60 * 2;
-
-    const oHeader = { alg: "HS256", typ: "JWT" };
-
-    const oPayload = {
-      sdkKey: sdkKey,
-      mn: meetingNumber,
-      role: role,
-      iat: iat,
-      exp: exp,
-      // appKey: sdkKey,
-      tokenExp: exp,
-    };
-
-    const sHeader = JSON.stringify(oHeader);
-    const sPayload = JSON.stringify(oPayload);
-
-    const signature = KJUR.jws.JWS.sign("HS256", sHeader, sPayload, sdkSecret);
-
-    res.json({ signature });
-  } catch (error) {
-    console.error("Error generating Zoom signature:", error);
-    res.status(500).json({ error: "Failed to generate Zoom signature." });
-  }
-};
 
 exports.getZoomSdkAccessToken = async (req, res) => {
   try {
@@ -286,9 +269,7 @@ exports.getZoomSdkAccessToken = async (req, res) => {
 
 const base64 = require("base-64");
 
-const zoomAccountId = process.env.ZOOM_ACCOUNT_ID;
-const zoomClientId = process.env.ZOOM_CLIENT_ID;
-const zoomClientSecret = process.env.ZOOM_CLIENT_SECRET;
+
 
 const getAuthHeaders = () => {
   return {
@@ -318,87 +299,560 @@ const generateZoomAccessToken = async () => {
   }
 };
 
-exports.generateZoomMeeting = async (req, res) => {
+// exports.generateZoomMeeting = async (req, res) => {
+//   try {
+//     const zoomAccessToken = await generateZoomAccessToken();
+
+//     const response = await axios.post(
+//       'https://api.zoom.us/v2/users/me/meetings',
+//       {
+//         agenda: "Zoom Meeting for YT Demo",
+//         default_password: false,
+//         duration: 60,
+//         password: "12345",
+//         settings: {
+//           allow_multiple_devices: true,
+//           // alternative_hosts: "jayanthbr@digi9.co.in",
+//           // alternative_hosts_email_notification: true,
+//           breakout_room: {
+//             enable: true,
+//             rooms: [
+//               {
+//                 name: "room1",
+//                 participants: [
+//                   "email1@gmail.com",
+//                   "email2@gmail.com",
+//                 ],
+//               },
+//             ],
+//           },
+//           calendar_type: 1,
+//           contact_email: "jayanthbr@digi9.co.in",
+//           contact_name: "Ajay Sharma",
+//           email_notification: true,
+//           encryption_type: "enhanced_encryption",
+//           focus_mode: true,
+//           host_video: true,
+//           join_before_host: true,
+//           meeting_authentication: true,
+//           meeting_invitees: [
+//             {
+//               email: "jayanthbr@digi9.co.in",
+//             },
+//           ],
+//           mute_upon_entry: true,
+//           participant_video: true,
+//           private_meeting: true,
+//           waiting_room: false,
+//           watermark: false,
+//           continuous_meeting_chat: {
+//             enable: true,
+//           },
+//         },
+//         start_time: new Date().toLocaleDateString(),
+//         timezone: "Asia/Kolkata",
+//         topic: "Zoom Meeting for YT Demo",
+//         type: 2,
+//       },
+//       {
+//         headers: {
+//           "Content-Type": "application/json",
+//           "Authorization": `Bearer ${zoomAccessToken}`
+//         }
+//       }
+//     );
+
+//     // Access response data with response.data
+
+//     const jsonResponse = response.data;
+
+//     console.log("generateZoomMeeting JsonResponse --> ", jsonResponse);
+//     res.status(200).json({
+//       message: "Zoom meeting created successfully",
+//       data: jsonResponse,
+//     });
+//   } catch (error) {
+//     console.log("generateZoomMeeting Error --> ", error);
+//     throw error;
+//   }
+// };
+
+
+
+exports.getALLUpcomingMeetings = async (req, res) => {
   try {
-    const zoomAccessToken = await generateZoomAccessToken();
+    const { userId } = req.params;
+    const user = await User.findById(userId);
 
-    const response = await axios.post(
-      'https://api.zoom.us/v2/users/me/meetings',
-      {
-        agenda: "Zoom Meeting for YT Demo",
-        default_password: false,
-        duration: 60,
-        password: "12345",
-        settings: {
-          allow_multiple_devices: true,
-          // alternative_hosts: "jayanthbr@digi9.co.in",
-          // alternative_hosts_email_notification: true,
-          breakout_room: {
-            enable: true,
-            rooms: [
-              {
-                name: "room1",
-                participants: [
-                  "email1@gmail.com",
-                  "email2@gmail.com",
-                ],
-              },
-            ],
-          },
-          calendar_type: 1,
-          contact_email: "jayanthbr@digi9.co.in",
-          contact_name: "Ajay Sharma",
-          email_notification: true,
-          encryption_type: "enhanced_encryption",
-          focus_mode: true,
-          host_video: true,
-          join_before_host: true,
-          meeting_authentication: true,
-          meeting_invitees: [
-            {
-              email: "jayanthbr@digi9.co.in",
-            },
-          ],
-          mute_upon_entry: true,
-          participant_video: true,
-          private_meeting: true,
-          waiting_room: false,
-          watermark: false,
-          continuous_meeting_chat: {
-            enable: true,
-          },
-        },
-        start_time: new Date().toLocaleDateString(),
-        timezone: "Asia/Kolkata",
-        topic: "Zoom Meeting for YT Demo",
-        type: 2,
-      },
-      {
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${zoomAccessToken}`
+    let courseId = await Promise.all(user.subscription.map(async (subscription) => {
+      const course = await Course.findById(subscription.course_enrolled);
+      if (course.isKycRequired) {
+        if (user.kyc_status != "rejected" && user.kyc_status != "not-applied") {
+          return course._id
+        } else {
+          return null
         }
+      } else {
+        return course._id
       }
-    );
 
-    // Access response data with response.data
+    }))
 
-    const jsonResponse = response.data;
-
-    console.log("generateZoomMeeting JsonResponse --> ", jsonResponse);
+    courseId = courseId.filter((course) => course !== null);
+    const meetings = await Meeting.find(
+      {
+        course_Ref: { $in: courseId },
+        meeting_time: {
+          $gte: new Date(),
+        },
+      }
+    ).populate("course_Ref");
     res.status(200).json({
-      message: "Zoom meeting created successfully",
-      data: jsonResponse,
+      message: "All upcoming meetings fetched successfully",
+      data: meetings,
     });
   } catch (error) {
-    console.log("generateZoomMeeting Error --> ", error);
-    throw error;
+    console.error("getALLUpcomingMeetings Error --> ", error);
+    res.status(500).json({
+      message: "Error fetching meetings",
+      error: error.message
+    });
+  }
+};
+
+exports.generateMeetingSugnature = async (req, res) => {
+  try {
+    let body = req.body
+    if (!body) body = {}
+    body.expirationSeconds = 172800;
+    const requestBody = coerceRequestBody(body);
+    const validationErrors = validateRequest(requestBody, propValidations, schemaValidations)
+
+    if (validationErrors.length > 0) {
+      return res.status(400).json({ errors: validationErrors })
+    }
+
+    const { meetingNumber, role, expirationSeconds, videoWebRtcMode } = requestBody
+    const iat = Math.floor(Date.now() / 1000) - 30
+    const exp = expirationSeconds ? iat + expirationSeconds : iat + 60 * 60 * 2
+    const oHeader = { alg: 'HS256', typ: 'JWT' }
+
+    const oPayload = {
+      appKey: process.env.ZOOM_MEETING_SDK_KEY,
+      sdkKey: process.env.ZOOM_MEETING_SDK_KEY,
+      mn: meetingNumber,
+      role,
+      iat,
+      exp,
+      tokenExp: exp,
+      video_webrtc_mode: videoWebRtcMode || 0
+    }
+    console.log(oPayload)
+    const sHeader = JSON.stringify(oHeader)
+    const sPayload = JSON.stringify(oPayload)
+    const sdkJWT = KJUR.jws.JWS.sign('HS256', sHeader, sPayload, process.env.ZOOM_MEETING_SDK_SECRET)
+    return res.json({ signature: sdkJWT, sdkKey: process.env.ZOOM_MEETING_SDK_KEY })
+
+  } catch (error) {
+    res.status(500).json({ success: false, error: "Failed to generate Zoom signature.".error });
+  }
+};
+const propValidations = {
+  role: inNumberArray([0, 1]),
+  expirationSeconds: isBetween(1800, 172800),
+  videoWebRtcMode: inNumberArray([0, 1])
+}
+
+const schemaValidations = [isRequiredAllOrNone(['meetingNumber', 'role'])]
+
+const coerceRequestBody = (body) => ({
+  ...body,
+  ...['role', 'expirationSeconds', 'videoWebRtcMode'].reduce(
+    (acc, cur) => ({ ...acc, [cur]: typeof body[cur] === 'string' ? parseInt(body[cur]) : body[cur] }),
+    {}
+  )
+})
+
+exports.createZoomMeetingMeOrOtherHost = async (req, res) => {
+  try {
+    const {
+      topic,
+      agenda,
+      password,
+      meeting_type = "me",
+      hostId,
+      courseIds,
+      startTime,
+      duration,
+
+    } = req.body;
+
+    /* ---------- 1. basic field validation --------------------------------- */
+    const missing = [];
+    if (!Array.isArray(courseIds) || courseIds.length == 0) missing.push("courseId");
+    if (!topic) missing.push("topic");
+    if (!startTime) missing.push("startTime");
+    if (!duration) missing.push("duration");
+
+    if (missing.length)
+      return res
+        .status(400)
+        .json({ msg: `Missing fields: ${missing.join(", ")}` });
+
+
+    let zoomPayload = {};
+    if (meeting_type == "other_host" && !hostId) {
+      return res.status(400).json({ msg: "hostId is required when meeting_type is other_host" });
+    }
+    if (meeting_type == "me") {
+      zoomPayload = {
+        topic,
+        type: 2,
+        start_time: startTime, // must include offset or 'Z'
+        duration,
+        timezone: process.env.TZ || "Asia/Kolkata",
+        agenda,
+        password,
+        settings: {
+          join_before_host: false,
+          mute_upon_entry: true,
+          waiting_room: true,
+          auto_recording: "cloud",
+        },
+      };
+    } else {
+      zoomPayload = {
+        topic,
+        type: 2,
+        start_time: startTime, // must include offset or 'Z'
+        duration,
+        timezone: process.env.TZ || "Asia/Kolkata",
+        agenda,
+        password,
+        settings: {
+          join_before_host: false,
+          mute_upon_entry: true,
+          waiting_room: true,
+          auto_recording: "cloud",
+        },
+        schedule_for: hostId,
+      };
+    }
+
+    const accessToken = await getZoomAccessToken();
+
+    // const hostDetails = await axios.get(`https://api.zoom.us/v2/users/me`, {
+    //   headers: { Authorization: `Bearer ${accessToken}` },
+    // });
+    let zoomPath = '';
+    console.log("zoomPayload", zoomPayload);
+    if (meeting_type == "other_host") {
+      zoomPath = `https://api.zoom.us/v2/users/${hostId}/meetings`;
+    } else {
+      zoomPath = `https://api.zoom.us/v2/users/me/meetings`;
+    }
+
+    let responseData = {};
+    try {
+      ({ data: responseData } = await axios.post(zoomPath, zoomPayload, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }));
+    } catch (zoomErr) {
+      console.error("Zoom 400/502 ►", zoomErr?.response?.data || zoomErr);
+      return res
+        .status(502)
+        .json({ error: zoomErr?.response?.data?.message || "Zoom error" });
+    }
+
+    const meetingDoc = await Meeting.create({
+      meeting_title: topic,
+      meeting_agenda: agenda,
+      assistant_id: responseData?.assistant_id || null,
+      host_email: responseData?.host_email || null,
+      meeting_url: responseData.join_url,
+      meeting_time: new Date(startTime),
+      meeting_duration: duration,
+      course_Ref: courseIds,
+      zoom_meeting_id: responseData.id,
+      zoom_passcode: responseData.password,
+      zoom_start_url: responseData.start_url,
+      zoom_join_url: responseData.join_url,
+      zoom_type: responseData.type,
+      meeting_type: meeting_type,
+
+    });
+
+    res.status(201).json({
+      meeting: meetingDoc,
+      sdkInfo: {
+        meetingNumber: responseData.id.toString(),
+        passcode: responseData.password,
+      },
+    });
+  } catch (err) {
+    console.error("Server error ►", err);
+    res.status(500).json({ error: "Unable to create Zoom meeting" });
+  }
+};
+
+
+exports.deleteMeetingById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const meeting = await Meeting.findById(id);
+    if (!meeting) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Meeting not found" });
+    }
+    const accessToken = await getZoomAccessToken();
+    let zoomResponse = {}
+    const zoomPath = `https://api.zoom.us/v2//meetings/${meeting.zoom_meeting_id}?&schedule_for_reminder=true&cancel_meeting_reminder=true`;
+    try {
+      ({ data: responseData } = await axios.delete(zoomPath, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }));
+      console.log("Zoom delete response", responseData);
+      await Meeting.findByIdAndDelete(id);
+    } catch (zoomErr) {
+      console.error("Zoom 400/502 ►", zoomErr?.response?.data || zoomErr);
+      return res
+        .status(502)
+        .json({ error: zoomErr?.response?.data?.message || "Zoom error" });
+    }
+
+    res
+      .status(200)
+      .json({ success: true, message: "Meeting deleted successfully" });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error deleting meeting",
+      error: error.message,
+    });
+  }
+};
+
+exports.updateMeetingById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      topic,
+      agenda,
+      password,
+      hostId,
+      meeting_type = "me",
+      courseIds,
+      startTime,
+      duration,
+    } = req.body;
+    const meeting = await Meeting.findById(id);
+    if (!meeting) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Meeting not found" });
+    }
+    const accessToken = await getZoomAccessToken();
+    const zoomPath = `https://api.zoom.us/v2/meetings/${meeting.zoom_meeting_id}`;
+    let zoomPayload = {
+
+    }
+    if (meeting_type == "other_host" && !hostId) {
+      return res
+        .status(400)
+        .json({ error: "Please provide hostId" });
+    }
+    if (meeting_type == "me") {
+      zoomPayload = {
+        topic,
+        agenda,
+        password,
+        start_time: startTime, // must include offset or 'Z'
+        duration,
+      };
+    } else {
+      zoomPayload = {
+        topic,
+        agenda,
+        password,
+        start_time: startTime, // must include offset or 'Z'
+        duration,
+        schedule_for: hostId,
+      };
+    }
+    let responseData = {};
+
+    try {
+      ({ data: responseData } = await axios.patch(zoomPath, zoomPayload, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }));
+    } catch (zoomErr) {
+      console.error("Zoom 400/502 ►", zoomErr?.response?.data || zoomErr);
+      return res
+        .status(502)
+        .json({ error: zoomErr?.response?.data?.message || "Zoom error" });
+    }
+    let updatedMeetingDetails = {}
+    try {
+      ({ data: updatedMeetingDetails } = await axios.get(`https://api.zoom.us/v2/meetings/${meeting.zoom_meeting_id}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }));
+    } catch (zoomErr) {
+      console.error("Zoom 400/502 ►", zoomErr?.response?.data || zoomErr);
+      return res
+        .status(502)
+        .json({ error: zoomErr?.response?.data?.message || "Zoom error" });
+    }
+
+    console.log("Zoom update response", updatedMeetingDetails);
+    const updatedMeeting = await Meeting.findByIdAndUpdate(
+      id,
+      {
+        meeting_title: topic,
+        meeting_agenda: agenda,
+        assistant_id: updatedMeetingDetails?.assistant_id || null,
+        host_email: updatedMeetingDetails?.host_email || null,
+        meeting_url: updatedMeetingDetails.join_url,
+        meeting_time: new Date(startTime),
+        meeting_duration: duration,
+        course_Ref: courseIds,
+        zoom_meeting_id: updatedMeetingDetails.id,
+        zoom_passcode: updatedMeetingDetails.password,
+        zoom_start_url: updatedMeetingDetails.start_url,
+        zoom_join_url: updatedMeetingDetails.join_url,
+        zoom_type: updatedMeetingDetails.type,
+        meeting_type: meeting_type,
+      },
+      { new: true }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Meeting updated successfully",
+      data: updatedMeeting,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error updating meeting",
+      error: error.message,
+    });
+  }
+};
+
+exports.getmeetingByHostEmail = async (req, res) => {
+  try {
+    const { hostEmail } = req.body;
+    const { upcoming } = req.query; // ?upcoming=true
+    let currentTime = new Date();
+    let meetings = [];
+    if (upcoming === "true") {
+      meetings = await Meeting.find({
+        host_email: hostEmail,
+        meeting_time: {
+          $gte: new Date(currentTime.getTime() - (24 * 60 * 60000))
+        }
+      }).sort({ meeting_time: 1 });
+      const activeMeetings = meetings.filter(meeting => {
+        const endTime = new Date(meeting.meeting_time.getTime() + (meeting.meeting_duration * 60000));
+        return endTime >= currentTime;
+      });
+      meetings = activeMeetings;
+      meetings = meetings.map((meeting) => {
+        return {
+          ...meeting._doc,
+          isPastMeeting: false
+        };
+      });
+    } else {
+      meetings = await Meeting.find({ host_email: hostEmail }).sort({
+        createdAt: -1,
+      });
+      const activeMeetings = meetings.filter(meeting => {
+        const endTime = new Date(meeting.meeting_time.getTime() + (meeting.meeting_duration * 60000));
+        return endTime >= currentTime;
+      });
+
+
+      meetings.map((meeting) => {
+        if (activeMeetings.indexOf(meeting) === -1) {
+          return {
+            ...meeting._doc,
+            isPastMeeting: true
+          }
+        } else {
+          return {
+            ...meeting._doc,
+            isPastMeeting: false
+          }
+        }
+      });
+    }
+    res.status(200).json({
+      success: true,
+      count: meetings.length,
+      data: meetings,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error getting meeting by host email",
+      error: error.message,
+    });
+  }
+};
+
+exports.bulkDeleteMeetings = async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Please provide an array of IDs" });
+    }
+    let results = [];
+    for (const id of ids) {
+      try {
+        const meeting = await Meeting.findById(id);
+        if (!meeting) {
+          results.push({ id, success: false, message: "Meeting not found" });
+          continue;
+        }
+        const accessToken = await getZoomAccessToken();
+        let zoomResponse = {}
+        const zoomPath = `https://api.zoom.us/v2//meetings/${meeting.zoom_meeting_id}?&schedule_for_reminder=true&cancel_meeting_reminder=true`;
+        try {
+          ({ data: responseData } = await axios.delete(zoomPath, {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          }));
+          console.log("Zoom delete response", responseData);
+          await Meeting.findByIdAndDelete(id);
+        } catch (zoomErr) {
+          console.error("Zoom 400/502 ►", zoomErr?.response?.data || zoomErr);
+          results.push({ id, success: false, message: zoomErr?.response?.data?.message || "Zoom error" });
+        }
+
+        results.push({ id, success: true, message: "Meeting deleted successfully" });
+      } catch (err) {
+        console.error(`Error deleting meeting with ID ${id}:`, err);
+        results.push({ id, success: false, message: err.message });
+        continue;
+      }
+    }
+    res.status(200).json({ success: true, results });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error deleting meeting",
+      error: error.message,
+    });
   }
 };
 
 exports.getUpcomingAndOngoingMeetings = async (req, res) => {
   try {
-    const { courseIds, studentId } = req.body;
+    const { courseIds } = req.body;
     const now = new Date();
     const fiveMinutesLater = new Date(now.getTime() + 5 * 60000);
 
@@ -406,7 +860,6 @@ exports.getUpcomingAndOngoingMeetings = async (req, res) => {
     // First get all meetings for these courses that might be relevant
     const meetings = await Meeting.find({
       course_Ref: { $in: courseIds },
-      students: { $in: [studentId] },
       $or: [
         // Meetings starting in next 5 minutes
         {
@@ -420,7 +873,7 @@ exports.getUpcomingAndOngoingMeetings = async (req, res) => {
           meeting_time: { $lte: now }
         }
       ]
-    }).populate("course_Ref students");
+    }).populate("course_Ref");
     // console.log("getUpcomingAndOngoingMeetings Meetings --> ", meetings);
 
     // Then filter in JavaScript to find ongoing meetings
@@ -450,94 +903,3 @@ exports.getUpcomingAndOngoingMeetings = async (req, res) => {
     });
   }
 }
-
-exports.getALLUpcomingMeetings = async (req, res) => {
-  try {
-    const { userId } = req.params;
-    const user = await User.findById(userId);
-
-    let courseId = await Promise.all(user.subscription.map(async (subscription) => {
-      const course = await Course.findById(subscription.course_enrolled);
-      if (course.isKycRequired) {
-        if (user.kyc_status != "rejected" && user.kyc_status != "not-applied") {
-          return course._id
-        } else {
-          return null
-        }
-      } else {
-        return course._id
-      }
-
-    }))
-
-    courseId = courseId.filter((course) => course !== null);
-    const meetings = await Meeting.find(
-      {
-        course_Ref: { $in: courseId },
-        meeting_time: {
-          $gte: new Date(),
-        },
-      }
-    ).populate("course_Ref students");
-    res.status(200).json({
-      message: "All upcoming meetings fetched successfully",
-      data: meetings,
-    });
-  } catch (error) {
-    console.error("getALLUpcomingMeetings Error --> ", error);
-    res.status(500).json({
-      message: "Error fetching meetings",
-      error: error.message
-    });
-  }
-};
-
-exports.generateMeetingSugnature = async (req, res) => {
-  try {
-    const requestBody = coerceRequestBody(req.body)
-    const validationErrors = validateRequest(requestBody, propValidations, schemaValidations)
-
-    if (validationErrors.length > 0) {
-      return res.status(400).json({ errors: validationErrors })
-    }
-
-    const { meetingNumber, role, expirationSeconds, videoWebRtcMode } = requestBody
-    const iat = Math.floor(Date.now() / 1000)
-    const exp = expirationSeconds ? iat + expirationSeconds : iat + 60 * 60 * 2
-    const oHeader = { alg: 'HS256', typ: 'JWT' }
-
-    const oPayload = {
-      appKey: process.env.ZOOM_MEETING_SDK_KEY,
-      sdkKey: process.env.ZOOM_MEETING_SDK_KEY,
-      mn: meetingNumber,
-      role,
-      iat,
-      exp,
-      tokenExp: exp,
-      video_webrtc_mode: videoWebRtcMode
-    }
-
-    const sHeader = JSON.stringify(oHeader)
-    const sPayload = JSON.stringify(oPayload)
-    const sdkJWT = KJUR.jws.JWS.sign('HS256', sHeader, sPayload, process.env.ZOOM_MEETING_SDK_SECRET)
-    return res.json({ signature: sdkJWT, sdkKey: process.env.ZOOM_MEETING_SDK_KEY })
-
-  } catch (error) {
-    res.status(500).json({ success: false, error: "Failed to generate Zoom signature.".error });
-  }
-};
-const propValidations = {
-  role: inNumberArray([0, 1]),
-  expirationSeconds: isBetween(1800, 172800),
-  videoWebRtcMode: inNumberArray([0, 1])
-}
-
-const schemaValidations = [isRequiredAllOrNone(['meetingNumber', 'role'])]
-
-const coerceRequestBody = (body) => ({
-  ...body,
-  ...['role', 'expirationSeconds', 'videoWebRtcMode'].reduce(
-    (acc, cur) => ({ ...acc, [cur]: typeof body[cur] === 'string' ? parseInt(body[cur]) : body[cur] }),
-    {}
-  )
-})
