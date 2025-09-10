@@ -867,9 +867,9 @@ exports.bulkDeleteMeetings = async (req, res) => {
             const student = await User.findById(studentId);
             if (student) {
               const studentNotification = await Notification.create({
-                title:`Meeting Cancelled ${topic}`,
-                description: agenda,
-                time: startTime,
+                title:`Meeting Cancelled ${meeting.meeting_title}`,
+                description: meeting.meeting_agenda,
+                time: meeting.meeting_time,
                 // image,
                 notificationType: "ZOOM MEETING",
                 user_ref: student._id,
@@ -879,7 +879,6 @@ exports.bulkDeleteMeetings = async (req, res) => {
               studentEmails.push(student.email);
             }
           }
-          studentEmails.push("jayanthbr@digi9.co.in");
           meetingCancelledMail(meeting, meeting.host_email, studentEmails);
           await Meeting.findByIdAndDelete(id);
         } catch (zoomErr) {
