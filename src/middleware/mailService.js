@@ -1565,7 +1565,7 @@ exports.meetingCancelledMail = async (meeting, hostEmail, studentEmails) => {
         // Mail to Host
         const hostMail = {
             from: fromMail,
-            to: "jayanthbychana@gmail.com",
+            to: hostEmail,
             subject: `Meeting Cancelled: ${meeting.meeting_title}`,
             html: `
       <div style="font-family: Arial, sans-serif; line-height:1.6;">
