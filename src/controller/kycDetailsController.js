@@ -1,4 +1,4 @@
-const { sendStudentKYCAcknowledgment, sendAdminKYCNofification, sendKYCApprovalEmail, sendKYCRejectionEmail } = require("../middleware/mailService");
+const { sendStudentKYCAcknowledgment, sendAdminKYCNofification, sendKYCApprovalEmail, sendKYCRejectionEmail, kycUpdatedMailToAdmins } = require("../middleware/mailService");
 const Kyc = require("../model/kycDetails");
 const User = require("../model/user_model");
 
@@ -367,8 +367,8 @@ exports.updateKycStatus = async (req, res) => {
     await user.save();
     if (status === "approved") {
       await sendKYCApprovalEmail(user.displayName, user.email);
-     
-    }else if (status === "rejected") {
+
+    } else if (status === "rejected") {
       await sendKYCRejectionEmail(user.displayName, user.email);
     }
     if (!updatedKyc) {
@@ -458,7 +458,7 @@ exports.updateKyc = async (req, res) => {
   try {
     const kycId = req.params.id;
     const {
-    id_proof,
+      id_proof,
       passport_photo,
       userref,
       date_of_birth,
@@ -489,9 +489,23 @@ exports.updateKyc = async (req, res) => {
     kyc.present_address = present_address || kyc.present_address;
     kyc.current_occupation = current_occupation || kyc.current_occupation;
     kyc.how_did_you_get_to_know_us = how_did_you_get_to_know_us || kyc.how_did_you_get_to_know_us;
-kyc.date_of_birth = date_of_birth || kyc.date_of_birth;
-kyc.userref = userref || kyc.userref;
+    kyc.date_of_birth = date_of_birth || kyc.date_of_birth;
+    kyc.userref = userref || kyc.userref;
     const updatedKyc = await kyc.save();
+
+    const user = await User.findById(kyc.userref);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+    const admins = await User.find({ role: "admin" });
+    await Promise.all(
+      admins.map(async (admin) => {
+        await kycUpdatedMailToAdmins(user, admin.email);
+      })
+    );
 
 
     if (!updatedKyc) {

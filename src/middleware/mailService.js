@@ -1664,3 +1664,46 @@ exports.meetingStartedMail = async (meeting, hostEmail, studentEmails) => {
     }
 };
 
+
+exports.kycUpdatedMailToAdmins = async (student, adminEmails) => {
+  try {
+    const mailOptions = {
+      from: fromMail,
+      to: adminEmails, // multiple admins can be passed as array
+      subject: `KYC Updated: ${student.displayName}`,
+      html: `
+      <div style="font-family: Arial, sans-serif; line-height:1.6;">
+        <h2 style="color:#2d6cdf; margin-bottom:8px;">KYC Updated Notification</h2>
+        <p>Dear Admin,</p>
+        <p>
+          The following student has updated their KYC details in the system:
+        </p>
+
+        <div style="padding:12px; border:1px solid #eee; border-radius:6px; background:#fafafa;">
+          <p><b>Name:</b> ${student.displayName}</p>
+          <p><b>Email:</b> ${student.email}</p>
+          <p><b>Phone:</b> ${student.phone || "N/A"}</p>
+          <p><b>Updated On:</b> ${new Date().toLocaleString()}</p>
+        </div>
+
+        <p>
+          Please log in to the admin portal to review and approve the updated KYC.
+        </p>
+
+        <p>
+          Regards,<br>
+          <strong>Team Mankavit Law Academy</strong><br>
+          <a href="${siteUrl}" target="_blank">${siteUrl}</a>
+        </p>
+      </div>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+
+    console.log(`KYC updated mail sent to admins for student: ${student.displayName}`);
+  } catch (error) {
+    console.error("Error sending KYC updated mail:", error);
+    throw error;
+  }
+};
