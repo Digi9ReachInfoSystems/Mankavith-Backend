@@ -807,13 +807,13 @@ exports.sendQuestionPaperDownloadAlert = async (userName, userEmail, userPhone, 
     const mailOptions = {
         from: fromMail,
         to: adminEmail,
-        subject: `Question Paper Downloaded`,
+        subject: `Question Paper Page Visited`,
         html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
-        <h2 style="color: #2d3748; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">Question Paper Download Alert</h2>
+        <h2 style="color: #2d3748; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">Question Paper Download Page Visited Alert</h2>
         
         <div style="background-color: #f8f9fa; border-radius: 8px; padding: 15px; margin: 20px 0;">
-          <h3 style="color: #4a5568; margin-top: 0;">Download Details</h3>
+          <h3 style="color: #4a5568; margin-top: 0;">User Details</h3>
           <table style="width: 100%; border-collapse: collapse;">
             <tr>
               <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; width: 40%;"><strong>User Name:</strong></td>

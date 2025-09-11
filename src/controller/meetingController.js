@@ -995,3 +995,20 @@ exports.getOngoingMeetingsByCourse = async (req, res) => {
     });
   }
 };
+
+app.post('/webhook', (req, res) => {
+  console.log('Webhook received!');
+  console.log('Event:', req.headers['x-zm-event-type']); // The event type header
+  console.log('Payload:', JSON.stringify(req.body, null, 2)); // The full event payload
+
+  // IMPORTANT: You must respond with a 200 status code to acknowledge receipt.
+  res.status(200).send('Webhook received successfully');
+});
+
+// Endpoint for initial webhook validation (Step 4)
+app.get('/webhook', (req, res) => {
+  // This handles the initial verification challenge
+  const challenge = req.query.challenge;
+  console.log('Received challenge:', challenge);
+  res.status(200).send(challenge);
+});
