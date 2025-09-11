@@ -137,6 +137,7 @@ exports.getAllmeetings = async (req, res) => {
     // Optional filters ?courseId=…&from=2025-05-01&to=2025-05-31
     const { courseId, from, to, hostEmail, isSuperAdmin } = req.query;
     const filter = {};
+    filter.isEnded = false;
     const currentTime = new Date();
     if (courseId) filter.course_Ref = courseId;
     if (from || to) filter.meeting_time = {};
@@ -146,6 +147,7 @@ exports.getAllmeetings = async (req, res) => {
       filter.host_email = hostEmail;
 
     }
+    
     // if (hostEmail) filter.host_email = hostEmail;
     console.log("filter", filter);
 
@@ -268,7 +270,7 @@ exports.getZoomSdkAccessToken = async (req, res) => {
 
 
 const base64 = require("base-64");
-const { meetingScheduledMail, meetingCancelledMail } = require("../middleware/mailService");
+const { meetingScheduledMail, meetingCancelledMail, meetingStartedMail } = require("../middleware/mailService");
 
 
 
@@ -406,6 +408,7 @@ exports.getALLUpcomingMeetings = async (req, res) => {
         meeting_time: {
           $gte: new Date(),
         },
+        isEnded: false
       }
     ).populate("course_Ref");
     res.status(200).json({
@@ -595,7 +598,7 @@ exports.createZoomMeetingMeOrOtherHost = async (req, res) => {
       const student = await User.findById(studentId);
       if (student) {
         const studentNotification = await Notification.create({
-          title:`Meeting Crea
+          title: `Meeting Crea
           ted ${topic}`,
           description: agenda,
           time: startTime,
@@ -779,7 +782,8 @@ exports.getmeetingByHostEmail = async (req, res) => {
         host_email: hostEmail,
         meeting_time: {
           $gte: new Date(currentTime.getTime() - (24 * 60 * 60000))
-        }
+        },
+        isEnded: false
       }).sort({ meeting_time: 1 });
       const activeMeetings = meetings.filter(meeting => {
         const endTime = new Date(meeting.meeting_time.getTime() + (meeting.meeting_duration * 60000));
@@ -854,33 +858,8 @@ exports.bulkDeleteMeetings = async (req, res) => {
             headers: { Authorization: `Bearer ${accessToken}` },
           }));
           console.log("Zoom delete response", responseData);
-          let students = [];
-          for (const courseId of meeting.course_Ref) {
-            const course = await Course.findById(courseId);
-            if (course) {
-              students = students.concat(course.student_enrolled);
-            }
-          }
-          let uniqueStudentIds = [...new Set(students.map(id => id))];
-          let studentEmails = [];
-          for (const studentId of uniqueStudentIds) {
-            const student = await User.findById(studentId);
-            if (student) {
-              const studentNotification = await Notification.create({
-                title:`Meeting Cancelled ${meeting.meeting_title}`,
-                description: meeting.meeting_agenda,
-                time: meeting.meeting_time,
-                // image,
-                notificationType: "ZOOM MEETING",
-                user_ref: student._id,
-                read: false
-              })
-              await studentNotification.save();
-              studentEmails.push(student.email);
-            }
-          }
-          meetingCancelledMail(meeting, meeting.host_email, studentEmails);
-          await Meeting.findByIdAndDelete(id);
+
+          // await Meeting.findByIdAndDelete(id);
         } catch (zoomErr) {
           console.error("Zoom 400/502 ►", zoomErr?.response?.data || zoomErr);
           results.push({ id, success: false, message: zoomErr?.response?.data?.message || "Zoom error" });
@@ -914,6 +893,7 @@ exports.getUpcomingAndOngoingMeetings = async (req, res) => {
     // First get all meetings for these courses that might be relevant
     const meetings = await Meeting.find({
       course_Ref: { $in: courseIds },
+      isEnded: false,
       $or: [
         // Meetings starting in next 5 minutes
         {
@@ -960,7 +940,7 @@ exports.getUpcomingAndOngoingMeetings = async (req, res) => {
 
 
 exports.getOngoingMeetingsByCourse = async (req, res) => {
-   try {
+  try {
     const { courseId } = req.params; // pass courseId in route
     if (!courseId) {
       return res.status(400).json({ success: false, message: "courseId is required" });
@@ -971,6 +951,7 @@ exports.getOngoingMeetingsByCourse = async (req, res) => {
     // Step 1: fetch meetings for this course
     const meetings = await Meeting.find({
       course_Ref: courseId,
+      isEnded: false,
     }).populate("course_Ref", "courseName");
 
     // Step 2: filter by ongoing or upcoming (end >= now OR start >= now)
@@ -986,7 +967,7 @@ exports.getOngoingMeetingsByCourse = async (req, res) => {
       count: activeMeetings.length,
       data: activeMeetings,
     });
-  }catch (error) {
+  } catch (error) {
     console.error("Error fetching ongoing meetings:", error);
     return res.status(500).json({
       success: false,
@@ -996,22 +977,23 @@ exports.getOngoingMeetingsByCourse = async (req, res) => {
   }
 };
 
-// exports.handleZoomWebhook = (req, res) => {
-//   console.log('Webhook received!');
-//   console.log('Event:', req.headers['x-zm-event-type']); // The event type header
-//   console.log('Payload:', JSON.stringify(req.body, null, 2)); // The full event payload
+exports.handleZoomWebhookGet = (req, res) => {
+  console.log('Webhook received!');
+  console.log('Event:', req.headers['x-zm-event-type']); // The event type header
+  console.log('Payload:', JSON.stringify(req.body, null, 2)); // The full event payload
 
-//   // IMPORTANT: You must respond with a 200 status code to acknowledge receipt.
-//   res.status(200).send('Webhook received successfully');
-// };
+  // IMPORTANT: You must respond with a 200 status code to acknowledge receipt.
+  res.status(200).send('Webhook received successfully');
+};
 
 // Endpoint for initial webhook validation (Step 4)
-exports.handleZoomWebhook = (req, res) => {
+exports.handleZoomWebhook = async (req, res) => {
+  console.log("Webhook received!");
 
   var response
 
-  console.log(req.headers)
-  console.log(req.body)
+  // console.log("one", req.headers)
+  // console.log("two", req.body)
 
   // construct the message string
   const message = `v0:${req.headers['x-zm-request-timestamp']}:${JSON.stringify(req.body)}`
@@ -1020,12 +1002,15 @@ exports.handleZoomWebhook = (req, res) => {
 
   // hash the message string with your Webhook Secret Token and prepend the version semantic
   const signature = `v0=${hashForVerify}`
+  console.log(signature)
+  console.log(req.headers['x-zm-signature'])
+  // console.log(req.body)
 
   // you validating the request came from Zoom https://marketplace.zoom.us/docs/api-reference/webhook-reference#notification-structure
   if (req.headers['x-zm-signature'] === signature) {
 
     // Zoom validating you control the webhook endpoint https://marketplace.zoom.us/docs/api-reference/webhook-reference#validate-webhook-endpoint
-    if(req.body.event === 'endpoint.url_validation') {
+    if (req.body.event === 'endpoint.url_validation') {
       const hashForValidate = crypto.createHmac('sha256', process.env.ZOOM_WEBHOOK_SECRET_TOKEN).update(req.body.payload.plainToken).digest('hex')
 
       response = {
@@ -1040,6 +1025,77 @@ exports.handleZoomWebhook = (req, res) => {
 
       res.status(response.status)
       res.json(response.message)
+    } else if (req.body.event === 'meeting.deleted') {
+      const meetingId = req.body.payload.object.id
+
+      const meeting = await Meeting.findOne({ zoom_meeting_id: meetingId })
+      let students = [];
+      for (const courseId of meeting.course_Ref) {
+        const course = await Course.findById(courseId);
+        if (course) {
+          students = students.concat(course.student_enrolled);
+        }
+      }
+      let uniqueStudentIds = [...new Set(students.map(id => id))];
+      let studentEmails = [];
+      for (const studentId of uniqueStudentIds) {
+        const student = await User.findById(studentId);
+        if (student) {
+          const studentNotification = await Notification.create({
+            title: `Meeting Cancelled ${meeting.meeting_title}`,
+            description: meeting.meeting_agenda,
+            time: meeting.meeting_time,
+            // image,
+            notificationType: "ZOOM MEETING",
+            user_ref: student._id,
+            read: false
+          })
+          await studentNotification.save();
+          studentEmails.push(student.email);
+        }
+      }
+      meetingCancelledMail(meeting, meeting.host_email, studentEmails);
+
+
+      await Meeting.findByIdAndDelete({ zoom_meeting_id: meetingId })
+
+      response = { message: 'Meeting deleted from Zoom Webhook sample.', status: 200 }
+    } else if (req.body.event === 'meeting.started') {
+      const meetingId = req.body.payload.object.id
+      const meetingDoc = await Meeting.findOne({ zoom_meeting_id: meetingId })
+      const courseIds = meetingDoc.course_Ref
+      let students = [];
+      for (const courseId of courseIds) {
+        const course = await Course.findById(courseId);
+        if (course) {
+          students = students.concat(course.student_enrolled);
+        }
+      }
+      let uniqueStudentIds = [...new Set(students.map(id => id))];
+      let studentEmails = [];
+      for (const studentId of uniqueStudentIds) {
+        const student = await User.findById(studentId);
+        if (student) {
+          const studentNotification = await Notification.create({
+            title: `Meeting Crea
+          ted ${topic}`,
+            description: agenda,
+            time: startTime,
+            // image,
+            notificationType: "ZOOM MEETING",
+            user_ref: student._id,
+            read: false
+          })
+          await studentNotification.save();
+          studentEmails.push(student.email);
+        }
+      }
+      meetingStartedMail(meetingDoc, meetingDoc.host_email, studentEmails);
+
+    } else if (req.body.event === 'meeting.ended') {
+      const meetingId = req.body.payload.object.id
+      const meetingDoc = await Meeting.findOneAndUpdate({ zoom_meeting_id: meetingId }, { $set: { is_ended: true } }, { new: true })
+      console.log(meetingDoc)
     } else {
       response = { message: 'Authorized request to Zoom Webhook sample.', status: 200 }
 

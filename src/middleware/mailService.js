@@ -1621,3 +1621,46 @@ exports.meetingCancelledMail = async (meeting, hostEmail, studentEmails) => {
     }
 };
 
+exports.meetingStartedMail = async (meeting, hostEmail, studentEmails) => {
+    try {
+        const formattedDate = new Date(meeting.meeting_time).toLocaleString();
+       
+        // Mail to Host
+
+        // Mail to Students
+        const studentMail = {
+            from: fromMail,
+            bcc: studentEmails, // bcc so all don’t see each other
+            subject: `Meeting Started: ${meeting.meeting_title}`,
+            html: `
+      <div style="font-family: Arial, sans-serif; line-height:1.6;">
+        <h2> Meeting Strted</h2>
+        <p>Dear Student,</p>
+        <p>Meeting has started. Please find the details below:</p>
+
+        <div style="padding:12px; border:1px solid #eee; border-radius:6px; background:#fafafa;">
+          <p><b>Title:</b> ${meeting.meeting_title}</p>
+          <p><b>Agenda:</b> ${meeting.meeting_agenda}</p>
+          <p><b>Duration:</b> ${meeting.meeting_duration} minutes</p>
+        </div>
+
+        <p>
+         Regards,<br>
+         <strong>Team Mankavit Law Academy</strong><br>
+         <a href="${siteUrl}">${siteUrl}</a>
+        </p>
+        
+      </div>
+      `
+        };
+
+        await transporter.sendMail(hostMail);
+        await transporter.sendMail(studentMail);
+
+        console.log(`Meeting scheduled emails sent for: ${meeting.meeting_title}`);
+    } catch (error) {
+        console.error("Error sending meeting scheduled mail:", error);
+        throw error;
+    }
+};
+

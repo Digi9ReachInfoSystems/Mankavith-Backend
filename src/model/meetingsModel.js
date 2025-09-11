@@ -50,6 +50,10 @@ const meetingSchema = new mongoose.Schema({
     enum:["me","other_host",],
     default:"me"
   },
+  isEnded: {
+    type: Boolean,
+    default: false,
+  },
 }, { timestamps: true });
 
 module.exports = mongoose.model("Meeting", meetingSchema);
