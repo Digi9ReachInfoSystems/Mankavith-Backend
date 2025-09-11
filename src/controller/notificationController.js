@@ -67,7 +67,7 @@ exports.getUserNotifications = async (req, res) => {
       return res.status(400).json({ message: 'Invalid User ID' });
     }
 
-    const notifications = await UserNotification.find({ user_ref: userId })
+    const notifications = await UserNotification.find({ user_ref: userId})
       .sort({ createdAt: -1 })  // use createdAt from timestamps
       .select('-__v');          // optional: clean up response
 
