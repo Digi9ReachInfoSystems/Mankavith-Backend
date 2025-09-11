@@ -858,35 +858,35 @@ exports.bulkDeleteMeetings = async (req, res) => {
             headers: { Authorization: `Bearer ${accessToken}` },
           }));
           console.log("Zoom delete response", responseData);
-          let students = [];
-          for (const courseId of meeting.course_Ref) {
-            const course = await Course.findById(courseId);
-            if (course) {
-              students = students.concat(course.student_enrolled);
-            }
-          }
-          let uniqueStudentIds = [...new Set(students.map(id => id))];
-          let studentEmails = [];
-          for (const studentId of uniqueStudentIds) {
-            const student = await User.findById(studentId);
-            if (student) {
-              const studentNotification = await Notification.create({
-                title: `Meeting Cancelled ${meeting.meeting_title}`,
-                description: meeting.meeting_agenda,
-                time: meeting.meeting_time,
-                // image,
-                notificationType: "ZOOM MEETING",
-                user_ref: student._id,
-                read: false
-              })
-              await studentNotification.save();
-              studentEmails.push(student.email);
-            }
-          }
-          meetingCancelledMail(meeting, meeting.host_email, studentEmails);
+          // let students = [];
+          // for (const courseId of meeting.course_Ref) {
+          //   const course = await Course.findById(courseId);
+          //   if (course) {
+          //     students = students.concat(course.student_enrolled);
+          //   }
+          // }
+          // let uniqueStudentIds = [...new Set(students.map(id => id))];
+          // let studentEmails = [];
+          // for (const studentId of uniqueStudentIds) {
+          //   const student = await User.findById(studentId);
+          //   if (student) {
+          //     const studentNotification = await Notification.create({
+          //       title: `Meeting Cancelled ${meeting.meeting_title}`,
+          //       description: meeting.meeting_agenda,
+          //       time: meeting.meeting_time,
+          //       // image,
+          //       notificationType: "ZOOM MEETING",
+          //       user_ref: student._id,
+          //       read: false
+          //     })
+          //     await studentNotification.save();
+          //     studentEmails.push(student.email);
+          //   }
+          // }
+          // meetingCancelledMail(meeting, meeting.host_email, studentEmails);
 
 
-          await Meeting.findByIdAndDelete(id);
+          // await Meeting.findByIdAndDelete(id);
         } catch (zoomErr) {
           console.error("Zoom 400/502 ►", zoomErr?.response?.data || zoomErr);
           results.push({ id, success: false, message: zoomErr?.response?.data?.message || "Zoom error" });
