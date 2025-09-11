@@ -137,7 +137,6 @@ exports.getAllmeetings = async (req, res) => {
     // Optional filters ?courseId=…&from=2025-05-01&to=2025-05-31
     const { courseId, from, to, hostEmail, isSuperAdmin } = req.query;
     const filter = {};
-    filter.isEnded = false;
     const currentTime = new Date();
     if (courseId) filter.course_Ref = courseId;
     if (from || to) filter.meeting_time = {};
@@ -488,6 +487,7 @@ exports.createZoomMeetingMeOrOtherHost = async (req, res) => {
       courseIds,
       startTime,
       duration,
+      autoRecord = false,
 
     } = req.body;
 
@@ -518,10 +518,11 @@ exports.createZoomMeetingMeOrOtherHost = async (req, res) => {
         agenda,
         password,
         settings: {
+          email_notification: false,
           join_before_host: false,
           mute_upon_entry: true,
           waiting_room: true,
-          auto_recording: "cloud",
+          auto_recording: autoRecord ? "cloud" : "none",
         },
       };
     } else {
@@ -534,14 +535,36 @@ exports.createZoomMeetingMeOrOtherHost = async (req, res) => {
         agenda,
         password,
         settings: {
+          email_notification: false,
           join_before_host: false,
           mute_upon_entry: true,
           waiting_room: true,
-          auto_recording: "cloud",
+          auto_recording: autoRecord ? "cloud" : "none",
         },
         schedule_for: hostId,
       };
     }
+
+    //  else if (meeting_type == "both") {
+    //   zoomPayload = {
+    //     topic,
+    //     type: 2,
+    //     start_time: startTime, // must include offset or 'Z'
+    //     duration,
+    //     timezone: process.env.TZ || "Asia/Kolkata",
+    //     agenda,
+    //     password,
+    //     settings: {
+            //  email_notification: false,
+    //       join_before_host: false,
+    //       mute_upon_entry: true,
+    //       waiting_room: true,
+    //       auto_recording: autoRecord ? "cloud" : "none",
+    //       alternative_hosts: hostId,
+    //     },
+    //   };
+
+    // }
 
     const accessToken = await getZoomAccessToken();
 
@@ -555,6 +578,10 @@ exports.createZoomMeetingMeOrOtherHost = async (req, res) => {
     } else {
       zoomPath = `https://api.zoom.us/v2/users/me/meetings`;
     }
+    // else if (meeting_type == "both") {
+    //   zoomPath = `https://api.zoom.us/v2/users/me/meetings`;
+    // } 
+
 
     let responseData = {};
     try {
@@ -783,7 +810,6 @@ exports.getmeetingByHostEmail = async (req, res) => {
         meeting_time: {
           $gte: new Date(currentTime.getTime() - (24 * 60 * 60000))
         },
-        isEnded: false
       }).sort({ meeting_time: 1 });
       const activeMeetings = meetings.filter(meeting => {
         const endTime = new Date(meeting.meeting_time.getTime() + (meeting.meeting_duration * 60000));
@@ -1142,5 +1168,23 @@ exports.handleZoomWebhook = async (req, res) => {
 
     res.status(response.status)
     res.json(response)
+  }
+}
+
+exports.toggleIsEndedMeeting = async (req, res) => {
+  try {
+    const { meetingId } = req.params;
+    const existingMeeting = await Meeting.findOne({ _id: meetingId });
+    if (!existingMeeting) {
+      return res.status(404).json({ success: false, message: "Meeting not found" });
+    }
+    const meeting = await Meeting.findOneAndUpdate({ _id: meetingId }, { $set: { isEnded: !existingMeeting.isEnded } }, { new: true })
+    if (!meeting) {
+      return res.status(404).json({ success: false, message: "Meeting not found" });
+    }
+    res.status(200).json({ success: true, message: "Meeting ended successfully", data: meeting });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 }

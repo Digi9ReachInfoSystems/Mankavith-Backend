@@ -1238,12 +1238,12 @@ exports.getOngoingCourses = async (req, res) => {
         .status(404)
         .json({ success: false, message: "User not found" });
     }
-    if (user.kyc_status !== "approved")
-      return res.status(200).json({
-        success: true,
-        enrolledCourses: [],
-        message: "Please complete kyc to view Course",
-      });
+    // if (user.kyc_status !== "approved")
+    //   return res.status(200).json({
+    //     success: true,
+    //     enrolledCourses: [],
+    //     message: "Please complete kyc to view Course",
+    //   });
     if (!user.subscription)
       return res.status(200).json({ success: true, enrolledCourses: [] });
     const userProgress = await UserProgress.findOne({ user_id: userId });
@@ -1315,12 +1315,12 @@ exports.getCompletedCourses = async (req, res) => {
         .status(404)
         .json({ success: false, message: "User not found" });
     }
-    if (user.kyc_status !== "approved")
-      return res.status(200).json({
-        success: true,
-        enrolledCourses: [],
-        message: "Please complete kyc to view Course",
-      });
+    // if (user.kyc_status !== "approved")
+    //   return res.status(200).json({
+    //     success: true,
+    //     enrolledCourses: [],
+    //     message: "Please complete kyc to view Course",
+    //   });
     if (!user.subscription)
       return res.status(200).json({ success: true, enrolledCourses: [] });
     const userProgress = await UserProgress.findOne({ user_id: userId });

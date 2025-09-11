@@ -47,7 +47,7 @@ const meetingSchema = new mongoose.Schema({
   meeting_type:{
     type:String,
     required:true,
-    enum:["me","other_host",],
+    enum:["me","other_host","both"],
     default:"me"
   },
   isEnded: {
