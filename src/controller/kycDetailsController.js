@@ -223,6 +223,12 @@ exports.createKyc = async (req, res) => {
       user.kycRef = existingKyc._id;
       user.kyc_status = "pending";
       await user.save();
+      const admins = await User.find({ role: "admin" });
+      await Promise.all(
+        admins.map(async (admin) => {
+          await kycUpdatedMailToAdmins(user, admin.email);
+        })
+      );
 
       return res.status(200).json({
         success: true,

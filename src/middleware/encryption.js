@@ -1,7 +1,7 @@
 module.exports = (encrypt, decrypt) => {
     return {
         decryptRequestBody: (req, res, next) => {
-            console.log("decrypting",req.path)
+            // console.log("decrypting",req.path)
             // add paths to skip decryption
             const excludedRoutes = [
                 // '/',
@@ -27,7 +27,7 @@ module.exports = (encrypt, decrypt) => {
         },
         encryptResponseBody: (req, res, next) => {
             const oldJson = res.json;
-            console.log("encrypting",req.path)
+            // console.log("encrypting",req.path)
             res.json = async (body) => {
                  // add paths to skip encryption
                 const excludedRoutes = [
