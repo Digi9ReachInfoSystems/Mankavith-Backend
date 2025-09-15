@@ -51,7 +51,7 @@ const KycSchema = new mongoose.Schema({
 
     current_occupation: { type: String },
     how_did_you_get_to_know_us: { type: String },
-    terms : { type: Boolean, required: false, default: true},
+    
 
 },
   { toJSON: { virtuals: true }, toObject: { virtuals: true } }
