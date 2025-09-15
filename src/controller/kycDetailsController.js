@@ -279,6 +279,16 @@ function getAgeFromDOB(dob) {
 //   }
 // };
 
+// helper to coerce truthy form values to boolean
+const toBool = (v) => {
+  if (typeof v === 'boolean') return v;
+  if (typeof v === 'number') return v === 1;
+  if (typeof v === 'string') {
+    const s = v.trim().toLowerCase();
+    return s === 'true' || s === '1' || s === 'yes' || s === 'on';
+  }
+  return false;
+};
 
 exports.createKyc = async (req, res) => {
   try {
@@ -289,14 +299,14 @@ exports.createKyc = async (req, res) => {
       fathers_occupation,
       present_address,
       current_occupation,
-      how_did_you_get_to_know_us
+      how_did_you_get_to_know_us,
+      terms
     } = req.body;
 
-    // Accept files from Multer OR strings from body
+    // files (if using Multer .fields)
     const idProofFile = req.files?.id_proof?.[0];
     const passportPhotoFile = req.files?.passport_photo?.[0];
 
-    // if you uploaded to disk/cloud, you may have .path/.location/.filename
     const id_proof = idProofFile
       ? (idProofFile.location || idProofFile.path || idProofFile.filename)
       : req.body.id_proof;
@@ -305,7 +315,10 @@ exports.createKyc = async (req, res) => {
       ? (passportPhotoFile.location || passportPhotoFile.path || passportPhotoFile.filename)
       : req.body.passport_photo;
 
-    // Validate required presence AFTER resolving files
+    // 🔧 FIX: normalize terms
+    const termsAccepted = toBool(terms);
+
+    // presence validation (after resolving files)
     if (
       !id_proof ||
       !passport_photo ||
@@ -315,12 +328,12 @@ exports.createKyc = async (req, res) => {
       !fathers_occupation ||
       !present_address ||
       !current_occupation ||
-      !how_did_you_get_to_know_us
+      !how_did_you_get_to_know_us ||
+      !termsAccepted                  // <— require a checked box
     ) {
       return res.status(400).json({ success: false, message: "All fields are required" });
     }
 
-    // Validate DOB (format), but DO NOT enforce an age gate
     const dob = new Date(date_of_birth);
     if (isNaN(dob.getTime())) {
       return res.status(400).json({ success: false, message: "Invalid date_of_birth" });
@@ -338,6 +351,7 @@ exports.createKyc = async (req, res) => {
       existingKyc.current_occupation = current_occupation;
       existingKyc.how_did_you_get_to_know_us = how_did_you_get_to_know_us;
       existingKyc.status = "pending";
+      existingKyc.terms = termsAccepted;      // <— store boolean
 
       const updatedKyc = await existingKyc.save();
 
@@ -346,12 +360,9 @@ exports.createKyc = async (req, res) => {
       user.kycRef = existingKyc._id;
       user.kyc_status = "pending";
       await user.save();
+
       const admins = await User.find({ role: "admin" });
-      await Promise.all(
-        admins.map(async (admin) => {
-          await kycUpdatedMailToAdmins(user, admin.email);
-        })
-      );
+      await Promise.all(admins.map((admin) => kycUpdatedMailToAdmins(user, admin.email)));
 
       return res.status(200).json({
         success: true,
@@ -371,9 +382,10 @@ exports.createKyc = async (req, res) => {
       present_address,
       current_occupation,
       how_did_you_get_to_know_us,
+      terms: termsAccepted,              // <— store boolean
       status: "pending"
     });
-
+console.log("Creating new KYC:", newKyc);
     const savedKyc = await newKyc.save();
 
     const user = await User.findById(userref);
@@ -385,11 +397,9 @@ exports.createKyc = async (req, res) => {
 
     await sendStudentKYCAcknowledgment(user.displayName, user.email);
     const userAdmin = await User.find({ role: "admin" });
-    await Promise.all(
-      userAdmin.map((admin) =>
-        sendAdminKYCNofification(user.displayName, user.email, admin.email)
-      )
-    );
+    await Promise.all(userAdmin.map((admin) =>
+      sendAdminKYCNofification(user.displayName, user.email, admin.email)
+    ));
 
     return res.status(201).json({
       success: true,
@@ -405,7 +415,6 @@ exports.createKyc = async (req, res) => {
     });
   }
 };
-
 
 // Get all KYC records with optional status filter
 exports.getAllKyc = async (req, res) => {

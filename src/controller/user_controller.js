@@ -1484,6 +1484,7 @@ exports.createStudent = async (req, res) => {
       college_name,
       date_of_birth,
     });
+    console.log("Creating user:", user);
 
     const savedStudent = await user.save();
 
