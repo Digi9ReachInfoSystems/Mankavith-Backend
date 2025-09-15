@@ -16,6 +16,10 @@
     {
       "path": "/job/subscriptionExpiry",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/job/oldMeetings",
+      "schedule": "0 0 * * *"
     }
   ]
 }

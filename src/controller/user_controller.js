@@ -1163,7 +1163,7 @@ exports.getAllEnrolledCourses = async (req, res) => {
       user.subscription.map(async (sub) => {
         const course = await Course.findOne({
           _id: sub.course_enrolled,
-          courseExpiry: { $gt: new Date() },
+          // courseExpiry: { $gt: new Date() },
           isPublished: true,
         });
         if (course) {
@@ -1238,12 +1238,12 @@ exports.getOngoingCourses = async (req, res) => {
         .status(404)
         .json({ success: false, message: "User not found" });
     }
-    if (user.kyc_status !== "approved")
-      return res.status(200).json({
-        success: true,
-        enrolledCourses: [],
-        message: "Please complete kyc to view Course",
-      });
+    // if (user.kyc_status !== "approved")
+    //   return res.status(200).json({
+    //     success: true,
+    //     enrolledCourses: [],
+    //     message: "Please complete kyc to view Course",
+    //   });
     if (!user.subscription)
       return res.status(200).json({ success: true, enrolledCourses: [] });
     const userProgress = await UserProgress.findOne({ user_id: userId });
@@ -1254,7 +1254,7 @@ exports.getOngoingCourses = async (req, res) => {
       user.subscription.map(async (sub) => {
         const course = await Course.findOne({
           _id: sub.course_enrolled,
-          courseExpiry: { $gt: new Date() },
+          // courseExpiry: { $gt: new Date() },
           isPublished: true,
         });
         if (course) {
@@ -1315,12 +1315,12 @@ exports.getCompletedCourses = async (req, res) => {
         .status(404)
         .json({ success: false, message: "User not found" });
     }
-    if (user.kyc_status !== "approved")
-      return res.status(200).json({
-        success: true,
-        enrolledCourses: [],
-        message: "Please complete kyc to view Course",
-      });
+    // if (user.kyc_status !== "approved")
+    //   return res.status(200).json({
+    //     success: true,
+    //     enrolledCourses: [],
+    //     message: "Please complete kyc to view Course",
+    //   });
     if (!user.subscription)
       return res.status(200).json({ success: true, enrolledCourses: [] });
     const userProgress = await UserProgress.findOne({ user_id: userId });
@@ -1331,7 +1331,7 @@ exports.getCompletedCourses = async (req, res) => {
       user.subscription.map(async (sub) => {
         const course = await Course.findOne({
           _id: sub.course_enrolled,
-          courseExpiry: { $gt: new Date() },
+          // courseExpiry: { $gt: new Date() },
           isPublished: true,
         });
         if (course) {
@@ -2703,6 +2703,7 @@ exports.createSubAdmin = async (req, res) => {
       webManagement = { access: false, readOnly: false },
       mockTestManagement = { access: false, readOnly: false },
       staticPageManagement = { access: false, readOnly: false },
+      meetingManagement = { access: false, readOnly: false }
     } = req.body;
 
     // Validate required fields
@@ -2738,6 +2739,7 @@ exports.createSubAdmin = async (req, res) => {
         webManagement,
         mockTestManagement,
         staticPageManagement,
+        meetingManagement
       },
       isSuperAdmin,
       isEmailVerified: true,
@@ -2769,6 +2771,7 @@ exports.updateSubAdmin = async (req, res) => {
       webManagement,
       mockTestManagement,
       staticPageManagement,
+      meetingManagement,
     } = req.body;
 
     // Find the admin by ID
@@ -2801,6 +2804,8 @@ exports.updateSubAdmin = async (req, res) => {
       user.permissions.mockTestManagement = mockTestManagement;
     if (staticPageManagement)
       user.permissions.staticPageManagement = staticPageManagement;
+    if (meetingManagement)
+      user.permissions.meetingManagement = meetingManagement;
 
     await user.save();
 
@@ -3056,5 +3061,48 @@ exports.sendPaperDownloadMail = async (req, res) => {
     return res
       .status(500)
       .json({ success: false, message: "Error sending email" });
+  }
+};
+
+
+exports.bulkDeleteSubAdmins = async (req, res) => {
+  try {
+    const { adminIds } = req.body;
+    const results = [];
+    for (const id of adminIds) {
+      try {
+        const user = await User.findById(id);
+        if (!user || user.role !== "admin") {
+          results.push({ id, success: false, message: "Admin not found" });
+          continue;
+        }
+
+        await User.findByIdAndDelete(id);
+
+        results.push({ id, success: true, message: "Admin deleted successfully" });
+      } catch (error) {
+        console.error(`Error deleting admin ${id}:`, error.message);
+        results.push({ id, success: false, message: error.message });
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Admin deleted successfully",
+      results,
+    });
+  } catch (error) {
+    console.error("Delete Admin Error:", error);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+exports.getMeetingHosts = async (req, res) => {
+  try {
+    const hosts = await User.find({ role: "admin", 'permissions.meetingManagement.access': true })
+    return res.status(200).json({ success: true, hosts });
+  } catch (error) {
+    console.error("Get Meeting Hosts Error:", error);
+    return res.status(500).json({ success: false, message: "Server error" });
   }
 };
