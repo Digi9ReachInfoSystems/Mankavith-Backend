@@ -15,7 +15,7 @@ const KycSchema = new mongoose.Schema({
   // },
   // email: {
   //   type: String,
-  //   required: false,
+  //   required: false,kycmode
   // },
   // mobile_number: {
   //   type: String,
