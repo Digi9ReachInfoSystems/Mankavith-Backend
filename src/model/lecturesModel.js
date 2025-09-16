@@ -18,6 +18,10 @@ const LectureSchema = new mongoose.Schema(
       type: String,
       required: false,
     },
+    folder: {
+      type: String,
+      required: false,
+    },
   
     // courseRef: {
     //   type: mongoose.Schema.Types.ObjectId,

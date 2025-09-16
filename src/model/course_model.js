@@ -136,10 +136,10 @@ const courseSchema = new mongoose.Schema(
     image: {
       type: String,
       required: false,
-      validate: {
-        validator: v => /^(http|https):\/\/[^ "]+$/.test(v),
-        message: "Invalid image URL format"
-      }
+      // validate: {
+      //   validator: v => /^(http|https):\/\/[^ "]+$/.test(v),
+      //   message: "Invalid image URL format"
+      // }
     },
     isKycRequired: {
       type: Boolean,

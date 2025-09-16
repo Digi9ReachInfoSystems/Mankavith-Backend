@@ -625,8 +625,7 @@ exports.createZoomMeetingMeOrOtherHost = async (req, res) => {
       const student = await User.findById(studentId);
       if (student) {
         const studentNotification = await Notification.create({
-          title: `Meeting Crea
-          ted ${topic}`,
+          title: `Meeting Created ${topic}`,
           description: agenda,
           time: startTime,
           // image,
