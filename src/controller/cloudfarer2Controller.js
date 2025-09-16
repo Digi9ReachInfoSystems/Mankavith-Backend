@@ -305,7 +305,7 @@ exports.uploadFiles = async (req, res) => {
 exports.accessFile = async (req, res) => {
     try {
         const { fileKey } = req.query;
-        // console.log(req.headers.referer, req.headers.origin);
+        console.log("origins",req.headers.referer, req.headers.origin);
 
         const command = new GetObjectCommand({
             Bucket: process.env.R2_BUCKET_NAME,
