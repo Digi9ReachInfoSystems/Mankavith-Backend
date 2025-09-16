@@ -20,8 +20,10 @@ const webhookController = require("./src/controller/razor_pay_webhook");
 const { removeExpiredSubscriptions } = require("./src/jobs/courseExpiryJobs");
 const { removeOldMeetings } = require("./src/jobs/oldMeetingJobs");
 const meetingController = require("./src/controller/meetingController");
+const cloudfareR2Controller = require("./src/controller/cloudfarer2Controller");
 const { Vimeo } = require('@vimeo/vimeo');
 const axios = require('axios');
+app.use(cors());
 // Start cron
 removeExpiredSubscriptions.start();
 removeOldMeetings.start();
@@ -46,10 +48,19 @@ app.post("/api/webhooks/zoom-webhook",
   express.raw({ type: "application/json" }),
   meetingController.handleZoomWebhook
 );
+app.get("/api/project/resource",
+  express.raw({ type: "application/json" }),
+  cloudfareR2Controller.accessFile
+);
+app.get("/api/project/resource/pdf",
+  express.raw({ type: "application/json" }),
+  cloudfareR2Controller.accessFilePDF
+);
+ 
 
 app.use(bodyParser.json({ limit: '2048mb' }));
 app.use(express.urlencoded({ limit: '2048mb', extended: true }));
-app.use(cors());
+
 app.use(express.json());
 
 app.use(decryptRequestBody);
@@ -97,7 +108,7 @@ const notificationRoutes = require("./src/routes/notificationRoutes");
 const couponRoutes = require("./src/routes/couponRoutes");
 const masterOtpRoutes = require("./src/routes/masterOtpRoutes");
 const jobRoutes = require("./src/routes/jobsRoute");
-
+const cloudfareR2Routes = require("./src/routes/cloudfarer2Routes");
 
 app.use("/user", userRoutes);
 app.use("/api/v1/course", courseRoutes);
@@ -140,6 +151,7 @@ app.use("/notifications", notificationRoutes);
 app.use("/coupon", couponRoutes);
 app.use("/masterOtp", masterOtpRoutes);
 app.use("/job", jobRoutes);
+app.use("/cloudfareR2", cloudfareR2Routes);
 
 
 

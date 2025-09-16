@@ -18,12 +18,12 @@ const noteSchema = new mongoose.Schema({
   fileUrl: {
     type: String,
     required: false,
-    validate: {
-      validator: function (v) {
-        return /^(ftp|http|https):\/\/[^ "]+$/.test(v);  // Validate URL format
-      },
-      message: "Invalid file URL format",
-    },
+    // validate: {
+    //   validator: function (v) {
+    //     return /^(ftp|http|https):\/\/[^ "]+$/.test(v);  // Validate URL format
+    //   },
+    //   message: "Invalid file URL format",
+    // },
   },
   subjects: [{
     type: mongoose.Schema.Types.ObjectId,

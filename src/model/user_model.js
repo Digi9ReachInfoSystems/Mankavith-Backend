@@ -45,14 +45,14 @@ const userSchema = new mongoose.Schema({
   photo_url: {
     type: String,
     required: false,
-    validate: {
-      validator: function (v) {
-        // Regex to validate image URL
-        return /^(ftp|http|https):\/\/[^ "]+$/.test(v);
-      },
-      message: "Invalid image URL format",
-    },
-    default: "https://mankavit.blob.core.windows.net/profile/60111.jpg",
+    // validate: {
+    //   validator: function (v) {
+    //     // Regex to validate image URL
+    //     return /^(ftp|http|https):\/\/[^ "]+$/.test(v);
+    //   },
+    //   message: "Invalid image URL format",
+    // },
+    default: "ProjectUploads/uploads/175795764013460111.jpg",
   }, // URL for photo
   role: {
     type: String,
