@@ -156,21 +156,157 @@ function getAgeFromDOB(dob) {
   return age;
 }
 
+// exports.createKyc = async (req, res) => {
+//   try {
+//     const {
+//       id_proof,
+//       passport_photo,
+//       userref,
+//       date_of_birth,
+//       fathers_name,
+//       fathers_occupation,
+//       present_address,
+//       current_occupation,
+//       how_did_you_get_to_know_us
+//     } = req.body;
+
+//     // Basic presence validation
+//     if (
+//       !id_proof ||
+//       !passport_photo ||
+//       !userref ||
+//       !date_of_birth ||
+//       !fathers_name ||
+//       !fathers_occupation ||
+//       !present_address ||
+//       !current_occupation ||
+//       !how_did_you_get_to_know_us
+//     ) {
+//       return res.status(400).json({ success: false, message: "All fields are required" });
+//     }
+
+//     // Validate and parse DOB, then compute age
+//     const dob = new Date(date_of_birth); // expect ISO string like "2002-05-14"
+//     if (isNaN(dob.getTime())) {
+//       return res.status(400).json({ success: false, message: "Invalid date_of_birth" });
+//     }
+//     const derivedAge = getAgeFromDOB(dob);
+
+//     // Age gate (if required)
+//     if (derivedAge < 18) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "User must be at least 18 years old"
+//       });
+//     }
+
+//     // Check if KYC already exists for this user
+//     const existingKyc = await Kyc.findOne({ userref });
+//     if (existingKyc) {
+//       existingKyc.id_proof = id_proof;
+//       existingKyc.passport_photo = passport_photo;
+//       existingKyc.date_of_birth = dob; // store as Date
+//       existingKyc.fathers_name = fathers_name;
+//       existingKyc.fathers_occupation = fathers_occupation;
+//       existingKyc.present_address = present_address;
+//       existingKyc.current_occupation = current_occupation;
+//       existingKyc.how_did_you_get_to_know_us = how_did_you_get_to_know_us;
+//       // optionally: reset status on re-submit
+//       existingKyc.status = "pending";
+
+//       const updatedKyc = await existingKyc.save();
+
+//       const user = await User.findById(userref);
+//       if (!user) {
+//         return res.status(404).json({ success: false, message: "User not found" });
+//       }
+//       user.kycRef = existingKyc._id;
+//       user.kyc_status = "pending";
+//       await user.save();
+
+//       return res.status(200).json({
+//         success: true,
+//         message: "KYC record updated successfully",
+//         data: updatedKyc,
+//         user
+//       });
+//     }
+
+//     // Create new KYC
+//     const newKyc = new Kyc({
+//       id_proof,
+//       passport_photo,
+//       userref,
+//       date_of_birth: dob,
+//       fathers_name,
+//       fathers_occupation,
+//       present_address,
+//       current_occupation,
+//       how_did_you_get_to_know_us,
+//       status: "pending"
+//     });
+
+//     const savedKyc = await newKyc.save();
+
+//     const user = await User.findById(userref);
+//     if (!user) {
+//       return res.status(404).json({ success: false, message: "User not found" });
+//     }
+//     user.kycRef = savedKyc._id;
+//     user.kyc_status = "pending";
+//     await user.save();
+
+//     await sendStudentKYCAcknowledgment(user.displayName, user.email);
+//     const userAdmin = await User.find({ role: "admin" });
+//     await Promise.all(
+//       userAdmin.map((admin) =>
+//         sendAdminKYCNofification(user.displayName, user.email, admin.email)
+//       )
+//     );
+
+//     return res.status(201).json({
+//       success: true,
+//       message: "KYC record created successfully",
+//       data: savedKyc
+//     });
+//   } catch (error) {
+//     console.error("Error creating KYC:", error.message);
+//     return res.status(500).json({
+//       success: false,
+//       message: "Server error. Could not create KYC record.",
+//       error: error.message
+//     });
+//   }
+// };
+
+
 exports.createKyc = async (req, res) => {
   try {
     const {
-      id_proof,
-      passport_photo,
       userref,
       date_of_birth,
       fathers_name,
       fathers_occupation,
       present_address,
       current_occupation,
-      how_did_you_get_to_know_us
+      how_did_you_get_to_know_us,
+      
     } = req.body;
 
-    // Basic presence validation
+    // Accept files from Multer OR strings from body
+    const idProofFile = req.files?.id_proof?.[0];
+    const passportPhotoFile = req.files?.passport_photo?.[0];
+
+    // if you uploaded to disk/cloud, you may have .path/.location/.filename
+    const id_proof = idProofFile
+      ? (idProofFile.location || idProofFile.path || idProofFile.filename)
+      : req.body.id_proof;
+
+    const passport_photo = passportPhotoFile
+      ? (passportPhotoFile.location || passportPhotoFile.path || passportPhotoFile.filename)
+      : req.body.passport_photo;
+
+    // Validate required presence AFTER resolving files
     if (
       !id_proof ||
       !passport_photo ||
@@ -185,41 +321,29 @@ exports.createKyc = async (req, res) => {
       return res.status(400).json({ success: false, message: "All fields are required" });
     }
 
-    // Validate and parse DOB, then compute age
-    const dob = new Date(date_of_birth); // expect ISO string like "2002-05-14"
+    // Validate DOB (format), but DO NOT enforce an age gate
+    const dob = new Date(date_of_birth);
     if (isNaN(dob.getTime())) {
       return res.status(400).json({ success: false, message: "Invalid date_of_birth" });
     }
-    const derivedAge = getAgeFromDOB(dob);
 
-    // Age gate (if required)
-    if (derivedAge < 18) {
-      return res.status(400).json({
-        success: false,
-        message: "User must be at least 18 years old"
-      });
-    }
-
-    // Check if KYC already exists for this user
+    // Upsert
     const existingKyc = await Kyc.findOne({ userref });
     if (existingKyc) {
       existingKyc.id_proof = id_proof;
       existingKyc.passport_photo = passport_photo;
-      existingKyc.date_of_birth = dob; // store as Date
+      existingKyc.date_of_birth = dob;
       existingKyc.fathers_name = fathers_name;
       existingKyc.fathers_occupation = fathers_occupation;
       existingKyc.present_address = present_address;
       existingKyc.current_occupation = current_occupation;
       existingKyc.how_did_you_get_to_know_us = how_did_you_get_to_know_us;
-      // optionally: reset status on re-submit
       existingKyc.status = "pending";
 
       const updatedKyc = await existingKyc.save();
 
       const user = await User.findById(userref);
-      if (!user) {
-        return res.status(404).json({ success: false, message: "User not found" });
-      }
+      if (!user) return res.status(404).json({ success: false, message: "User not found" });
       user.kycRef = existingKyc._id;
       user.kyc_status = "pending";
       await user.save();
@@ -238,7 +362,6 @@ exports.createKyc = async (req, res) => {
       });
     }
 
-    // Create new KYC
     const newKyc = new Kyc({
       id_proof,
       passport_photo,
@@ -255,9 +378,8 @@ exports.createKyc = async (req, res) => {
     const savedKyc = await newKyc.save();
 
     const user = await User.findById(userref);
-    if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
-    }
+    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+
     user.kycRef = savedKyc._id;
     user.kyc_status = "pending";
     await user.save();
@@ -284,7 +406,6 @@ exports.createKyc = async (req, res) => {
     });
   }
 };
-
 
 
 // Get all KYC records with optional status filter

@@ -15,7 +15,7 @@ const KycSchema = new mongoose.Schema({
   // },
   // email: {
   //   type: String,
-  //   required: false,
+  //   required: false,kycmode
   // },
   // mobile_number: {
   //   type: String,
@@ -51,6 +51,7 @@ const KycSchema = new mongoose.Schema({
 
     current_occupation: { type: String },
     how_did_you_get_to_know_us: { type: String },
+    
 
 },
   { toJSON: { virtuals: true }, toObject: { virtuals: true } }
