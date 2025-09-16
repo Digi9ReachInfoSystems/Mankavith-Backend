@@ -3,6 +3,16 @@ const fs = require('fs');
 const path = require('path');
 const { fromBuffer } = require('pdf2pic');
 const { BlobServiceClient, StorageSharedKeyCredential } = require('@azure/storage-blob');
+const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
+const BUCKET_NAME = process.env.R2_BUCKET_NAME;
+const s3 = new S3Client({
+    region: "auto",
+    endpoint: process.env.R2_ENDPOINT,
+    credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    },
+});
 exports.generateCertificate = async (name, course) => {
     try {
         // const { name, course } = req.body;
@@ -99,40 +109,65 @@ exports.generateCertificate = async (name, course) => {
         res.status(500).json({ error: 'Failed to generate certificate' });
     }
 };
-
 async function uploadFile(file) {
-    const accountName = process.env.AZURE_STORAGE_ACCOUNT_NAME;
-    const accountKey = process.env.AZURE_STORAGE_ACCOUNT_KEY;
-    const containerName = process.env.AZURE_STORAGE_CONTAINER_NAME;
-    const sharedKeyCredential = new StorageSharedKeyCredential(accountName, accountKey);
-    const blobServiceClient = new BlobServiceClient(
-        `https://${accountName}.blob.core.windows.net`,
-        sharedKeyCredential
-    );
-    const blobName = `${Date.now()}-${file.originalname}`;
-    const containerClient = blobServiceClient.getContainerClient(containerName);
-    const blockBlobClient = containerClient.getBlockBlobClient(blobName);
-    const fileExtension = file.originalname.split('.').pop().toLowerCase();
+    const fileExtension = file.originalname.split(".").pop().toLowerCase();
     const contentType = getContentType(fileExtension);
-    const contentDisposition = getContentDisposition(fileExtension, file.originalname);
+    // const contentDisposition = getContentDisposition(fileExtension, file.originalname);
 
-    const uploadOptions = {
-        blobHTTPHeaders: {
-            blobContentType: contentType,
-            blobContentDisposition: contentDisposition
-        }
-    };
-    await blockBlobClient.uploadData(file.buffer, uploadOptions);
-    const blobUrl = blockBlobClient.url;
+    const blobName = `ProjectUploads/certificates/${Date.now()}-${file.originalname}`;
 
-    return ({
-        message: 'File uploaded successfully',
-        blobName,
-        blobUrl,
-        contentType
+    const command = new PutObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: blobName,
+        Body: file.buffer,
+        ContentType: contentType,
     });
 
+    await s3.send(command);
+
+    // const blobUrl = `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${process.env.R2_BUCKET_NAME}/${blobName}`;
+
+    return {
+        message: "File uploaded successfully",
+        blobName,
+        blobUrl:blobName,
+        contentType,
+    };
 }
+
+// async function uploadFile(file) {
+//     const accountName = process.env.AZURE_STORAGE_ACCOUNT_NAME;
+//     const accountKey = process.env.AZURE_STORAGE_ACCOUNT_KEY;
+//     const containerName = process.env.AZURE_STORAGE_CONTAINER_NAME;
+//     const sharedKeyCredential = new StorageSharedKeyCredential(accountName, accountKey);
+//     const blobServiceClient = new BlobServiceClient(
+//         `https://${accountName}.blob.core.windows.net`,
+//         sharedKeyCredential
+//     );
+//     const blobName = `${Date.now()}-${file.originalname}`;
+//     const containerClient = blobServiceClient.getContainerClient(containerName);
+//     const blockBlobClient = containerClient.getBlockBlobClient(blobName);
+//     const fileExtension = file.originalname.split('.').pop().toLowerCase();
+//     const contentType = getContentType(fileExtension);
+//     const contentDisposition = getContentDisposition(fileExtension, file.originalname);
+
+//     const uploadOptions = {
+//         blobHTTPHeaders: {
+//             blobContentType: contentType,
+//             blobContentDisposition: contentDisposition
+//         }
+//     };
+//     await blockBlobClient.uploadData(file.buffer, uploadOptions);
+//     const blobUrl = blockBlobClient.url;
+
+//     return ({
+//         message: 'File uploaded successfully',
+//         blobName,
+//         blobUrl,
+//         contentType
+//     });
+
+// }
 function getContentType(extension) {
     const mimeTypes = {
         'pdf': 'application/pdf',
