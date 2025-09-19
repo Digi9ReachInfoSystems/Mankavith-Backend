@@ -426,9 +426,10 @@ exports.getALLUpcomingMeetings = async (req, res) => {
     }))
 
     courseId = courseId.filter((course) => course !== null);
-    const nowIST = new Date(
-      new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
-    );
+    // const nowIST = new Date(
+    //   new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
+    // );
+    const nowIST = new Date();
     const meetings = await Meeting.find(
       {
         course_Ref: { $in: courseId },
@@ -983,9 +984,10 @@ exports.bulkDeleteMeetings = async (req, res) => {
 exports.getUpcomingAndOngoingMeetings = async (req, res) => {
   try {
     const { courseIds } = req.body;
-    const now = new Date(
-      new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
-    );
+    // const now = new Date(
+    //   new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
+    // );
+    const now = new Date();
     const fiveMinutesLater = new Date(now.getTime() + 5 * 60000);
 
 
@@ -1045,9 +1047,10 @@ exports.getOngoingMeetingsByCourse = async (req, res) => {
       return res.status(400).json({ success: false, message: "courseId is required" });
     }
 
-    const now = new Date(
-      new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
-    );
+    // const now = new Date(
+    //   new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
+    // );
+     const now = new Date();
 
     // Step 1: fetch meetings for this course
     const meetings = await Meeting.find({
