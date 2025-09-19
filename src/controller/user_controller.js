@@ -2029,7 +2029,7 @@ exports.resendPhoneotp = async (req, res) => {
           }
         );
         if (response.data.type == "success") {
-          res.status(200).json({
+          return res.status(200).json({
             success: true,
             message: "OTP sent successfully",
             data: response.data,
@@ -2050,7 +2050,7 @@ exports.resendPhoneotp = async (req, res) => {
       });
     }
   } catch (error) {
-    console.error("Error generating OTP:", error.message);
+    console.error("Error generating OTP:", error);
     res
       .status(500)
       .json({ success: false, message: "Server error", error: error.message });
@@ -2199,12 +2199,12 @@ exports.deleteStudents = async (req, res) => {
         course_id: sub.course_enrolled,
       });
       courseProgress?.progress.filter(
-        (progress) => !progress.user_id.equals(id)
+        (progress) => !progress.user_id.equals(userId)
       );
       await courseProgress.save();
       if (course) {
         course.student_enrolled = course.student_enrolled.filter(
-          (studentId) => !studentId.equals(id)
+          (studentId) => !studentId.equals(userId)
         );
         await course.save();
       }
