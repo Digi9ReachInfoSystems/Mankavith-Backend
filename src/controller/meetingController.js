@@ -171,8 +171,10 @@ exports.getAllmeetings = async (req, res) => {
     // console.log("meetings", meetings);
     const activeMeetings = meetings.filter(meeting => {
       const endTime = new Date(meeting.meeting_time.getTime() + (meeting.meeting_duration * 60000));
+      console.log("meeting time", meeting.meeting_time, "endTime", endTime, "currentTime", currentTime);
       return endTime >= currentTime;
     });
+    console.log("activeMeetings", activeMeetings);
     // console.log("activeMeetings", activeMeetings);
     meetings = meetings.map((meeting) => {
       // console.log("hostId", hostId, "meeting.hostIds", meeting.hostIds, (hostId && meeting.hostIds.includes(new mongoose.Types.ObjectId(hostId))));
@@ -183,7 +185,9 @@ exports.getAllmeetings = async (req, res) => {
         isHostMeeting = hostId && meeting.hostIds.map(id => id.toString()).includes(hostId);
       }
       // console.log("hostId", hostId,"hostIdObj", hostIdObj, "meeting.hostIds", meeting.hostIds, "isHostMeeting", isHostMeeting,"  ",activeMeetings.indexOf(meeting));
+      console.log("meeting.id", meeting._id, "activeMeetings.indexOf(meeting)", activeMeetings.indexOf(meeting));
       if (activeMeetings.indexOf(meeting) === -1) {
+
         // if (hostEmail && meeting.host_email == hostEmail) {
         if (isHostMeeting) {
           return {
