@@ -141,16 +141,20 @@ exports.getAllmeetings = async (req, res) => {
     //     new Date(dateStr).toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
     //   );
     // };
-    const parseIST = new Date();
+    const parseIST = (dateStr) => {
+      return moment(dateStr).tz("Asia/Kolkata").toDate();
+    };
+    // const parseIST = new Date();
     // const parseIST = moment().tz("Asia/Kolkata").toDate();
 
     // Optional filters ?courseId=…&from=2025-05-01&to=2025-05-31
     const { courseId, from, to, hostEmail, isSuperAdmin, hostId } = req.query;
     console.log("req.query", req.query);
     const filter = {};
-    const currentTime = new Date(
-      new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
-    );
+    // const currentTime = new Date(
+    //   new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
+    // );
+    const currentTime = moment().tz("Asia/Kolkata").toDate();
     if (courseId) filter.course_Ref = courseId;
     if (from || to) filter.meeting_time = {};
     if (from) filter.meeting_time.$gte = parseIST(from);
@@ -1014,10 +1018,10 @@ exports.getUpcomingAndOngoingMeetings = async (req, res) => {
     // const now = new Date(
     //   new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
     // );
-    const now = new Date();
-    // const now = moment().tz("Asia/Kolkata");
-    const fiveMinutesLater = new Date(now.getTime() + 5 * 60000);
-    // const fiveMinutesLater = now.clone().add(5, "minutes");
+    // const now = new Date();
+    const now = moment().tz("Asia/Kolkata");
+    // const fiveMinutesLater = new Date(now.getTime() + 5 * 60000);
+    const fiveMinutesLater = now.clone().add(5, "minutes");
 
     // First get all meetings for these courses that might be relevant
     const meetings = await Meeting.find({
@@ -1091,8 +1095,8 @@ exports.getOngoingMeetingsByCourse = async (req, res) => {
     // const now = new Date(
     //   new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
     // );
-    const now = new Date();
-    // const now = moment().tz("Asia/Kolkata").toDate();
+    // const now = new Date();
+    const now = moment().tz("Asia/Kolkata").toDate();
 
     // Step 1: fetch meetings for this course
     const meetings = await Meeting.find({
