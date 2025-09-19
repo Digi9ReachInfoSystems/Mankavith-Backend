@@ -954,7 +954,17 @@ exports.bulkDeleteMeetings = async (req, res) => {
               studentEmails.push(student.email);
             }
           }
-          meetingCancelledMail(meeting, meeting.host_email, studentEmails);
+          let hostEmails = [];
+          hostEmails.push(meeting.host_email);
+          for (const hostId of meeting.hostIds) {
+            const host = await User.findById(hostId);
+            if (host) {
+              hostEmails.push(host.email);
+            }
+          }
+          hostEmails = [...new Set(hostEmails.map(email => email))];
+          console.log("hostEmails", hostEmails);
+          meetingCancelledMail(meeting, hostEmails, studentEmails);
 
 
           await Meeting.findByIdAndDelete(id);
@@ -1050,7 +1060,7 @@ exports.getOngoingMeetingsByCourse = async (req, res) => {
     // const now = new Date(
     //   new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
     // );
-     const now = new Date();
+    const now = new Date();
 
     // Step 1: fetch meetings for this course
     const meetings = await Meeting.find({
