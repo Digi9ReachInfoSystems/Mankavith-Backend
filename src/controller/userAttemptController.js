@@ -1378,9 +1378,9 @@ exports.getAllAttempts = async (req, res) => {
     attempts = await Promise.all(
       attempts.map(async (attempt) => {
         const ranking = await UserRanking.findOne({
-          userId: attempt.userId._id, //req.params.user_id,
+          userId: attempt.userId?._id, //req.params.user_id,
           mockTestId: attempt.mockTestId?._id, // req.params.mockTestId,
-          subject: attempt.subject._id,
+          // subject: attempt.subject?._id,
         }).populate("subject");
 
         return {
