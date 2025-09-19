@@ -1176,8 +1176,24 @@ exports.getAllEnrolledCourses = async (req, res) => {
     subscribedCourses = subscribedCourses.filter((course) => course !== null);
     let enrolledCourses = user.subscription.map((sub) => sub.course_enrolled);
     const userProgress = await UserProgress.findOne({ user_id: userId });
-    if (!userProgress)
+    if (!userProgress) {
+      enrolledCourses = enrolledCourses.map((course) => {
+        const plainCourse = course.toObject();
+        return {
+          ...plainCourse,
+          course_status: "Not started",
+          completePercentage: 0,
+          kycStatus: course.isKycRequired
+            ? user.kyc_status === "approved"
+              ? true
+              : false
+            : true,
+          userKycStatus: user.kyc_status,
+        };
+      });
       return res.status(200).json({ success: true, enrolledCourses });
+    }
+
     enrolledCourses = await Promise.all(
       subscribedCourses.map((course) => {
         const plainCourse = course.toObject();

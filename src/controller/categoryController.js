@@ -261,3 +261,30 @@ exports.getNonFeaturedCategories = async (req, res) => {
     });
   }
 };
+
+exports.toggleFeatured = async (req, res) => {
+  try {
+    const { categoryId } = req.params;
+    const category = await Category.findById(categoryId);
+    if (!category) {
+      return res.status(404).json({
+        success: false,
+        message: "Category not found",
+      });
+    }
+    category.featured = !category.featured;
+    await category.save();
+    return res.status(200).json({
+      success: true,
+      message: "Category updated successfully",
+      data: category,
+    });
+  } catch (error) {
+    console.error("Error updating category:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Server error. Could not update category.",
+      error: error.message,
+    });
+  }
+};

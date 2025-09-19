@@ -677,9 +677,12 @@ exports.getAllUpcomingMockTests = async (req, res) => {
         }
       })
     );
+     const nowIST = new Date(
+      new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
+    );
     const tests = await MockTest.find({
       subject: { $in: subjectIds },
-      startDate: { $gte: new Date() },
+      startDate: { $gte: nowIST },
       isPublished: true,
     }).populate("subject");
     res.status(200).json({
