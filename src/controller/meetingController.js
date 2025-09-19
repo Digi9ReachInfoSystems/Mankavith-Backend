@@ -26,6 +26,8 @@ async function getZoomAccessToken() {
   });
   return res.data.access_token; // valid for 1 h
 }
+const moment = require("moment-timezone");
+// const currentTimeFromMoment = moment().tz("Asia/Kolkata").toDate();
 
 exports.createZoomMeeting = async (req, res) => {
   try {
@@ -139,7 +141,8 @@ exports.getAllmeetings = async (req, res) => {
     //     new Date(dateStr).toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
     //   );
     // };
-    const parseIST= new Date();
+    const parseIST = new Date();
+    // const parseIST = moment().tz("Asia/Kolkata").toDate();
 
     // Optional filters ?courseId=…&from=2025-05-01&to=2025-05-31
     const { courseId, from, to, hostEmail, isSuperAdmin, hostId } = req.query;
@@ -170,11 +173,15 @@ exports.getAllmeetings = async (req, res) => {
       .lean();
     // console.log("meetings", meetings);
     const activeMeetings = meetings.filter(meeting => {
-      const endTime = new Date(meeting.meeting_time.getTime() + (meeting.meeting_duration * 60000));
-      console.log("meeting time", meeting.meeting_time, "endTime", endTime, "currentTime", currentTime);
-      return endTime >= currentTime;
+      // const endTime = new Date(meeting.meeting_time.getTime() + (meeting.meeting_duration * 60000));
+      // console.log("meeting time", meeting.meeting_time, "endTime", endTime, "currentTime", currentTime);
+      // return endTime >= currentTime;
+      const startTime = moment(meeting.meeting_time).tz("Asia/Kolkata");
+      const endTime = startTime.clone().add(meeting.meeting_duration, "minutes");
+
+      return endTime.isSameOrAfter(currentTime);
     });
-    console.log("activeMeetings", activeMeetings);
+    // console.log("activeMeetings", activeMeetings);
     // console.log("activeMeetings", activeMeetings);
     meetings = meetings.map((meeting) => {
       // console.log("hostId", hostId, "meeting.hostIds", meeting.hostIds, (hostId && meeting.hostIds.includes(new mongoose.Types.ObjectId(hostId))));
@@ -185,7 +192,7 @@ exports.getAllmeetings = async (req, res) => {
         isHostMeeting = hostId && meeting.hostIds.map(id => id.toString()).includes(hostId);
       }
       // console.log("hostId", hostId,"hostIdObj", hostIdObj, "meeting.hostIds", meeting.hostIds, "isHostMeeting", isHostMeeting,"  ",activeMeetings.indexOf(meeting));
-      console.log("meeting.id", meeting._id, "activeMeetings.indexOf(meeting)", activeMeetings.indexOf(meeting));
+      // console.log("meeting.id", meeting._id, "activeMeetings.indexOf(meeting)", activeMeetings.indexOf(meeting));
       if (activeMeetings.indexOf(meeting) === -1) {
 
         // if (hostEmail && meeting.host_email == hostEmail) {
@@ -434,7 +441,8 @@ exports.getALLUpcomingMeetings = async (req, res) => {
     // const nowIST = new Date(
     //   new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
     // );
-    const nowIST = new Date();
+    // const nowIST = new Date();
+    const nowIST = moment().tz("Asia/Kolkata").toDate();
     const meetings = await Meeting.find(
       {
         course_Ref: { $in: courseId },
@@ -862,8 +870,12 @@ exports.getmeetingByHostEmail = async (req, res) => {
         },
       }).sort({ meeting_time: 1 });
       const activeMeetings = meetings.filter(meeting => {
-        const endTime = new Date(meeting.meeting_time.getTime() + (meeting.meeting_duration * 60000));
-        return endTime >= currentTime;
+        // const endTime = new Date(meeting.meeting_time.getTime() + (meeting.meeting_duration * 60000));
+        // return endTime >= currentTime;
+        const startTime = moment(meeting.meeting_time).tz("Asia/Kolkata");
+        const endTime = startTime.clone().add(meeting.meeting_duration, "minutes");
+
+        return endTime.isSameOrAfter(currentTime);
       });
       meetings = activeMeetings;
       meetings = meetings.map((meeting) => {
@@ -1003,8 +1015,9 @@ exports.getUpcomingAndOngoingMeetings = async (req, res) => {
     //   new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
     // );
     const now = new Date();
+    // const now = moment().tz("Asia/Kolkata");
     const fiveMinutesLater = new Date(now.getTime() + 5 * 60000);
-
+    // const fiveMinutesLater = now.clone().add(5, "minutes");
 
     // First get all meetings for these courses that might be relevant
     const meetings = await Meeting.find({
@@ -1027,16 +1040,29 @@ exports.getUpcomingAndOngoingMeetings = async (req, res) => {
     // console.log("getUpcomingAndOngoingMeetings Meetings --> ", meetings);
 
     // Then filter in JavaScript to find ongoing meetings
-    const results = meetings.filter(meeting => {
-      // Parse duration (ensure it's a number)
-      const durationMinutes = Number(meeting.meeting_duration) || 0;
-      const endTime = new Date(meeting.meeting_time.getTime() + durationMinutes * 60000);
+    // const results = meetings.filter(meeting => {
+    //   // Parse duration (ensure it's a number)
+    //   const durationMinutes = Number(meeting.meeting_duration) || 0;
+    //   const endTime = new Date(meeting.meeting_time.getTime() + durationMinutes * 60000);
 
+    //   return (
+    //     // Either starting in next 5 minutes
+    //     (meeting.meeting_time >= now && meeting.meeting_time <= fiveMinutesLater) ||
+    //     // Or started but not ended
+    //     (meeting.meeting_time <= now && endTime >= now)
+    //   );
+    // });
+    const results = meetings.filter(meeting => {
+      const start = moment(meeting.meeting_time).tz("Asia/Kolkata");
+      const durationMinutes = Number(meeting.meeting_duration) || 0;
+      const end = start.clone().add(durationMinutes, "minutes");
+      const nowLoop = moment().tz("Asia/Kolkata");
+      const fiveMinutesLaterLoop = nowLoop.clone().add(5, "minutes");
       return (
         // Either starting in next 5 minutes
-        (meeting.meeting_time >= now && meeting.meeting_time <= fiveMinutesLater) ||
+        (start.isSameOrAfter(nowLoop) && start.isSameOrBefore(fiveMinutesLaterLoop)) ||
         // Or started but not ended
-        (meeting.meeting_time <= now && endTime >= now)
+        (start.isSameOrBefore(nowLoop) && end.isSameOrAfter(nowLoop))
       );
     });
 
@@ -1066,6 +1092,7 @@ exports.getOngoingMeetingsByCourse = async (req, res) => {
     //   new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
     // );
     const now = new Date();
+    // const now = moment().tz("Asia/Kolkata").toDate();
 
     // Step 1: fetch meetings for this course
     const meetings = await Meeting.find({
@@ -1075,10 +1102,14 @@ exports.getOngoingMeetingsByCourse = async (req, res) => {
 
     // Step 2: filter by ongoing or upcoming (end >= now OR start >= now)
     const activeMeetings = meetings.filter((meeting) => {
-      const start = new Date(meeting.meeting_time);
-      const end = new Date(start.getTime() + meeting.meeting_duration * 60000);
+      // const start = new Date(meeting.meeting_time);
+      // const end = new Date(start.getTime() + meeting.meeting_duration * 60000);
 
-      return start >= now || (start <= now && end >= now);
+      // return start >= now || (start <= now && end >= now);
+      const start = moment(meeting.meeting_time).tz("Asia/Kolkata");
+      const end = start.clone().add(meeting.meeting_duration, "minutes");
+      const nowLoop = moment().tz("Asia/Kolkata");
+      return start.isSameOrAfter(nowLoop) || (start.isBefore(now) && end.isAfter(nowLoop));
     });
 
     return res.status(200).json({
