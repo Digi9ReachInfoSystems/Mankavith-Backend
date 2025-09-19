@@ -1492,7 +1492,7 @@ exports.admincreateStudentMailtoadmins = async (name, email, phone, date_of_birt
 exports.meetingScheduledMail = async (meeting, hostEmail, studentEmails) => {
     try {
         const formattedDate = new Date(meeting.meeting_time).toLocaleString();
-        console.log("hostEmail", hostEmail,"studentEmails",studentEmails);
+        // console.log("hostEmail", hostEmail,"studentEmails",studentEmails);
         // Mail to Host
         const hostMail = {
             from: fromMail,
@@ -1561,11 +1561,11 @@ exports.meetingScheduledMail = async (meeting, hostEmail, studentEmails) => {
 exports.meetingCancelledMail = async (meeting, hostEmail, studentEmails) => {
     try {
         const formattedDate = new Date(meeting.meeting_time).toLocaleString();
-
+        // console.log("hostEmail", hostEmail,"studentEmails",studentEmails);
         // Mail to Host
         const hostMail = {
             from: fromMail,
-            to: hostEmail,
+            bcc: hostEmail,
             subject: `Meeting Cancelled: ${meeting.meeting_title}`,
             html: `
       <div style="font-family: Arial, sans-serif; line-height:1.6;">
