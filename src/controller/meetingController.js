@@ -134,11 +134,12 @@ exports.createZoomMeeting = async (req, res) => {
 
 exports.getAllmeetings = async (req, res) => {
   try {
-    const parseIST = (dateStr) => {
-      return new Date(
-        new Date(dateStr).toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
-      );
-    };
+    // const parseIST = (dateStr) => {
+    //   return new Date(
+    //     new Date(dateStr).toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
+    //   );
+    // };
+    const parseIST= new Date();
 
     // Optional filters ?courseId=…&from=2025-05-01&to=2025-05-31
     const { courseId, from, to, hostEmail, isSuperAdmin, hostId } = req.query;
