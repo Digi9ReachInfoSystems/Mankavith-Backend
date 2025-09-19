@@ -134,18 +134,31 @@ exports.createZoomMeeting = async (req, res) => {
 
 exports.getAllmeetings = async (req, res) => {
   try {
+    const parseIST = (dateStr) => {
+      return new Date(
+        new Date(dateStr).toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
+      );
+    };
+
     // Optional filters ?courseId=…&from=2025-05-01&to=2025-05-31
-    const { courseId, from, to, hostEmail, isSuperAdmin } = req.query;
+    const { courseId, from, to, hostEmail, isSuperAdmin, hostId } = req.query;
+    console.log("req.query", req.query);
     const filter = {};
-    const currentTime = new Date();
+    const currentTime = new Date(
+      new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
+    );
     if (courseId) filter.course_Ref = courseId;
     if (from || to) filter.meeting_time = {};
-    if (from) filter.meeting_time.$gte = new Date(from);
-    if (to) filter.meeting_time.$lte = new Date(to);
-    if (!isSuperAdmin) {
-      filter.host_email = hostEmail;
+    if (from) filter.meeting_time.$gte = parseIST(from);
+    if (to) filter.meeting_time.$lte = parseIST(to);
+    // if (!isSuperAdmin) {
+    //   filter.host_email = hostEmail;
 
+    // }
+    if (!isSuperAdmin == true) {
+      filter.hostIds = hostId
     }
+    const hostIdObj = new mongoose.Types.ObjectId(hostId);
 
     // if (hostEmail) filter.host_email = hostEmail;
     console.log("filter", filter);
@@ -154,13 +167,24 @@ exports.getAllmeetings = async (req, res) => {
       .sort({ meeting_time: 1 }) // ascending
       .populate("course_Ref")
       .lean();
+    // console.log("meetings", meetings);
     const activeMeetings = meetings.filter(meeting => {
       const endTime = new Date(meeting.meeting_time.getTime() + (meeting.meeting_duration * 60000));
       return endTime >= currentTime;
     });
+    // console.log("activeMeetings", activeMeetings);
     meetings = meetings.map((meeting) => {
+      // console.log("hostId", hostId, "meeting.hostIds", meeting.hostIds, (hostId && meeting.hostIds.includes(new mongoose.Types.ObjectId(hostId))));
+      let isHostMeeting = false;
+      if (isSuperAdmin) {
+        isHostMeeting = true
+      } else {
+        isHostMeeting = hostId && meeting.hostIds.map(id => id.toString()).includes(hostId);
+      }
+      // console.log("hostId", hostId,"hostIdObj", hostIdObj, "meeting.hostIds", meeting.hostIds, "isHostMeeting", isHostMeeting,"  ",activeMeetings.indexOf(meeting));
       if (activeMeetings.indexOf(meeting) === -1) {
-        if (hostEmail && meeting.host_email == hostEmail) {
+        // if (hostEmail && meeting.host_email == hostEmail) {
+        if (isHostMeeting) {
           return {
             ...meeting,
             isPastMeeting: true,
@@ -175,7 +199,8 @@ exports.getAllmeetings = async (req, res) => {
         }
 
       } else {
-        if (hostEmail && meeting.host_email == hostEmail) {
+        // if (hostEmail && meeting.host_email == hostEmail) {
+        if (isHostMeeting) {
           return {
             ...meeting,
             isPastMeeting: false,
@@ -401,11 +426,14 @@ exports.getALLUpcomingMeetings = async (req, res) => {
     }))
 
     courseId = courseId.filter((course) => course !== null);
+    const nowIST = new Date(
+      new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
+    );
     const meetings = await Meeting.find(
       {
         course_Ref: { $in: courseId },
         meeting_time: {
-          $gte: new Date(),
+          $gte: nowIST,
         },
         isEnded: false
       }
@@ -488,6 +516,8 @@ exports.createZoomMeetingMeOrOtherHost = async (req, res) => {
       startTime,
       duration,
       autoRecord = false,
+      record_location,
+      hostIds = [],
 
     } = req.body;
 
@@ -514,38 +544,40 @@ exports.createZoomMeetingMeOrOtherHost = async (req, res) => {
         type: 2,
         start_time: startTime, // must include offset or 'Z'
         duration,
-        timezone: process.env.TZ || "Asia/Kolkata",
+        timezone: process.env.TZ || "Asia/Calcutta",
         agenda,
         password,
         settings: {
           email_notification: false,
-          join_before_host: false,
+          join_before_host: true,
           mute_upon_entry: true,
-          waiting_room: true,
-          auto_recording: autoRecord ? "cloud" : "none",
+          waiting_room: false,
+          auto_recording: autoRecord ? record_location : "none",
+          allow_host_control_participant_mute_state: true
         },
       };
-    } else {
+    } else if (meeting_type == "both") {
       zoomPayload = {
         topic,
         type: 2,
         start_time: startTime, // must include offset or 'Z'
         duration,
-        timezone: process.env.TZ || "Asia/Kolkata",
+        timezone: process.env.TZ || "Asia/Calcutta",
         agenda,
         password,
         settings: {
           email_notification: false,
-          join_before_host: false,
+          join_before_host: true,
           mute_upon_entry: true,
-          waiting_room: true,
-          auto_recording: autoRecord ? "cloud" : "none",
+          waiting_room: false,
+          auto_recording: autoRecord ? record_location : "none",
+          alternative_hosts: hostId,
+          allow_host_control_participant_mute_state: true
         },
-        schedule_for: hostId,
       };
-    }
 
-    //  else if (meeting_type == "both") {
+    }
+    //  else {
     //   zoomPayload = {
     //     topic,
     //     type: 2,
@@ -555,16 +587,17 @@ exports.createZoomMeetingMeOrOtherHost = async (req, res) => {
     //     agenda,
     //     password,
     //     settings: {
-            //  email_notification: false,
-    //       join_before_host: false,
+    //       email_notification: false,
+    //       join_before_host: true,
     //       mute_upon_entry: true,
-    //       waiting_room: true,
+    //       waiting_room: false,
     //       auto_recording: autoRecord ? "cloud" : "none",
-    //       alternative_hosts: hostId,
     //     },
+    //     schedule_for: hostId,
     //   };
-
     // }
+
+
 
     const accessToken = await getZoomAccessToken();
 
@@ -594,12 +627,14 @@ exports.createZoomMeetingMeOrOtherHost = async (req, res) => {
         .status(502)
         .json({ error: zoomErr?.response?.data?.message || "Zoom error" });
     }
+    console.log("Zoom response", responseData);
 
     const meetingDoc = await Meeting.create({
       meeting_title: topic,
       meeting_agenda: agenda,
       assistant_id: responseData?.assistant_id || null,
       host_email: responseData?.host_email || null,
+      alternate_host_email: responseData?.settings?.alternative_hosts || null,
       meeting_url: responseData.join_url,
       meeting_time: new Date(startTime),
       meeting_duration: duration,
@@ -610,6 +645,7 @@ exports.createZoomMeetingMeOrOtherHost = async (req, res) => {
       zoom_join_url: responseData.join_url,
       zoom_type: responseData.type,
       meeting_type: meeting_type,
+      hostIds: hostIds
 
     });
     let students = [];
@@ -637,7 +673,16 @@ exports.createZoomMeetingMeOrOtherHost = async (req, res) => {
         studentEmails.push(student.email);
       }
     }
-    meetingScheduledMail(meetingDoc, meetingDoc.host_email, studentEmails);
+    let hostEmails = [];
+    hostEmails.push(responseData.host_email);
+    for (const hostId of hostIds) {
+      const host = await User.findById(hostId);
+      if (host) {
+        hostEmails.push(host.email);
+      }
+    }
+    hostEmails = [...new Set(hostEmails.map(email => email))];
+    await meetingScheduledMail(meetingDoc, hostEmails, studentEmails);
     res.status(201).json({
       meeting: meetingDoc,
       sdkInfo: {
@@ -938,7 +983,9 @@ exports.bulkDeleteMeetings = async (req, res) => {
 exports.getUpcomingAndOngoingMeetings = async (req, res) => {
   try {
     const { courseIds } = req.body;
-    const now = new Date();
+    const now = new Date(
+      new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
+    );
     const fiveMinutesLater = new Date(now.getTime() + 5 * 60000);
 
 
@@ -998,7 +1045,9 @@ exports.getOngoingMeetingsByCourse = async (req, res) => {
       return res.status(400).json({ success: false, message: "courseId is required" });
     }
 
-    const now = new Date();
+    const now = new Date(
+      new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
+    );
 
     // Step 1: fetch meetings for this course
     const meetings = await Meeting.find({
@@ -1129,8 +1178,7 @@ exports.handleZoomWebhook = async (req, res) => {
         const student = await User.findById(studentId);
         if (student) {
           const studentNotification = await Notification.create({
-            title: `Meeting Crea
-          ted ${topic}`,
+            title: `Meeting Created ${topic}`,
             description: agenda,
             time: startTime,
             // image,
