@@ -10,6 +10,6 @@ router.get("/getByTitleAndYear/:title/:year", QuestionController.getQuestionPape
 router.put("/addQuestionPaper/:title", QuestionController.addQuestionPaper);
 router.put("/removeQuestionPaper/:title/:year", QuestionController.removeQuestionPaper);
 router.put("/updateQuestionPaper/:title/:year", QuestionController.updateQuestionPaper);
-router.delete("/deleteQuestionPaper/:title", QuestionController.deleteQuestionPaper);
+router.delete("/deleteQuestionPaper/:title/papers/:year", QuestionController.deletePaper);
 
 module.exports = router;

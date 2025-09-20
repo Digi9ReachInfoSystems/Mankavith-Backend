@@ -158,16 +158,35 @@ exports.updateQuestionPaper = async (req, res) => {
         res.status(500).json({ error: "Failed to update question" });
     }
 };
+exports.deletePaper = async (req, res) => {
+  try {
+    const { title, year } = req.params;
+    const yr = Number(year);
 
-exports.deleteQuestionPaper = async (req, res) => {
-    const { title } = req.params;
-    try {
-        const question = await Question.findOneAndDelete({ title });
-        if (!question) {
-            return res.status(404).json({ error: "Question not found" });
-        }
-        res.json({ message: "Question deleted successfully" });
-    } catch (error) {
-        res.status(500).json({ error: "Failed to delete question" });
+    // 1) Ensure the set exists
+    const set = await Question.findOne({ title: title.trim() });
+    if (!set) return res.status(404).json({ error: "Question set not found" });
+
+    // 2) Ensure the paper (year) exists in the array
+    const hasYear = set.papers.some(p => p.year === yr);
+    if (!hasYear) {
+      return res.status(404).json({ error: `Paper for year ${yr} not found` });
     }
+
+    // 3) Pull just that paper (array element) out
+    await Question.updateOne(
+      { _id: set._id },
+      { $pull: { papers: { year: yr } } }
+    );
+
+    // (Optional) return the updated document
+    const updated = await Question.findById(set._id);
+    return res.json({
+      message: `Paper for year ${yr} deleted successfully`,
+      data: updated
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Failed to delete paper" });
+  }
 };
