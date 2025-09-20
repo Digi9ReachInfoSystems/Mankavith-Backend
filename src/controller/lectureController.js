@@ -2,14 +2,51 @@ const mongoose = require("mongoose");
 const Lecture = require("../model/lecturesModel");
 const Course = require("../model/course_model");
 const Subject = require("../model/subject_model");
-
+const {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+  GetObjectCommand,
+  ListObjectsV2Command,
+} = require("@aws-sdk/client-s3");
+const BUCKET_NAME = process.env.R2_BUCKET_NAME;
+const s3 = new S3Client({
+  region: "auto",
+  endpoint: process.env.R2_ENDPOINT,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  },
+});
 // @desc    Create a new Lecture
 // @route   POST /lecture
 // @access  Private/Admin
 exports.createLecture = async (req, res) => {
   try {
-    const { lectureName, description, duration, videoUrl, subjectRef,folder } = req.body;
-    
+    // const { lectureName, description, duration, videoUrl, subjectRef, folder } = req.body;
+    const { lectureName, description, duration, subjectRef, folder } = req.body;
+    console.log(req.body);
+    const file = req.file;
+    // console.log("api called file upload", req.videoUrl);
+
+    const timestamp = Date.now();
+    let url = '';
+    // const response = await Promise.all(uploadPromises);
+    const params = {
+      Bucket: BUCKET_NAME,
+      Key: `${folder}/${timestamp}${file.originalname}`,
+      Body: file.buffer,
+      ContentType: file.mimetype,
+    };
+    const command = new PutObjectCommand(params);
+    const response = await s3.send(command);
+    if (response.$metadata.httpStatusCode == 200) {
+
+      url: `${folder}/${timestamp}${file.originalname}`
+
+    } else {
+      res.status(500).send({ error: response });
+    }
     // Validate required fields
     // if (!lectureName || !duration || !videoUrl) {
     //   return res.status(400).json({ success: false, message: "lectureName, duration and videoUrl are required" });
@@ -26,16 +63,22 @@ exports.createLecture = async (req, res) => {
     // if (subjectRef && !mongoose.Types.ObjectId.isValid(subjectRef)) {
     //   return res.status(400).json({ success: false, message: "Invalid subjectRef" });
     // }
-
-    const lecture = new Lecture({ lectureName, description, duration, videoUrl, subjectRef ,folder});
+    let subjects = [];
+    if (subjectRef) {
+      subjects = subjectRef.split(',');
+    }
+    const lecture = new Lecture({ lectureName, description, duration, videoUrl: `${folder}/${timestamp}${file.originalname}`, subjectRef: subjects, folder });
     const savedLecture = await lecture.save();
-    subjectRef.forEach(async (subjectId) => {
-      const subject = await Subject.findById(subjectId);
-      if (subject) {
-        subject.lectures.push(savedLecture._id);
-        await subject.save();
-      }
-    })
+    if (subjects && subjects.length > 0) {
+      subjects.forEach(async (subjectId) => {
+        const subject = await Subject.findById(subjectId);
+        if (subject) {
+          subject.lectures.push(savedLecture._id);
+          await subject.save();
+        }
+      })
+    }
+
 
     res.status(201).json({ success: true, data: savedLecture });
   } catch (error) {
@@ -93,7 +136,7 @@ exports.getLectureById = async (req, res) => {
 exports.updateLecture = async (req, res) => {
   try {
     const { id } = req.params;
-    const { lectureName, description, duration, videoUrl, subjectRef,folder } = req.body;
+    const { lectureName, description, duration, videoUrl, subjectRef, folder } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ success: false, message: "Invalid lecture ID" });
@@ -119,7 +162,7 @@ exports.updateLecture = async (req, res) => {
 
     const updatedLecture = await Lecture.findByIdAndUpdate(
       id,
-      { lectureName, description, duration, videoUrl, subjectRef,folder },
+      { lectureName, description, duration, videoUrl, subjectRef, folder },
       { new: true, runValidators: true }
     )
     // .populate("courseRef", "courseName")
