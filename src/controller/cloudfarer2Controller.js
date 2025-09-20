@@ -237,7 +237,7 @@ exports.getFileUrl = async (req, res) => {
 exports.uploadFiles = async (req, res) => {
     const folder = req.body.containerName || "ProjectUploads/uploads";
     const file = req.file;
-
+    console.log("api called file upload");
     if (!file) {
         return res.status(400).send({ message: "No files uploaded" });
     }
@@ -291,13 +291,19 @@ exports.uploadFiles = async (req, res) => {
 
 
         const response = await s3.send(command);
-        console.log(response);
-        res.status(201).send({
-            message: "Files uploaded successfully",
-            // fileNames: files.map((file) => ({ fileName: file.originalname, url: `${process.env.R2_ENDPOINT}/${process.env.R2_BUCKET}/${folder}/${file.originalname}` })),
-            response,
-            blobUrl: `${folder}/${timestamp}${file.originalname}`
-        });
+        console.log("response", response);
+        console.log(`${folder}/${timestamp}${file.originalname}`);
+        if (response.$metadata.httpStatusCode == 200) {
+            res.status(201).send({
+                message: "Files uploaded successfully",
+                // fileNames: files.map((file) => ({ fileName: file.originalname, url: `${process.env.R2_ENDPOINT}/${process.env.R2_BUCKET}/${folder}/${file.originalname}` })),
+                response,
+                blobUrl: `${folder}/${timestamp}${file.originalname}`
+            });
+        }else{
+            res.status(500).send({ error: response });
+        }
+
     } catch (error) {
         res.status(500).send({ error: error.message });
     }
@@ -305,7 +311,7 @@ exports.uploadFiles = async (req, res) => {
 exports.accessFile = async (req, res) => {
     try {
         const { fileKey } = req.query;
-        console.log("origins",req.headers.referer, req.headers.origin);
+        console.log("origins", req.headers.referer, req.headers.origin);
 
         const command = new GetObjectCommand({
             Bucket: process.env.R2_BUCKET_NAME,
@@ -351,7 +357,7 @@ exports.accessFile = async (req, res) => {
         });
         const signedUrl = await getSignedUrl(s3, command22, { expiresIn: 60 * 60 * 24 * 2 }); // 5 min
         // res.json({ url: signedUrl });
-         res.setHeader("Content-Type", data.ContentType );
+        res.setHeader("Content-Type", data.ContentType);
         res.redirect(signedUrl);
     } catch (err) {
         console.error(err);
@@ -411,7 +417,7 @@ exports.accessFilePDF = async (req, res) => {
         // res.json({ url: signedUrl });
         //  res.setHeader("Content-Type", data.ContentType );
         // console.log("backend is returning data", signedUrl)
-       res.json({ url: signedUrl });    
+        res.json({ url: signedUrl });
     } catch (err) {
         console.error(err);
         res.status(404).send({ error: "File not found" });
