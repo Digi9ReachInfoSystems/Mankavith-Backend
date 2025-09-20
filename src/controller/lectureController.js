@@ -25,10 +25,10 @@ exports.createLecture = async (req, res) => {
   try {
     // const { lectureName, description, duration, videoUrl, subjectRef, folder } = req.body;
     const { lectureName, description, duration, subjectRef, folder } = req.body;
-    console.log(req.body);
+    // console.log(req.body);
     const file = req.file;
     // console.log("api called file upload", req.videoUrl);
-
+// console.log(" req.file    ",subjectRef);
     const timestamp = Date.now();
     let url = '';
     // const response = await Promise.all(uploadPromises);
@@ -80,7 +80,7 @@ exports.createLecture = async (req, res) => {
     }
 
 
-    res.status(201).json({ success: true, data: savedLecture });
+    return res.status(201).json({ success: true, data: savedLecture });
   } catch (error) {
     console.error("Error creating lecture:", error);
     res.status(500).json({ success: false, message: "Internal server error", error: error.message });
@@ -137,7 +137,33 @@ exports.updateLecture = async (req, res) => {
   try {
     const { id } = req.params;
     const { lectureName, description, duration, videoUrl, subjectRef, folder } = req.body;
+    const file = req.file;
+    // console.log("api called file upload", req.videoUrl);
+    
+    const timestamp = Date.now();
+     let url = '';
+     console.log(" req.file    ",req.file);
+     if(req.file){
+   
+    // const response = await Promise.all(uploadPromises);
+    const params = {
+      Bucket: BUCKET_NAME,
+      Key: `${folder}/${timestamp}${file.originalname}`,
+      Body: file.buffer,
+      ContentType: file.mimetype,
+    };
+    const command = new PutObjectCommand(params);
+    const response = await s3.send(command);
+    if (response.$metadata.httpStatusCode == 200) {
 
+      url: `${folder}/${timestamp}${file.originalname}`
+
+    } else {
+      res.status(500).send({ error: response });
+    }
+   
+      url = `${folder}/${timestamp}${file.originalname}`;
+    }
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ success: false, message: "Invalid lecture ID" });
     }
@@ -152,17 +178,22 @@ exports.updateLecture = async (req, res) => {
         await subject.save();
       }
     })
-    subjectRef.forEach(async (subjectId) => {
+    let subjects = [];
+    if (subjectRef) {
+      subjects = subjectRef.split(',');
+    }
+    subjects.forEach(async (subjectId) => {
       const subject = await Subject.findById(subjectId);
       if (subject) {
         subject.lectures.push(id);
         await subject.save();
       }
     })
+    console.log(" subjects", subjects);
 
     const updatedLecture = await Lecture.findByIdAndUpdate(
       id,
-      { lectureName, description, duration, videoUrl, subjectRef, folder },
+      { lectureName, description, duration, videoUrl:url!=``?url:lecture.videoUrl, subjectRef: subjects, folder },
       { new: true, runValidators: true }
     )
     // .populate("courseRef", "courseName")

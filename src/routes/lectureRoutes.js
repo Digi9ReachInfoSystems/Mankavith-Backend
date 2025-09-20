@@ -7,7 +7,7 @@ const upload = multer({ storage: multer.memoryStorage() });
 router.post("/",upload.single('videoUrl'), lectureController.createLecture);
 router.get("/", lectureController.getAllLectures);
 router.get("/:id", lectureController.getLectureById);
-router.put("/:id", lectureController.updateLecture);
+router.put("/:id",upload.single('videoUrl'), lectureController.updateLecture);
 router.delete("/:id", lectureController.deleteLecture);
 router.delete("/bulk/delete", lectureController.bulkDeleteLectures);
 router.put("/lectures/rearrangeLectures", lectureController.rearrangeLectures);
