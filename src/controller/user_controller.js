@@ -1127,21 +1127,24 @@ exports.editUser = async (req, res) => {
         .json({ success: false, message: "User not found" });
     }
     let updateData = req.body;
-    if(req.body.email){
-      const emailExists = await User.findOne({ email: req.body.email });
-      if (emailExists) {
-        return res.status(400).json({
-          success: false,
-          message: "Email already exists",
-        });
+    if (req.body.email) {
+      if (user.email != req.body.email.trim().toLowerCase()) {
+        const emailExists = await User.findOne({ email: req.body.email });
+        if (emailExists) {
+          return res.status(400).json({
+            success: false,
+            message: "Email already exists",
+          });
+        }
+        req.body.email = req.body.email.toLowerCase();
+
+        updateData = {
+          ...updateData,
+          email: req.body.email.toLowerCase(),
+          refreshToken: null,
+        };
       }
-      req.body.email = req.body.email.toLowerCase();
-      
-      updateData = {
-        ...updateData,
-        email:req.body.email.toLowerCase(),
-        refreshToken:null,
-      };
+
     }
     const updatedUser = await User.findByIdAndUpdate(userId, updateData, {
       new: true,
