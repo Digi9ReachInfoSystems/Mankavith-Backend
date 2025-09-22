@@ -1275,7 +1275,7 @@ exports.bulkDeleteCourse = async (req, res) => {
         await Promise.all(
           course.student_enrolled.map(async (studentId) => {
             const student = await User.findById(studentId);
-            const foundSubscription = student.subscription.find(sub => sub.course_enrolled.equals(courseId));
+            const foundSubscription = student?.subscription.find(sub => sub.course_enrolled.equals(courseId));
             if (!foundSubscription) {
               return;
             }
@@ -1303,6 +1303,7 @@ exports.bulkDeleteCourse = async (req, res) => {
         result.push({ courseId, error: error.message });
       }
     }
+    // console.log(result);  
     res.status(200).json({
       success: true,
       message: "Bulk delete operation completed",
