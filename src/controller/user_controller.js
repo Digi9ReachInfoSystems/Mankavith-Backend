@@ -1126,7 +1126,24 @@ exports.editUser = async (req, res) => {
         .status(404)
         .json({ success: false, message: "User not found" });
     }
-    const updatedUser = await User.findByIdAndUpdate(userId, req.body, {
+    let updateData = req.body;
+    if(req.body.email){
+      const emailExists = await User.findOne({ email: req.body.email });
+      if (emailExists) {
+        return res.status(400).json({
+          success: false,
+          message: "Email already exists",
+        });
+      }
+      req.body.email = req.body.email.toLowerCase();
+      
+      updateData = {
+        ...updateData,
+        email:req.body.email.toLowerCase(),
+        refreshToken:null,
+      };
+    }
+    const updatedUser = await User.findByIdAndUpdate(userId, updateData, {
       new: true,
     });
     res.status(200).json({
@@ -2315,6 +2332,7 @@ exports.blockAndUnblockUser = async (req, res) => {
         .json({ success: false, message: "User not found" });
     }
     user.isBlocked = !user.isBlocked;
+    user.refreshToken = null;
     await user.save();
     res.status(200).json({
       success: true,
