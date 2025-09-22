@@ -2887,7 +2887,7 @@ exports.resetAdminPassword = async (req, res) => {
 
 exports.getAllAdmins = async (req, res) => {
   try {
-    const admins = await User.find({ role: "admin", isSuperAdmin: false });
+    const admins = await User.find({ role: "admin" });
     return res
       .status(200)
       .json({ success: true, message: "Admins fetched successfully", admins });

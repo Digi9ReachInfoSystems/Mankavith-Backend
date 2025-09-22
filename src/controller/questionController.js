@@ -16,7 +16,7 @@ exports.addPaper = async (req, res) => {
         title: title.trim(),
         papers: [
           {
-            year: Number(year),
+            year: year,
             // description: description.trim(),
             question_url: question_url.trim(),
           },
@@ -33,7 +33,7 @@ exports.addPaper = async (req, res) => {
     }
 
     set.papers.push({
-      year: Number(year),
+      year: year,
       //   description: description.trim(),
       question_url: question_url.trim(),
     });
@@ -89,7 +89,7 @@ exports.removeQuestionPaper = async (req, res) => {
   try {
     const question = await Question.findOneAndUpdate(
       { title },
-      { $pull: { papers: { year: Number(year) } } },
+      { $pull: { papers: { year: year } } },
       { new: true }
     );
     if (!question) {
@@ -111,7 +111,7 @@ exports.addQuestionPaper = async (req, res) => {
     }
     const question = await Question.findOneAndUpdate(
       { title },
-      { $push: { papers: { year: Number(year), question_url: question_url } } },
+      { $push: { papers: { year: year, question_url: question_url } } },
       { new: true }
     );
 
@@ -140,7 +140,7 @@ exports.updateQuestionPaper = async (req, res) => {
     const question = await Question.findOne(
       {
         title,
-        "papers.year": Number(year),
+        "papers.year": year,
       }
     )
 
@@ -161,7 +161,7 @@ exports.updateQuestionPaper = async (req, res) => {
 exports.deletePaper = async (req, res) => {
   try {
     const { title, year } = req.params;
-    const yr = Number(year);
+    const yr = year;
 
     // 1) Ensure the set exists
     const set = await Question.findOne({ title: title.trim() });
@@ -207,9 +207,9 @@ exports.bulkDeletePapers = async (req, res) => {
         // 2) Pull just that paper (array element) out
        const res = await Question.updateOne(
           { _id: set._id },
-          { $pull: { papers: { year: { $in: years } } } }
+          { $pull: { papers: { year:  years  } } }
         );
-        if(res.set.papers.length === 0){
+        if(res.papers.length === 0){
           await Question.deleteOne({ _id: set._id });
         }
         // (Optional) return the updated document
