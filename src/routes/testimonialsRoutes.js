@@ -9,5 +9,5 @@ router.get('/getAllTestimonials', TestimonialsController.getAllTestimonials);
 router.get('/getTestimonialsById/:id', TestimonialsController.getTestimonialsById);
 router.put('/updateTestimonialsById/:id', TestimonialsController.updateTestimonialsById);
 router.delete('/deleteTestimonialsById/:id', TestimonialsController.deleteTestimonialsById);
-
+router.delete('/bulk/deleteTestimonials', TestimonialsController.bulkDeleteTestimonials);
 module.exports = router;

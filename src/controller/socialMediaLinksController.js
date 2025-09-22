@@ -362,3 +362,31 @@ exports.getNonHomepageVideos = async (req, res) => {
         });
     }
 };
+
+exports.bulkDeleteYoutubeVideos = async (req, res) => {
+  try {
+    const { videoIds } = req.body;
+
+    if (!Array.isArray(videoIds) || videoIds.length === 0) {
+      return res.status(400).json({ success: false, message: "No videoIds provided" });
+    }
+
+    const result = await SocialMediaLinks.updateMany(
+      {},
+      { $pull: { youtube_videoLink: { _id: { $in: videoIds } } } }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Videos deleted successfully",
+      data: result
+    });
+  } catch (error) {
+    console.error("Error deleting videos:", error);
+    res.status(500).json({
+      success: false,
+      error: "Internal server error",
+      message: error.message
+    });
+  }
+};

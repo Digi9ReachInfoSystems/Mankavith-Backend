@@ -146,3 +146,25 @@ exports.getAllNotifications = async (req, res) => {
     return res.status(500).json({ message: 'Server error' });
   }
 };
+
+exports.bulkDeleteNotifications = async (req, res) => {
+  try {
+    const { notificationIds } = req.body;
+   let result = [];
+
+    for (const notificationId of notificationIds) {
+      const notification = await Notification.findById(notificationId);
+      if (!notification) {
+        result.push({ success: false, notificationId, message: "Notification not found" });
+      } else {
+        await Notification.findByIdAndDelete(notificationId);
+        result.push({ success: true, notificationId, message: "Notification deleted successfully" });
+      }
+    }
+
+    return res.status(200).json({ success: true, message: "Notifications deleted successfully", result });
+  } catch (err) {
+    console.error("Error deleting notifications:", err);
+    return res.status(500).json({ message: 'Server error' });
+  }
+};

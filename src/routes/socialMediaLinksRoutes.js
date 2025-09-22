@@ -12,5 +12,5 @@ router.put("/setHomepageYoutubeVideoLink/:videoId", socialMediaLinksController.s
 router.get("/getHomepageYoutubeVideoLink", socialMediaLinksController.getHomepageVideo);
 router.get("/getAllYoutubeVideoLinks", socialMediaLinksController.getAllYoutubeVideos);
 router.get("/getOtherYoutubeVideoLinks", socialMediaLinksController.getNonHomepageVideos);
-
+router.delete("/bulk/deleteYoutubeVideoLinks", socialMediaLinksController.bulkDeleteYoutubeVideos);
 module.exports = router;
