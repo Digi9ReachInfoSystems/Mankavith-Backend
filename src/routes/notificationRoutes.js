@@ -13,4 +13,5 @@ router.delete(
 );
 
 router.get("/getAllNotifications", notificationController.getAllNotifications);
+router.delete("/bulk/deleteNotifications", notificationController.bulkDeleteNotifications);
 module.exports = router;

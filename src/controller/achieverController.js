@@ -61,3 +61,22 @@ exports.deleteAchiever = async (req, res) => {
         res.status(500).json({ error: "Failed to delete achiever" });
     }
 };
+
+exports.bulkDeleteAchiever = async (req, res) => {
+    const { ids } = req.body;
+    try {
+        let result = [];
+        for (let id of ids) {
+            const achiever = await Achiever.findById(id);
+            if (!achiever) {
+                result.push({ success: false, achieverId: id, message: "Achiever not found" });
+            } else {
+                await Achiever.findByIdAndDelete(id);
+                result.push({ success: true, achieverId: id, message: "Achiever deleted successfully" });
+            }
+        }
+        res.status(200).json({ success: true, message: "Achievers deleted successfully", result });
+    } catch (error) {
+        res.status(500).json({ error: "Failed to delete achievers" });
+    }
+}

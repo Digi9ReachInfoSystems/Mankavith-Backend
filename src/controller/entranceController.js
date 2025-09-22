@@ -63,3 +63,22 @@ exports.deleteEntranceById = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
+
+exports.bulkDeleteEntrances = async (req, res) => {
+    try {
+        const { ids } = req.body;
+       let result = [];
+       for (let id of ids) {
+           const entrance = await Entrance.findById(id);
+           if (!entrance) {
+               result.push({ success: false, entranceId: id, message: "Entrance not found" });
+           } else {
+               await Entrance.findByIdAndDelete(id);
+               result.push({ success: true, entranceId: id, message: "Entrance deleted successfully" });
+           }
+       }
+       res.status(200).json({ success: true, message: "Entrances deleted successfully", result });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};

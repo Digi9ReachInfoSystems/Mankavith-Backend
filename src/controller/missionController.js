@@ -46,3 +46,21 @@ exports.deleteMissionById = async (req, res) => {
     }
 };
 
+exports.bulkDeleteMissions = async (req, res) => {
+    try {
+        const { ids } = req.body;
+        let result = [];
+        for (let id of ids) {
+            const mission = await Mission.findById(id);
+            if (!mission) {
+                result.push({ success: false, missionId: id, message: "mission not found" });
+            } else {
+                await Mission.findByIdAndDelete(id);
+                result.push({ success: true, missionId: id, message: "mission deleted successfully" });
+            }
+        }
+        res.status(200).json({ success: true, message: "missions deleted successfully", result });
+    } catch (error) {
+        res.status(500).json({ error: "Failed to delete missions" });
+    }
+};

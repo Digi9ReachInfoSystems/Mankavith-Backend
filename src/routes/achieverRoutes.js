@@ -9,5 +9,5 @@ router.get("/getAllAchievers", AchieverController.getAllAchievers);
 router.get("/getAchieverById/:id", AchieverController.getAchieversById);
 router.put("/updateAchiever/:id", AchieverController.updateAchiever);
 router.delete("/deleteAchiever/:id", AchieverController.deleteAchiever);
-
+router.delete("/bulk/deleteAchievers", AchieverController.bulkDeleteAchiever);
 module.exports = router;

@@ -53,25 +53,25 @@ exports.createTestimonials = async (req, res) => {
 
 
 exports.getTestimonialsById = async (req, res) => {
-    const { id } = req.params;
-    try {
-        const testimonials = await Testimonials.findById(id);
-        if (!testimonials) {
-            return res.status(404).json({ error: "Testimonials not found" });
-        }
-        res.status(200).json(testimonials);
-    } catch (error) {
-        res.status(500).json({ error: "Failed to retrieve testimonials" });
+  const { id } = req.params;
+  try {
+    const testimonials = await Testimonials.findById(id);
+    if (!testimonials) {
+      return res.status(404).json({ error: "Testimonials not found" });
     }
+    res.status(200).json(testimonials);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to retrieve testimonials" });
+  }
 };
 
 exports.getAllTestimonials = async (req, res) => {
-    try {
-        const testimonials = await Testimonials.find();
-        res.status(200).json(testimonials);
-    } catch (error) {
-        res.status(500).json({ error: "Failed to retrieve testimonials" });
-    }
+  try {
+    const testimonials = await Testimonials.find();
+    res.status(200).json(testimonials);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to retrieve testimonials" });
+  }
 };
 
 
@@ -100,7 +100,7 @@ exports.updateTestimonialsById = async (req, res) => {
   } = req.body;
 
   if ((testimonial_image && testimonial_video) ||
-      (!testimonial_image && !testimonial_video)) {
+    (!testimonial_image && !testimonial_video)) {
     return res.status(400).json({
       message: "Please include exactly one: testimonial_image or testimonial_video."
     });
@@ -142,11 +142,30 @@ exports.updateTestimonialsById = async (req, res) => {
 
 
 exports.deleteTestimonialsById = async (req, res) => {
-    const { id } = req.params;
-    try {
+  const { id } = req.params;
+  try {
+    await Testimonials.findByIdAndDelete(id);
+    res.json({ message: "Testimonials deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to delete testimonials" });
+  }
+};
+
+exports.bulkDeleteTestimonials = async (req, res) => {
+  const { ids } = req.body;
+  try {
+    let result = [];
+    for (let id of ids) {
+      const testimonial = await Testimonials.findById(id);
+      if (!testimonial) {
+        result.push({ success: false, testimonialId: id, message: "Testimonial not found" });
+      } else {
         await Testimonials.findByIdAndDelete(id);
-        res.json({ message: "Testimonials deleted successfully" });
-    } catch (error) {
-        res.status(500).json({ error: "Failed to delete testimonials" });
+        result.push({ success: true, testimonialId: id, message: "Testimonial deleted successfully" });
+      }
     }
+    res.status(200).json({ success: true, message: "Testimonials deleted successfully", result });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to delete testimonials" });
+  }
 };
