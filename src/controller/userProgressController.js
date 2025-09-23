@@ -401,6 +401,9 @@ exports.completeLecturer = async (req, res) => {
         lecturer.status = "completed";
         lecturer.completedAt = new Date();
         await userProgress.save();
+        if(userProgress.status === "completed" ) {
+            return res.status(200).json({ message: "Lecturer completed successfully", userProgress: userProgress, courseProgress: courseProgress });
+        }
 
         const mainSubjects = await Subject.findById(subject_id);
         const totalLectures = mainSubjects.lectures.length > 0 ? mainSubjects.lectures.length : 0;
@@ -412,8 +415,22 @@ exports.completeLecturer = async (req, res) => {
         subject.completedAt = Number((totalCompletedLecturer / totalLectures) * 100).toFixed(2) == 100 ? new Date() : null;
         subject.completedPercentage = totalLectures == 0 ? 0.0 : Number((totalCompletedLecturer / totalLectures) * 100).toFixed(2);
 
-        const mainCourse = await Course.findById(course_id);
-        const totalSubjects = mainCourse.subjects.length > 0 ? mainCourse.subjects.length : 0;
+        const mainCourse = await Course.findById(course_id)
+        .populate("subjects");
+        const subjectsWithLectures = mainCourse.subjects.filter((subject) => {
+            console.log("subject", subject);
+            // subject?.lectures?.length > 0
+            if(subject?.lectures){
+                if (subject.lectures.length > 0) {
+                    return true;
+                }
+            }else{
+                return false;
+            }
+        });
+        console.log("subjectsWithLectures", subjectsWithLectures);
+        // const totalSubjects = mainCourse.subjects.length > 0 ? mainCourse.subjects.length : 0;
+        const totalSubjects = subjectsWithLectures.length > 0 ? subjectsWithLectures.length : 0;
         const completedSubjects = course.subjectProgress.filter((subject) => subject.status == "completed");
         const totalCompletedSubjects = completedSubjects.length > 0 ? completedSubjects.length : 0;
         await userProgress.save();

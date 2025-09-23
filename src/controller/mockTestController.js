@@ -7,6 +7,7 @@ const Course = require("../model/course_model");
 const UserAttempt = require("../model/userAttemptModel");
 const UserRanking = require("../model/userRankingModel");
 const mongoose = require("mongoose");
+const moment = require("moment");
 
 // Admin: Create a new mock test
 exports.createMockTest = async (req, res) => {
@@ -18,9 +19,10 @@ exports.createMockTest = async (req, res) => {
       passingMarks,
       questions,
       subject,
-      startDate,
+      startDate= moment().tz("Asia/Kolkata").toDate(),
       endDate,
       maxAttempts,
+      isUnlimitedAttempts=false
     } = req.body;
 
     // Validate test window
@@ -36,6 +38,8 @@ exports.createMockTest = async (req, res) => {
       totalMarks = questions.reduce((sum, q) => sum + q.marks, 0);
     }
 
+    console.log(" totalMarks:", totalMarks);
+
     const mockTest = new MockTest({
       title,
       description,
@@ -44,9 +48,10 @@ exports.createMockTest = async (req, res) => {
       totalMarks,
       passingMarks,
       questions,
-      startDate,
+      startDate, 
       endDate,
       maxAttempts,
+      isUnlimitedAttempts
     });
 
     const savedTest = await mockTest.save();

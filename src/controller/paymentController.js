@@ -219,18 +219,18 @@ exports.handleWebhook = async (req, res) => {
     await sendCoursePurchaseEmail(
       user.displayName,
       user.email,
-      course.name,
+      course.courseDisplayName,
       payment.amountPaid,
       payId
     );
-    const userAdmin = await User.find({ role: "admin" });
+    const userAdmin = await User.find({ role: "admin",  isSuperAdmin: true });
     await Promise.all(userAdmin.map(async (admin) => {
       await sendAdminCoursePurchaseNotification(
         user.displayName,
         user.email,
-        course.name,
+        course.courseDisplayName,
         payment.amountPaid,
-        payId,
+        // payId,
         admin.email,
       );
     }))

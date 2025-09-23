@@ -2,33 +2,41 @@ const Notification = require('../model/notificationModel');
 const User = require('../model/user_model');
 const UserNotification = require('../model/userNotificationModel');
 const mongoose = require('mongoose');
+const moment = require("moment-timezone");
 exports.sendNotification = async (req, res) => {
   try {
     const { title, description, time, notificationType } = req.body;
 
-    const notification = new Notification({ title, description, time, 
-        // image,
-         notificationType });
+    const notification = new Notification({
+      title, description, time,
+      // image,
+      notificationType
+    });
     await notification.save();
+    const now = moment().tz("Asia/Kolkata").toDate();
+    const users = await User.find({ role: 'user' });
+    if (time == null || time < now) {
+      for (const user of users) {
+        const userNotification = new UserNotification({
+          title,
+          description,
+          time,
+          // image,
+          user_ref: user._id,
+          read: false
+        });
+        await userNotification.save();
 
-    const users = await User.find();
+        const userIdentifier = user.displayName || user.email || user._id;
+        console.log(`App notification created for user ${userIdentifier}`);
+      }
+      return res.status(200).json({ message: 'App notifications created successfully' });
 
-    for (const user of users) {
-      const userNotification = new UserNotification({
-        title,
-        description,
-        time,
-        // image,
-        user_ref: user._id,
-         read: false 
-      });
-      await userNotification.save();
-
-      const userIdentifier = user.displayName || user.email || user._id;
-      console.log(`App notification created for user ${userIdentifier}`);
+    } else {
+      return res.status(200).json({ message: 'App notifications scheduled successfully' });
     }
 
-    return res.status(200).json({ message: 'App notifications created successfully' });
+
   } catch (err) {
     console.error(err);
     return res.status(500).json({ message: 'Error creating app notifications' });
@@ -67,7 +75,7 @@ exports.getUserNotifications = async (req, res) => {
       return res.status(400).json({ message: 'Invalid User ID' });
     }
 
-    const notifications = await UserNotification.find({ user_ref: userId})
+    const notifications = await UserNotification.find({ user_ref: userId })
       .sort({ createdAt: -1 })  // use createdAt from timestamps
       .select('-__v');          // optional: clean up response
 
@@ -138,7 +146,7 @@ exports.getAllNotifications = async (req, res) => {
   try {
     const notifications = await Notification.find()
       .sort({ createdAt: -1 })
-      .select('-__v'); 
+      .select('-__v');
 
     return res.status(200).json(notifications);
   } catch (err) {
@@ -150,7 +158,7 @@ exports.getAllNotifications = async (req, res) => {
 exports.bulkDeleteNotifications = async (req, res) => {
   try {
     const { notificationIds } = req.body;
-   let result = [];
+    let result = [];
 
     for (const notificationId of notificationIds) {
       const notification = await Notification.findById(notificationId);

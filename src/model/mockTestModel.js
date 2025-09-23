@@ -37,6 +37,7 @@ const mockTestSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false },
   maxAttempts: { type: Number, default: 1 },
+  isUnlimitedAttempts: { type: Boolean, default: false },
   isPublished: { type: Boolean, default: false },
    order: { type: Number, default: 0 },
   isDeleted: { type: Boolean, default: false },
