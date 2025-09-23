@@ -466,6 +466,9 @@ exports.editMockTest = async (req, res) => {
     if ("endDate" in updates)
       existingTest.endDate = updates.endDate ?? existingTest.endDate;
 
+    if("isUnlimitedAttempts" in updates)
+      existingTest.isUnlimitedAttempts = updates.isUnlimitedAttempts ?? existingTest.isUnlimitedAttempts
+
     if (existingTest.startDate && existingTest.endDate) {
       const s = new Date(existingTest.startDate);
       const e = new Date(existingTest.endDate);
