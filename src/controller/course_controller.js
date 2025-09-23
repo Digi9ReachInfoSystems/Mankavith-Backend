@@ -370,11 +370,19 @@ exports.updateCourse = async (req, res) => {
 // Publish course (updated to populate category)
 exports.publishCourse = async (req, res) => {
   try {
-    const courseId = req.params.id;
+    const courseId = req.params.id; 
+    const course = await Course.findById(courseId);
+
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: "Course not found",
+      });
+    }
 
     const updatedCourse = await Course.findByIdAndUpdate(
       courseId,
-      { isPublished: true },
+      { isPublished: !course.isPublished },
       { new: true }
     )
       .populate("subjects", "subjectName")
