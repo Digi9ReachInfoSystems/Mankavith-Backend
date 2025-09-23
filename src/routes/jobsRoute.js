@@ -5,5 +5,6 @@ const jobsController = require("../controller/jobsController");
 
 router.get("/subscriptionExpiry", jobsController.removeExpiredSubscriptions);
 router.get("/oldMeetings", jobsController.cleanOldMeetings);
-
+router.get("/scheduledNotifications", jobsController.sendScheduledNotifications);
+router.get("/deleteOldNotifications", jobsController.removeOldNotifications);   
 module.exports = router;

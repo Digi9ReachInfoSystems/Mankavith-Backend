@@ -140,10 +140,10 @@ exports.register = async (req, res) => {
       realTimeResponse: 1,
     });
     await sendWelcomeEmail(user.displayName, user.email);
-    const adminUser = await User.find({ role: "admin" });
+    const adminUser = await User.find({ role: "admin" ,isSuperAdmin: true});
     Promise.all(
       adminUser.map(async (admin) => {
-        await sendAdminNotification(user.displayName, user.email, admin.email);
+        await sendAdminNotification(user.displayName, user.email,user.phone, admin.email);
       })
     );
 

@@ -2,6 +2,9 @@ const User = require("../model/user_model");
 const UserProgress = require("../model/userProgressModel");
 const Course = require("../model/course_model");
 const Meeting = require("../model/meetingsModel");
+const Notification = require("../model/notificationModel");
+const UserNotification = require("../model/userNotificationModel");
+const moment = require("moment-timezone");
 exports.removeExpiredSubscriptions = async (req, res) => {
   const now = new Date();
 
@@ -80,3 +83,55 @@ exports.cleanOldMeetings = async (req, res) => {
     });
   }
 };
+
+exports.sendScheduledNotifications = async (req, res) => {
+  await dbConnect();
+
+  const now = moment().tz("Asia/Kolkata").toDate();
+
+  // find due notifications
+  const due = await Notification.find({
+    time: { $lte: now },
+    sent: false
+  });
+
+  if (!due.length) {
+    return res.json({ dispatched: 0 });
+  }
+
+  for (const notif of due) {
+    const users = await User.find({ role: "user" });
+
+    for (const user of users) {
+      await new UserNotification({
+        title: notif.title,
+        description: notif.description,
+        time: notif.time,
+        user_ref: user._id,
+        read: false
+      }).save();
+    }
+
+    notif.sent = true; // mark as dispatched
+    await notif.save();
+  }
+
+  res.json({ dispatched: due.length });
+}
+
+exports.removeOldNotifications = async (req, res) => {
+  try {
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 3);
+
+    const result = await UserNotification.deleteMany({
+      time: { $lt: oneMonthAgo },
+      read: true
+    });
+    
+    res.json({ deleted: true, count: result.deletedCount });
+  } catch (err) {
+    console.log(err);
+  }
+
+}

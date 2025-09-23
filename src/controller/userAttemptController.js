@@ -217,7 +217,7 @@ exports.startAttempt = async (req, res) => {
     }
     let isWithinWindow = true;
       const now = new Date();
-    if (mockTest.startDate !== null && mockTest.endDate !== null) {
+    if (mockTest.isUnlimitedAttempts === false) {
       if (attemptCount >= mockTest.maxAttempts) {
         return res.status(200).json({
           success: false,
@@ -225,8 +225,8 @@ exports.startAttempt = async (req, res) => {
         });
       }
     
-      isWithinWindow =
-        now >= new Date(mockTest.startDate) && now <= new Date(mockTest.endDate);
+      isWithinWindow =true;
+        // now >= new Date(mockTest.startDate) && now <= new Date(mockTest.endDate);
     }
 
 
@@ -1813,6 +1813,11 @@ exports.getUserMockTestStats = async (req, res) => {
     const totalAttempts = await UserAttempt.countDocuments({
       userId: user_id,
       mockTestId,
+      $or: [
+        { status: "submitted" },
+        { status: "evaluated" },
+        { status: "evaluating" },
+      ],
     });
     return res.status(200).json({
       success: true,
@@ -1821,7 +1826,7 @@ exports.getUserMockTestStats = async (req, res) => {
         mockTest: mockTest,
         attemptCount: totalAttempts,
         maxAttempts: mockTest.maxAttempts,
-        isUnlimited:(mockTest.startDate==null && mockTest.endDate==null) ?true:false,
+        isUnlimited:mockTest.isUnlimitedAttempts,
         resume: pausedAttempt ? true : false,
         start:(mockTest.startDate==null && mockTest.endDate==null)? true : (totalAttempts < mockTest.maxAttempts) ? true : false
       }

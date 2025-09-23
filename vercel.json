@@ -20,6 +20,14 @@
     {
       "path": "/job/oldMeetings",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/job/scheduledNotifications",
+       "schedule": "*/1 * * * *"
+    },
+    {
+      "path": "/job/deleteOldNotifications",
+      "schedule": "0 0 * * *"
     }
   ]
 }

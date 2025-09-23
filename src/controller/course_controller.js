@@ -24,7 +24,7 @@ exports.createCourse = async (req, res) => {
         }
         return cat;
       }));
-      courseData.category =  courseData.category.filter(cat => cat !== null);
+      courseData.category = courseData.category.filter(cat => cat !== null);
 
       // const categoryExists = await Category.findById(courseData.category);
       // if (!categoryExists) {
@@ -333,7 +333,7 @@ exports.updateCourse = async (req, res) => {
     }
 
     course.image = updateData.image ?? course.image;
-    if(updateData.courseExpiry != null) {
+    if (updateData.courseExpiry != null) {
       course.courseExpiry = updateData.courseExpiry;
     }
 
@@ -657,7 +657,8 @@ exports.getAllUserCourses = async (req, res) => {
         message: "User not found",
       });
     }
-    let courses = await Course.find({ isPublished: true ,
+    let courses = await Course.find({
+      isPublished: true,
       // courseExpiry: { $gte: new Date() }
     }).populate("subjects").populate("category");
     courses = courses.map(course => {
@@ -703,9 +704,10 @@ exports.getAllUserCoursesByCategory = async (req, res) => {
         message: "Category not found",
       });
     }
-    let courses = await Course.find({ category: categoryExists._id, isPublished: true,
+    let courses = await Course.find({
+      category: categoryExists._id, isPublished: true,
       //  courseExpiry: { $gte: new Date() } 
-      }).populate("subjects").populate("category");
+    }).populate("subjects").populate("category");
     courses = courses.map(course => {
       if (user.subscription.find(sub => sub.course_enrolled.equals(course._id))) {
         return ({
@@ -793,14 +795,212 @@ exports.searchUserCourses = async (req, res) => {
     });
   }
 };
+async function cleanupUserProgress(userProgress, course) {
+  // console.log('cleanupUserProgress',course);
+  // console.dir(userProgress.toObject(), { depth: null });
+  const courseProgress = userProgress.courseProgress.find(
+    cp => cp.course_id.toString() === course._id.toString()
+  );
+  if (!courseProgress) return userProgress;
+
+  const subjectsWithLectures = course.subjects.filter((subject) => {
+    console.log("subject", subject);
+    // subject?.lectures?.length > 0
+    if (subject?.lectures) {
+      if (subject.lectures.length > 0) {
+        return true;
+      }
+    } else {
+      return false;
+    }
+  });
+
+  // keep only valid subjects
+  courseProgress.subjectProgress = courseProgress.subjectProgress.filter(sp =>
+    // course.subjects.some(cs => cs._id.toString() === sp.subject_id.toString())
+    subjectsWithLectures.some(cs => cs._id.toString() === sp.subject_id.toString()) 
+  );
+  // console.log('subjectProgress', courseProgress.subjectProgress);
+
+  // keep only valid lectures inside each subject
+  courseProgress.subjectProgress.forEach(sp => {
+
+    const courseSubject = course.subjects.find(cs => cs._id.toString() === sp.subject_id.toString());
+    if (courseSubject) {
+      sp.lecturerProgress = sp.lecturerProgress.filter(lp =>
+        courseSubject?.lectures?.some(cl => cl._id.toString() === lp.lecturer_id.toString())
+      );
+    }
+    // console.log('lecturerProgress', sp.lecturerProgress);
+  });
+
+  // console.dir(userProgress.toObject(), { depth: null });
+  // console.log('cleanupUserProgress', courseProgress);
+  userProgress.courseProgress = userProgress.courseProgress.map(cp => {
+    if (cp.course_id.toString() === course._id.toString()) {
+      return courseProgress;
+    }
+    return cp;
+  });
+
+  await userProgress.save();
+  return userProgress;
+}
+
+
+async function recalcProgress(userProgress, courseData) {
+  if (!userProgress) return null;
+
+  // loop each courseProgress for this course
+  const courseProgress = userProgress.courseProgress.find(
+    cp => cp.course_id.toString() === courseData._id.toString()
+  );
+  if (!courseProgress) return userProgress;
+
+  // ---- SUBJECTS ----
+  for (let sp of courseProgress.subjectProgress) {
+    const courseSubject = await Subject.findById(sp.subject_id);
+    if (!courseSubject) continue;
+
+    const totalLectures = courseSubject.lectures?.length || 0;
+    const completedLectures = sp.lecturerProgress.filter(lp => lp.status === "completed").length;
+
+    if (totalLectures === 0) {
+      sp.status = "completed";
+      sp.completedPercentage = 100;
+    } else {
+      sp.completedPercentage = Number((completedLectures / totalLectures) * 100).toFixed(2);
+      if (courseProgress.status === "completed") {
+        sp.status = "completed";
+        sp.completedPercentage = 100;
+      } else {
+        if (sp.completedPercentage == 100) {
+          sp.status = "completed";
+          sp.completedAt = new Date();
+        } else if (sp.completedPercentage > 0) {
+          sp.status = "ongoing";
+          sp.completedAt = null;
+        }
+      }
+      // if (sp.completedPercentage == 100) {
+      //   sp.status = "completed";
+      //   sp.completedAt = new Date();
+      // } else if (sp.completedPercentage > 0) {
+      //   sp.status = "ongoing";
+      //   sp.completedAt = null;
+      // }
+      //  else {
+      //   sp.status = "not started";
+      //   sp.completedAt = null;
+      // }
+    }
+  }
+  
+ const subjectsWithLectures = courseData.subjects.filter((subject) => {
+    // console.log("subject", subject);
+    // subject?.lectures?.length > 0
+    if (subject?.lectures) {
+      if (subject.lectures.length > 0) {
+        return true;
+      }
+    } else {
+      return false;
+    }
+  });
+  const completedSubjects = courseProgress.subjectProgress.filter(sp => sp.status === "completed").length;
+  courseProgress.completedPercentage = Number((completedSubjects / subjectsWithLectures.length) * 100).toFixed(2);
+  courseProgress.status = courseProgress.completedPercentage == 100 ? "completed" : "ongoing";
+  // ---- COURSE ----
+  // const subjectsWithLectures = courseData.subjects.filter(s => s.lectures?.length > 0);
+  // const totalSubjects = subjectsWithLectures.length || 0;
+  // const completedSubjects = courseProgress.subjectProgress.filter(sp => sp.status === "completed").length;
+
+  // if (totalSubjects === 0) {
+  //   courseProgress.completedPercentage = 0;
+  //   courseProgress.status = "not started";
+  // } else {
+  //   courseProgress.completedPercentage = Number((completedSubjects / totalSubjects) * 100).toFixed(2);
+  //   if (courseProgress.completedPercentage == 100) {
+  //     courseProgress.status = "completed";
+  //     courseProgress.completedAt = new Date();
+  //   } else if (courseProgress.completedPercentage > 0) {
+  //     courseProgress.status = "ongoing";
+  //     courseProgress.completedAt = null;
+  //   } else {
+  //     courseProgress.status = "not started";
+  //     courseProgress.completedAt = null;
+  //   }
+  // }
+  // console.log("recalcProgress", courseProgress);
+  userProgress.courseProgress = userProgress.courseProgress.map(cp => {
+    if (cp.course_id.toString() === courseData._id.toString()) {
+      return courseProgress;
+    }
+    return cp;
+  })
+  await userProgress.save();
+  // console.log("recalcProgress", courseProgress);
+  // res.status(200).json({ success: true, data: userProgress });
+  return userProgress;
+}
+function buildCourseWithProgress(courseData, userProgress) {
+  // find course progress
+  const courseProgress = userProgress?.courseProgress.find(
+    cp => cp.course_id.toString() === courseData._id.toString()
+  );
+
+  return {
+    ...courseData.toObject(),
+    status: courseProgress?.status || "not started",
+    completedPercentage: courseProgress?.completedPercentage || 0,
+    completed: courseProgress?.status === "completed",
+    subjects: courseData.subjects.map(subject => {
+      // console.log(" subject", subject);
+      const subjectProgress = courseProgress?.subjectProgress.find(
+        sp => sp.subject_id.toString() === subject._id.toString()
+      );
+      if (!subjectProgress) {
+        return {
+          ...subject.toObject(),
+          status: "not started",
+          completedPercentage: 0,
+          completed: false,
+          lectures: subject.lectures.map(lecture => ({
+            ...lecture.toObject(),
+            status: "not started",
+            completedPercentage: 0,
+            completed: false,
+          }))
+        };
+      }
+
+      return {
+        ...subject.toObject(),
+        status: subjectProgress?.status || "not started",
+        completedPercentage: subjectProgress?.completedPercentage || 0,
+        completed: subjectProgress?.status === "completed",
+        lectures: subject.lectures.map(lecture => {
+          const lectureProgress = subjectProgress?.lecturerProgress.find(
+            lp => lp.lecturer_id.toString() === lecture._id.toString()
+          );
+          return {
+            ...lecture.toObject(),
+            status: lectureProgress?.status || "not started",
+            completedPercentage: lectureProgress?.completedPercentage || 0,
+            completed: lectureProgress?.status === "completed",
+          };
+        })
+      };
+    })
+  };
+}
+
 
 exports.getCourseWithProgress = async (req, res) => {
   try {
     const { courseId, userId } = req.body;
-    console.log("Fetching course with progress for user:", userId, "and course:", courseId);
-
-    // Fetch course with nested subjects and lectures
-    let course = await Course.findOne({ _id: courseId, isPublished: true})
+    // console.log("Fetching course with progress for user:", userId, "and course:", courseId);
+    const courseData = await Course.findOne({ _id: courseId, })
       .populate({
         path: "subjects",
         populate: [{
@@ -808,11 +1008,30 @@ exports.getCourseWithProgress = async (req, res) => {
           // path :"notes"
         }],
       })
-       .populate({
+      .populate({
         path: "subjects",
         populate: [{
           // path: "lectures",
-          path :"notes"
+          path: "notes"
+        }],
+      });
+    const userProgressData = await UserProgress.findOne({ user_id: userId });
+
+    const updatedUserProgressData = await userProgressData.save();
+    // Fetch course with nested subjects and lectures
+    let course = await Course.findOne({ _id: courseId, isPublished: true })
+      .populate({
+        path: "subjects",
+        populate: [{
+          path: "lectures",
+          // path :"notes"
+        }],
+      })
+      .populate({
+        path: "subjects",
+        populate: [{
+          // path: "lectures",
+          path: "notes"
         }],
       });
 
@@ -822,7 +1041,7 @@ exports.getCourseWithProgress = async (req, res) => {
 
     // Fetch user progress for this course
     const userProgress = await UserProgress.findOne({ user_id: userId });
-    console.log("User progress:", userProgress);
+    // console.log("User progress:", userProgress);
     if (!userProgress) {
 
       course = {
@@ -850,6 +1069,10 @@ exports.getCourseWithProgress = async (req, res) => {
     // Initialize progress data
     let courseProgress = null;
     if (userProgress) {
+      await cleanupUserProgress(userProgressData, courseData);
+      await recalcProgress(userProgressData, courseData);
+      const response = buildCourseWithProgress(courseData, updatedUserProgressData);
+      return res.status(200).json({ success: true, data: response });
       courseProgress = userProgress.courseProgress.find(p => p.course_id.toString() === courseId);
 
       if (!courseProgress) {
@@ -1322,7 +1545,7 @@ exports.bulkDeleteCourse = async (req, res) => {
 exports.getAllCourseAdmin = async (req, res) => {
   try {
     const courses = await Course.find()
-       .populate({
+      .populate({
         path: "subjects",
         select: "subjectName image description lectures notes",
         populate: [
@@ -1365,12 +1588,12 @@ exports.getCategoriesWithCourses = async (req, res) => {
   try {
     // Get all categories (or only featured if specified)
     const filter = {};
-   
-      filter.featured = true;
-    
-    
+
+    filter.featured = true;
+
+
     const categories = await Category.find(filter);
-    
+
     if (!categories || categories.length === 0) {
       return res.status(404).json({
         success: false,
@@ -1385,29 +1608,29 @@ exports.getCategoriesWithCourses = async (req, res) => {
       .populate("mockTests")
       .populate("recorded_sessions")
       .lean();
-    
+
     const categoriesWithCourses = await Promise.all(
       categories.map(async (category) => {
         const courses = await Course.find({
           category: category._id,
           isPublished: true,
         })
-        .populate("subjects",)
-        .populate("category",)
-        .populate("student_feedback")
-        .populate("student_enrolled")
-        .populate("mockTests")
-        .populate("recorded_sessions")
-        // .select("courseName courseDisplayName shortDescription price discountPrice discountActive image rating course_rating duration no_of_videos instructors student_enrolled")
-        .limit(parseInt(req.query.limit) || 5) // Default to 5 courses per category
-        .lean(); // Return plain JavaScript objects
-        
+          .populate("subjects",)
+          .populate("category",)
+          .populate("student_feedback")
+          .populate("student_enrolled")
+          .populate("mockTests")
+          .populate("recorded_sessions")
+          // .select("courseName courseDisplayName shortDescription price discountPrice discountActive image rating course_rating duration no_of_videos instructors student_enrolled")
+          .limit(parseInt(req.query.limit) || 5) // Default to 5 courses per category
+          .lean(); // Return plain JavaScript objects
+
         // Add student count to each course
         const coursesWithStudentCount = courses.map(course => ({
           ...course,
           student_enrolled_count: course.student_enrolled ? course.student_enrolled.length : 0
         }));
-        
+
         return {
           category: {
             _id: category._id,
@@ -1418,12 +1641,12 @@ exports.getCategoriesWithCourses = async (req, res) => {
         };
       })
     );
-    
+
     // // Filter out categories with no courses
     // const filteredCategories = categoriesWithCourses.filter(
     //   item => item.courses && item.courses.length > 0
     // );
-    
+
     res.status(200).json({
       success: true,
       data: {

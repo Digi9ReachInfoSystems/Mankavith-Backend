@@ -19,6 +19,7 @@ const { decryptRequestBody, encryptResponseBody } = encryptionMiddleware(
 const webhookController = require("./src/controller/razor_pay_webhook");
 const { removeExpiredSubscriptions } = require("./src/jobs/courseExpiryJobs");
 const { removeOldMeetings } = require("./src/jobs/oldMeetingJobs");
+const {sendScheduledNotifications,removeOlderNotifications} = require("./src/jobs/notificationJobs");
 const meetingController = require("./src/controller/meetingController");
 const cloudfareR2Controller = require("./src/controller/cloudfarer2Controller");
 const { Vimeo } = require('@vimeo/vimeo');
@@ -27,6 +28,8 @@ app.use(cors());
 // Start cron
 removeExpiredSubscriptions.start();
 removeOldMeetings.start();
+sendScheduledNotifications.start();
+removeOlderNotifications.start();
 
 app.post(
   "/api/webhooks/razorpay-webhook",
@@ -109,6 +112,7 @@ const couponRoutes = require("./src/routes/couponRoutes");
 const masterOtpRoutes = require("./src/routes/masterOtpRoutes");
 const jobRoutes = require("./src/routes/jobsRoute");
 const cloudfareR2Routes = require("./src/routes/cloudfarer2Routes");
+const { sendAdminPaperDownloadMail } = require("./src/middleware/mailService");
 
 app.use("/user", userRoutes);
 app.use("/api/v1/course", courseRoutes);
@@ -153,7 +157,24 @@ app.use("/masterOtp", masterOtpRoutes);
 app.use("/job", jobRoutes);
 app.use("/cloudfareR2", cloudfareR2Routes);
 
+// app.post("/api/send/previousYearQuestionRequest", async (req, res) => {
+//   try {
+//     const { email, name,phone } = req.body;
 
+//     const admins=await User.find({role:"admin", isSuperAdmin:true});
+
+//     await Promise.all(
+//       admins.map(async (admin) => {
+//         await sendAdminPaperDownloadMail(name, email, phone, admin.email);
+//       })
+//     );
+    
+//     res.status(200).json({ message: "Email sent successfully" });
+//   } catch (error) {
+//     console.error("Error sending email:", error);
+//     res.status(500).json({ error: "Failed to send email" });
+//   }
+// });
 
 
 connectDB()

@@ -152,7 +152,7 @@ exports.sendWelcomeEmail = async (studentName, studentEmail) => {
 };
 
 // Admin Notification Email
-exports.sendAdminNotification = async (studentName, studentEmail, adminEmail) => {
+exports.sendAdminNotification = async (studentName, studentEmail,studentPhone, adminEmail) => {
     const mailOptions = {
         from: fromMail,
         to: adminEmail,
@@ -164,6 +164,7 @@ exports.sendAdminNotification = async (studentName, studentEmail, adminEmail) =>
         <ul>
           <li><strong>Name:</strong> ${studentName}</li>
           <li><strong>Email:</strong> ${studentEmail}</li>
+          <li><strong>Phone:</strong> ${studentPhone}</li>
           <li><strong>Signup Date:</strong> ${new Date().toLocaleDateString()}</li>
         </ul>
         <p><a href="${siteUrl}">Review profile on Admin Dashboard</a></p>
