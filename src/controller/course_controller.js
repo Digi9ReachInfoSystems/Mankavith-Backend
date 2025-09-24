@@ -9,6 +9,7 @@ const CourseProgress = require("../model/courseProgressModel");
 const Meeting = require("../model/meetingsModel");
 const Payment = require("../model/paymentModel");
 const Certificate = require("../model/certificatesModel");
+const { generateCertificate } = require("../utils/certificateGenerationService");
 // Create a new course (updated for category reference)
 exports.createCourse = async (req, res) => {
   try {
@@ -370,7 +371,7 @@ exports.updateCourse = async (req, res) => {
 // Publish course (updated to populate category)
 exports.publishCourse = async (req, res) => {
   try {
-    const courseId = req.params.id; 
+    const courseId = req.params.id;
     const course = await Course.findById(courseId);
 
     if (!course) {
@@ -826,7 +827,7 @@ async function cleanupUserProgress(userProgress, course) {
   // keep only valid subjects
   courseProgress.subjectProgress = courseProgress.subjectProgress.filter(sp =>
     // course.subjects.some(cs => cs._id.toString() === sp.subject_id.toString())
-    subjectsWithLectures.some(cs => cs._id.toString() === sp.subject_id.toString()) 
+    subjectsWithLectures.some(cs => cs._id.toString() === sp.subject_id.toString())
   );
   // console.log('subjectProgress', courseProgress.subjectProgress);
 
@@ -864,6 +865,7 @@ async function recalcProgress(userProgress, courseData) {
     cp => cp.course_id.toString() === courseData._id.toString()
   );
   if (!courseProgress) return userProgress;
+  const oldStatus = courseProgress.status;
 
   // ---- SUBJECTS ----
   for (let sp of courseProgress.subjectProgress) {
@@ -903,8 +905,8 @@ async function recalcProgress(userProgress, courseData) {
       // }
     }
   }
-  
- const subjectsWithLectures = courseData.subjects.filter((subject) => {
+
+  const subjectsWithLectures = courseData.subjects.filter((subject) => {
     // console.log("subject", subject);
     // subject?.lectures?.length > 0
     if (subject?.lectures) {
@@ -918,6 +920,20 @@ async function recalcProgress(userProgress, courseData) {
   const completedSubjects = courseProgress.subjectProgress.filter(sp => sp.status === "completed").length;
   courseProgress.completedPercentage = Number((completedSubjects / subjectsWithLectures.length) * 100).toFixed(2);
   courseProgress.status = courseProgress.completedPercentage == 100 ? "completed" : "ongoing";
+
+  if (courseProgress.status === "completed" && courseProgress.generatedCertificate === false) {
+
+    courseProgress.completedAt = new Date();
+    const userData = await User.findById(userProgress.user_id);
+    const urls = await generateCertificate(userData.displayName, courseData.courseDisplayName);
+    const certificate = new Certificate({
+      user_ref: userProgress.user_id,
+      course_ref: courseProgress.course_id,
+      certificate_url: urls.pdfUrl,
+    });
+    await certificate.save();
+
+  }
   // ---- COURSE ----
   // const subjectsWithLectures = courseData.subjects.filter(s => s.lectures?.length > 0);
   // const totalSubjects = subjectsWithLectures.length || 0;
