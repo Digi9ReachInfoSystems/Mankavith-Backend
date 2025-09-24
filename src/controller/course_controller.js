@@ -918,9 +918,10 @@ async function recalcProgress(userProgress, courseData) {
     }
   });
   const completedSubjects = courseProgress.subjectProgress.filter(sp => sp.status === "completed").length;
-  courseProgress.completedPercentage = Number((completedSubjects / subjectsWithLectures.length) * 100).toFixed(2);
-  courseProgress.status = courseProgress.completedPercentage == 100 ? "completed" : "ongoing";
-
+  if (courseProgress.status !== "completed") {
+    courseProgress.completedPercentage = Number((completedSubjects / subjectsWithLectures.length) * 100).toFixed(2);
+    courseProgress.status = courseProgress.completedPercentage == 100 ? "completed" : "ongoing";
+  }
   if (courseProgress.status === "completed" && courseProgress.generatedCertificate === false) {
 
     courseProgress.completedAt = new Date();
