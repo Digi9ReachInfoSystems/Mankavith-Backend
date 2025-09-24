@@ -4,6 +4,7 @@ const StaticSchema = new mongoose.Schema({
     terms: { type: String, required: false },
     privacy: { type: String, required: false },
     refund: { type: String, required: false },
+    courseInfo: { type: String, required: false },
 
 });
 

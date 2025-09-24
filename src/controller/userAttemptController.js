@@ -875,92 +875,139 @@ exports.getUserAttempts = async (req, res) => {
 };
 
 // Helper function to update rankings (updated)
+// async function updateRankings(attempt) {
+//   console.log("updateRankings",attempt);
+//   // Get all evaluated attempts for this user, test, and course
+//   const attempts = await UserAttempt.find({
+//     userId: attempt.userId,
+//     mockTestId: attempt.mockTestId,
+//     // courseId: attempt.courseId,
+//     status: "evaluated",
+//     isWithinTestWindow: true,
+//   });
+
+//   // Find best attempt (highest score, earliest submission for ties)
+//   let bestAttempt = attempts.reduce((best, current) => {
+//     if (current.totalMarks > best.totalMarks) return current;
+//     if (
+//       current.totalMarks === best.totalMarks &&
+//       current.submittedAt < best.submittedAt
+//     )
+//       return current;
+//     return best;
+//   }, attempts[0]);
+
+//   // Update all attempts to mark which is best
+//   await UserAttempt.updateMany(
+//     {
+//       userId: attempt.userId,
+//       mockTestId: attempt.mockTestId,
+//       // courseId: attempt.courseId,
+//     },
+//     { $set: { isBestAttempt: false } }
+//   );
+//   // if (bestAttempt) {
+//   //   bestAttempt.isBestAttempt = true;
+//   //   await bestAttempt.save();
+
+//   //   // Update or create ranking
+//   //   const ranking = await UserRanking.findOneAndUpdate(
+//   //     {
+//   //       userId: attempt.userId,
+//   //       mockTestId: attempt.mockTestId,
+//   //       subject: attempt.subject,
+//   //     },
+//   //     {
+//   //       bestAttemptId: bestAttempt._id,
+//   //       bestScore: bestAttempt.totalMarks,
+//   //       attemptsCount: attempts.length,
+//   //       lastUpdated: new Date(),
+//   //     },
+//   //     { upsert: true, new: true }
+//   //   );
+//   // }
+//   //Find recent attempts for this user, test and course
+//   const recentAttempts = await UserAttempt.find({
+//     userId: attempt.userId,
+//     mockTestId: attempt.mockTestId,
+//     // courseId: attempt.courseId,
+//     status: "evaluated",
+//     isWithinTestWindow: true,
+//   }).sort({ submittedAt: -1 });
+//   // Update attemptsCount in ranking based on recent attempts
+//   const recentRanking = await UserRanking.findOne({
+//     userId: attempt.userId,
+//     mockTestId: attempt.mockTestId,
+//     // subject: attempt.subject,
+//   });
+//   if (recentRanking) {
+//     const ranking = await UserRanking.findOneAndUpdate(
+//       {
+//         userId: attempt.userId,
+//         mockTestId: attempt.mockTestId,
+//         // subject: attempt.subject,
+//       },
+//       {
+//         bestAttemptId: recentAttempts[0]._id,
+//         bestScore: recentAttempts[0].totalMarks,
+//         attemptsCount: recentAttempts[0].length,
+//         lastUpdated: new Date(),
+//       },
+//       { upsert: true, new: true }
+//     );
+//   }
+
+//   // Recalculate all rankings for this test and course
+//   await recalculateTestRankings(attempt.mockTestId, attempt.subject);
+// }
 async function updateRankings(attempt) {
-  // Get all evaluated attempts for this user, test, and course
+  
+
+  // Get all evaluated attempts for this user and mock test
   const attempts = await UserAttempt.find({
     userId: attempt.userId,
     mockTestId: attempt.mockTestId,
-    // courseId: attempt.courseId,
     status: "evaluated",
     isWithinTestWindow: true,
-  });
+  }).sort({ submittedAt: -1 }); // 👈 newest first
 
-  // Find best attempt (highest score, earliest submission for ties)
-  let bestAttempt = attempts.reduce((best, current) => {
-    if (current.totalMarks > best.totalMarks) return current;
-    if (
-      current.totalMarks === best.totalMarks &&
-      current.submittedAt < best.submittedAt
-    )
-      return current;
-    return best;
-  }, attempts[0]);
+  if (!attempts.length) return;
 
-  // Update all attempts to mark which is best
+  // Instead of "best score", take the LAST submitted attempt
+  const lastAttempt = attempts[0];
+
+  // Reset all attempts
   await UserAttempt.updateMany(
+    { userId: attempt.userId, mockTestId: attempt.mockTestId },
+    { $set: { isBestAttempt: false } }
+  );
+
+  // Mark last attempt as "best"
+  lastAttempt.isBestAttempt = true;
+  await lastAttempt.save();
+
+  // Update or create ranking
+  await UserRanking.findOneAndUpdate(
     {
       userId: attempt.userId,
       mockTestId: attempt.mockTestId,
-      // courseId: attempt.courseId,
     },
-    { $set: { isBestAttempt: false } }
+    {
+      bestAttemptId: lastAttempt._id,
+      bestScore: lastAttempt.totalMarks,
+      attemptsCount: attempts.length,
+      lastUpdated: new Date(),
+    },
+    { upsert: true, new: true }
   );
-  // if (bestAttempt) {
-  //   bestAttempt.isBestAttempt = true;
-  //   await bestAttempt.save();
 
-  //   // Update or create ranking
-  //   const ranking = await UserRanking.findOneAndUpdate(
-  //     {
-  //       userId: attempt.userId,
-  //       mockTestId: attempt.mockTestId,
-  //       subject: attempt.subject,
-  //     },
-  //     {
-  //       bestAttemptId: bestAttempt._id,
-  //       bestScore: bestAttempt.totalMarks,
-  //       attemptsCount: attempts.length,
-  //       lastUpdated: new Date(),
-  //     },
-  //     { upsert: true, new: true }
-  //   );
-  // }
-  //Find recent attempts for this user, test and course
-  const recentAttempts = await UserAttempt.find({
-    userId: attempt.userId,
-    mockTestId: attempt.mockTestId,
-    // courseId: attempt.courseId,
-    status: "evaluated",
-    isWithinTestWindow: true,
-  }).sort({ submittedAt: -1 });
-  // Update attemptsCount in ranking based on recent attempts
-  const recentRanking = await UserRanking.findOne({
-    userId: attempt.userId,
-    mockTestId: attempt.mockTestId,
-    // subject: attempt.subject,
-  });
-  if (recentRanking) {
-    const ranking = await UserRanking.findOneAndUpdate(
-      {
-        userId: attempt.userId,
-        mockTestId: attempt.mockTestId,
-        // subject: attempt.subject,
-      },
-      {
-        bestAttemptId: recentAttempts[0]._id,
-        bestScore: recentAttempts[0].totalMarks,
-        attemptsCount: recentAttempts[0].length,
-        lastUpdated: new Date(),
-      },
-      { upsert: true, new: true }
-    );
-  }
-
-  // Recalculate all rankings for this test and course
+  // Recalculate overall leaderboard
   await recalculateTestRankings(attempt.mockTestId, attempt.subject);
 }
 
+
 async function recalculateTestRankings(mockTestId, subject) {
+  // console.log("recalculateTestRankings");
   const rankings = await UserRanking.find({
     mockTestId,
     // subject,

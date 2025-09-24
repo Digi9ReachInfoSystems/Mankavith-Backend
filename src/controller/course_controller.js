@@ -1095,7 +1095,10 @@ exports.getCourseWithProgress = async (req, res) => {
     if (userProgress) {
       await cleanupUserProgress(userProgressData, courseData);
       await recalcProgress(userProgressData, courseData);
-      const response = buildCourseWithProgress(courseData, updatedUserProgressData);
+      let response = buildCourseWithProgress(courseData, updatedUserProgressData);
+      // remove subject with no lectures
+      response.subjects = response.subjects.filter(subject => subject.lectures.length > 0);
+
       return res.status(200).json({ success: true, data: response });
       courseProgress = userProgress.courseProgress.find(p => p.course_id.toString() === courseId);
 
