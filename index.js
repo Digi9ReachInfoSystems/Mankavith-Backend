@@ -113,6 +113,8 @@ const masterOtpRoutes = require("./src/routes/masterOtpRoutes");
 const jobRoutes = require("./src/routes/jobsRoute");
 const cloudfareR2Routes = require("./src/routes/cloudfarer2Routes");
 const { sendAdminPaperDownloadMail } = require("./src/middleware/mailService");
+const whyOurCourseRoutes = require("./src/routes/whyOurCourseRoutes");
+const courseInfoRoutes = require("./src/routes/courseInfoRoutes");
 
 app.use("/user", userRoutes);
 app.use("/api/v1/course", courseRoutes);
@@ -156,6 +158,8 @@ app.use("/coupon", couponRoutes);
 app.use("/masterOtp", masterOtpRoutes);
 app.use("/job", jobRoutes);
 app.use("/cloudfareR2", cloudfareR2Routes);
+app.use("/whyOurCourse", whyOurCourseRoutes);
+app.use("/courseInfo", courseInfoRoutes);
 
 // app.post("/api/send/previousYearQuestionRequest", async (req, res) => {
 //   try {
