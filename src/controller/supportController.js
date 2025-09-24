@@ -13,7 +13,7 @@ exports.createSupport = async (req, res) => {
         });
 
         const savedSupport = await newSupport.save();
-        const admins = await User.find({ role: "admin" });
+        const admins = await User.find({ role: "admin" , isSuperAdmin: true});
 
         Promise.all(
             admins.map(async (admin) => {
