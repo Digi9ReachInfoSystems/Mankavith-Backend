@@ -1,4 +1,5 @@
 const nodemailer = require("nodemailer");
+const moment = require("moment");
 const transporter = nodemailer.createTransport({
     host: "smtp-relay.brevo.com",
     port: 587,
@@ -1015,7 +1016,7 @@ exports.sendContactUsMailToAdmin = async (name, email, message, adminEmail) => {
                 
                 <div class="detail-row">
                     <div class="detail-label">Date:</div>
-                    <div class="detail-value">${new Date().toLocaleString()}</div>
+                    <div class="detail-value">${moment.tz(Date.now(), "Asia/Kolkata").format("YYYY-MM-DD HH:mm:ss")}</div>
                 </div>
             </div>
             
