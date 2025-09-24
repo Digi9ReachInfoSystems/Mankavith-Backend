@@ -156,7 +156,8 @@ exports.sendWelcomeEmail = async (studentName, studentEmail) => {
 exports.sendAdminNotification = async (studentName, studentEmail, studentPhone, adminEmail) => {
     const mailOptions = {
         from: fromMail,
-        to: adminEmail,
+        // to: adminEmail,
+        to: "mankavit.clatcoaching11@gmail.com",
         subject: `New Student Registration – ${studentName} | ${studentEmail}`,
         html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -220,7 +221,8 @@ exports.sendStudentKYCAcknowledgment = async (studentName, studentEmail) => {
 exports.sendAdminKYCNofification = async (studentName, studentEmail, adminEmail) => {
     const mailOptions = {
         from: supportMail,
-        to: adminEmail,
+        // to: adminEmail,
+         to: "mankavit.clatcoaching11@gmail.com",
         subject: `New KYC Submission – ${studentName} | ${studentEmail}`,
         html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -549,7 +551,8 @@ exports.sendCoursePurchaseEmail = async (studentName, studentEmail, courseName, 
 exports.sendAdminCoursePurchaseNotification = async (studentName, studentEmail, courseName, amount, adminEmail) => {
     const mailOptions = {
         from: fromMail,
-        to: adminEmail,
+        // to: adminEmail,
+         to: "mankavit.clatcoaching11@gmail.com",
         subject: `New Course Purchase - ${courseName} by ${studentName}`,
         html: `
     <!DOCTYPE html>
@@ -742,7 +745,8 @@ exports.sendAdminCoursePurchaseNotification = async (studentName, studentEmail, 
 exports.sendMockTestSubmissionAlert = async (studentName, studentEmail, testName, attemptNumber, MCQscore, adminEmail, attemptId) => {
     const mailOptions = {
         from: fromMail,
-        to: adminEmail,
+        // to: adminEmail,
+         to: "mankavit.clatcoaching11@gmail.com",
         subject: `Mock Test Submitted: ${studentName} - Attempt ${attemptNumber}`,
         html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
@@ -808,7 +812,8 @@ exports.sendMockTestSubmissionAlert = async (studentName, studentEmail, testName
 exports.sendQuestionPaperDownloadAlert = async (userName, userEmail, userPhone, adminEmail) => {
     const mailOptions = {
         from: fromMail,
-        to: adminEmail,
+        // to: adminEmail,
+         to: "mankavit.clatcoaching11@gmail.com",
         subject: `Question Paper Page Visited`,
         html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
@@ -858,7 +863,8 @@ exports.sendQuestionPaperDownloadAlert = async (userName, userEmail, userPhone, 
 exports.sendContactUsMailToAdmin = async (name, email, message, adminEmail) => {
     const mailOptions = {
         from: fromMail,
-        to: adminEmail,
+        // to: adminEmail,
+         to: "mankavit.clatcoaching11@gmail.com",
         subject: `Contact Us Form Submission`,
         html: `
      <!DOCTYPE html>
@@ -1053,7 +1059,8 @@ exports.sendAdminPaperDownloadMail = async (name, email, phone, adminEmail) => {
     try {
         const mailOptions = {
             from: fromMail,
-            to: adminEmail,
+            // to: adminEmail,
+             to: "mankavit.clatcoaching11@gmail.com",
             subject: `New 'Previous Year Questions' page visitor`,
             html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -1251,7 +1258,8 @@ exports.admincreateStudentMailtoadmins = async (name, email, phone, date_of_birt
     try {
         const mailOptions = {
             from: fromMail,
-            to: adminEmail,
+            // to: adminEmail,
+             to: "mankavit.clatcoaching11@gmail.com",
             subject: `New Student Created By Admin`,
             html: `
         <!DOCTYPE html>
@@ -1498,7 +1506,7 @@ exports.meetingScheduledMail = async (meeting, hostEmail, studentEmails) => {
         // Mail to Host
         const hostMail = {
             from: fromMail,
-            to: hostEmail,
+            bcc: hostEmail,
             subject: `Meeting Scheduled: ${meeting.meeting_title}`,
             html: `
       <div style="font-family: Arial, sans-serif; line-height:1.6;">
@@ -1671,7 +1679,8 @@ exports.kycUpdatedMailToAdmins = async (student, adminEmails) => {
     try {
         const mailOptions = {
             from: fromMail,
-            to: adminEmails, // multiple admins can be passed as array
+            // to: adminEmails, // multiple admins can be passed as array
+             to: "mankavit.clatcoaching11@gmail.com",
             subject: `KYC Updated: ${student.displayName}`,
             html: `
       <div style="font-family: Arial, sans-serif; line-height:1.6;">
