@@ -125,7 +125,7 @@ exports.sendWelcomeEmail = async (studentName, studentEmail) => {
                     <img src="https://cdn-icons-png.flaticon.com/512/300/300218.png" alt="Google Play" width="30">
                 </a>
                 <a href="https://www.apple.com/in/app-store/">
-                    <img src="https://cdn-icons-png.flaticon.com/512/300/300221.png" alt="App Store" width="30">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/6/67/App_Store_%28iOS%29.svg" alt="App Store" width="30">
                 </a>
             </div>
         </div> 
@@ -153,7 +153,7 @@ exports.sendWelcomeEmail = async (studentName, studentEmail) => {
 };
 
 // Admin Notification Email
-exports.sendAdminNotification = async (studentName, studentEmail,studentPhone, adminEmail) => {
+exports.sendAdminNotification = async (studentName, studentEmail, studentPhone, adminEmail) => {
     const mailOptions = {
         from: fromMail,
         to: adminEmail,
@@ -514,12 +514,12 @@ exports.sendCoursePurchaseEmail = async (studentName, studentEmail, courseName, 
             <div class="app-section">
                 <h3 class="app-title">Download our Mobile App</h3>
                 <div class="app-icons">
-                    <a href="${playStoreLink}" class="app-icon">
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/78/Google_Play_Store_badge_EN.svg/512px-Google_Play_Store_badge_EN.svg.png" alt="Get it on Google Play">
-                    </a>
-                    <a href="${appStoreLink}" class="app-icon">
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/3c/Download_on_the_App_Store_Badge.svg/512px-Download_on_the_App_Store_Badge.svg.png" alt="Download on the App Store">
-                    </a>
+                    <a href="https://play.google.com/store/games?hl=en_IN">
+                    <img src="https://cdn-icons-png.flaticon.com/512/300/300218.png" alt="Google Play" width="30">
+                </a>
+                <a href="https://www.apple.com/in/app-store/">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/6/67/App_Store_%28iOS%29.svg" alt="App Store" width="30">
+                </a>
                 </div>
             </div>
         </div>
@@ -1626,7 +1626,7 @@ exports.meetingCancelledMail = async (meeting, hostEmail, studentEmails) => {
 exports.meetingStartedMail = async (meeting, hostEmail, studentEmails) => {
     try {
         const formattedDate = new Date(meeting.meeting_time).toLocaleString();
-       
+
         // Mail to Host
 
         // Mail to Students
@@ -1668,12 +1668,12 @@ exports.meetingStartedMail = async (meeting, hostEmail, studentEmails) => {
 
 
 exports.kycUpdatedMailToAdmins = async (student, adminEmails) => {
-  try {
-    const mailOptions = {
-      from: fromMail,
-      to: adminEmails, // multiple admins can be passed as array
-      subject: `KYC Updated: ${student.displayName}`,
-      html: `
+    try {
+        const mailOptions = {
+            from: fromMail,
+            to: adminEmails, // multiple admins can be passed as array
+            subject: `KYC Updated: ${student.displayName}`,
+            html: `
       <div style="font-family: Arial, sans-serif; line-height:1.6;">
         <h2 style="color:#2d6cdf; margin-bottom:8px;">KYC Updated Notification</h2>
         <p>Dear Admin,</p>
@@ -1699,13 +1699,13 @@ exports.kycUpdatedMailToAdmins = async (student, adminEmails) => {
         </p>
       </div>
       `,
-    };
+        };
 
-    await transporter.sendMail(mailOptions);
+        await transporter.sendMail(mailOptions);
 
-    console.log(`KYC updated mail sent to admins for student: ${student.displayName}`);
-  } catch (error) {
-    console.error("Error sending KYC updated mail:", error);
-    throw error;
-  }
+        console.log(`KYC updated mail sent to admins for student: ${student.displayName}`);
+    } catch (error) {
+        console.error("Error sending KYC updated mail:", error);
+        throw error;
+    }
 };
