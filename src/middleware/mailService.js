@@ -1227,11 +1227,11 @@ exports.sendwelcomeMailtoStudentAdminCreated = async (studentName, email, passwo
         <div class="app-download">
             <h3>Download our Mobile App</h3>
             <div class="app-icons">
-                <a href="https://play.google.com/store/games?hl=en_IN">
+                 <a href="https://play.google.com/store/games?hl=en_IN">
                     <img src="https://cdn-icons-png.flaticon.com/512/300/300218.png" alt="Google Play" width="30">
                 </a>
                 <a href="https://www.apple.com/in/app-store/">
-                    <img src="https://cdn-icons-png.flaticon.com/512/300/300221.png" alt="App Store" width="30">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/6/67/App_Store_%28iOS%29.svg" alt="App Store" width="30">
                 </a>
             </div>
         </div> 

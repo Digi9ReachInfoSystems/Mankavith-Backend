@@ -52,7 +52,7 @@ exports.register = async (req, res) => {
     if (existingUser) {
       return res
         .status(400)
-        .json({ success: false, message: "email already exists" });
+        .json({ success: false, message: "An account with this E-mail already exists" });
     }
     const validPhone = /^\d{10}$/.test(phone);
     if (!validPhone) {
@@ -180,7 +180,7 @@ exports.login = async (req, res) => {
     if (Email == undefined || Email == "" || Email == null) {
       return res
         .status(400)
-        .json({ success: false, message: "email cannot be empty " });
+        .json({ success: false, message: "E-mail cannot be empty " });
     }
 
     const validMail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(Email);
@@ -192,7 +192,7 @@ exports.login = async (req, res) => {
     if (password == undefined || password == "" || password == null) {
       return res
         .status(400)
-        .json({ success: false, message: "password cannot be empty " });
+        .json({ success: false, message: "Password cannot be empty " });
     }
     const user = await User.findOne({ email: Email });
     if (!user) {
