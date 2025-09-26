@@ -141,11 +141,10 @@ exports.register = async (req, res) => {
     });
     await sendWelcomeEmail(user.displayName, user.email);
     const adminUser = await User.find({ role: "admin" ,isSuperAdmin: true});
-    Promise.all(
-      adminUser.map(async (admin) => {
-        await sendAdminNotification(user.displayName, user.email,user.phone, admin.email);
-      })
-    );
+  
+        await sendAdminNotification(user.displayName, user.email,user.phone, "mankavit.clatcoaching11@gmail.com");
+    
+    
 
     if (response.data.type == "success") {
       res.status(200).json({
@@ -1591,8 +1590,7 @@ exports.createStudent = async (req, res) => {
       password
     );
     const admins = await User.find({ role: "admin" });
-    await Promise.all(
-      admins.map(async (admin) => {
+ 
         await admincreateStudentMailtoadmins(
           savedStudent.displayName,
           savedStudent.email,
@@ -1605,10 +1603,9 @@ exports.createStudent = async (req, res) => {
           fathers_name,
           fathers_occupation,
           present_address,
-          admin.email
+         "mankavit.clatcoaching11@gmail.com"
         );
-      })
-    );
+  
     res.status(200).json({
       success: true,
       message: "Student created successfully",
@@ -2668,16 +2665,15 @@ exports.collectDetailsOnQuestionPaperDownload = async (req, res) => {
   try {
     const { name, email, phoneNumber } = req.body;
     const userAdmins = await User.find({ role: "admin" });
-    Promise.all(
-      userAdmins.map(async (admin) => {
+ 
+   
         await sendQuestionPaperDownloadAlert(
           name,
           email,
           phoneNumber,
-          admin.email
+          "mankavit.clatcoaching11@gmail.com"
         );
-      })
-    );
+  
     res
       .status(200)
       .json({ success: true, message: "Details collected successfully" });
@@ -3086,11 +3082,9 @@ exports.sendPaperDownloadMail = async (req, res) => {
     const { email, name, phone } = req.body;
     const admins = await User.find({ role: "admin" });
 
-    await Promise.all(
-      admins.map(async (admin) => {
-        await sendAdminPaperDownloadMail(name, email, phone, admin.email);
-      })
-    );
+   
+        await sendAdminPaperDownloadMail(name, email, phone, "mankavit.clatcoaching11@gmail.com");
+
     return res
       .status(200)
       .json({ success: true, message: "Email sent successfully" });

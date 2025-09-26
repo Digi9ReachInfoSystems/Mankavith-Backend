@@ -224,17 +224,15 @@ exports.handleWebhook = async (req, res) => {
       payId
     );
     const userAdmin = await User.find({ role: "admin",  isSuperAdmin: true });
-    await Promise.all(userAdmin.map(async (admin) => {
+
       await sendAdminCoursePurchaseNotification(
         user.displayName,
         user.email,
         course.courseDisplayName,
         payment.amountPaid,
         // payId,
-        admin.email,
+        "mankavit.clatcoaching11@gmail.com"
       );
-    }))
-
     // await upsertStudent({
     //   userRef: payment.userRef,
     //   courseRef: payment.courseRef, // field already saved in Payment
