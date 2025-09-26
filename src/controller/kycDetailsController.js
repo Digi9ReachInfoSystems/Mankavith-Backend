@@ -386,11 +386,9 @@ exports.createKyc = async (req, res) => {
 
     await sendStudentKYCAcknowledgment(user.displayName, user.email);
     const userAdmin = await User.find({ role: "admin" });
-    await Promise.all(
-      userAdmin.map((admin) =>
-        sendAdminKYCNofification(user.displayName, user.email, admin.email)
-      )
-    );
+
+        sendAdminKYCNofification(user.displayName, user.email, "mankavit.clatcoaching11@gmail.com")
+
 
     return res.status(201).json({
       success: true,
@@ -628,11 +626,9 @@ exports.updateKyc = async (req, res) => {
       });
     }
     const admins = await User.find({ role: "admin" });
-    await Promise.all(
-      admins.map(async (admin) => {
-        await kycUpdatedMailToAdmins(user, admin.email);
-      })
-    );
+
+        await kycUpdatedMailToAdmins(user, "mankavit.clatcoaching11@gmail.com");
+   
 
 
     if (!updatedKyc) {

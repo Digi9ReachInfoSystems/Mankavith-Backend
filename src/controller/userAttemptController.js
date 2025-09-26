@@ -658,7 +658,7 @@ exports.submitAttempt = async (req, res) => {
     };
     const user = await User.findById(user_id);
     const userAdmin = await User.find({ role: "admin" });
-    await userAdmin.map(async (admin) => {
+    // await userAdmin.map(async (admin) => {
       sendMockTestSubmissionAlert(
         user.displayName,
         user.email,
@@ -666,10 +666,10 @@ exports.submitAttempt = async (req, res) => {
         attempt.attemptNumber,
         attempt.mcqScore,
         // attempt.totalMarks,
-        admin.email,
+       "mankavit.clatcoaching11@gmail.com",
         attempt._id
       );
-    });
+    // });
 
     res.status(200).json({
       success: true,

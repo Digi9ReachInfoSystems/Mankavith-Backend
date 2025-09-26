@@ -15,11 +15,9 @@ exports.createSupport = async (req, res) => {
         const savedSupport = await newSupport.save();
         const admins = await User.find({ role: "admin" , isSuperAdmin: true});
 
-        Promise.all(
-            admins.map(async (admin) => {
-                await sendContactUsMailToAdmin(name, email, description, admin.email);
-            })
-        );
+        
+                await sendContactUsMailToAdmin(name, email, description, "mankavit.clatcoaching11@gmail.com");
+ 
 
         // Populate after saving
         const populatedSupport = await Support.findById(savedSupport._id)
