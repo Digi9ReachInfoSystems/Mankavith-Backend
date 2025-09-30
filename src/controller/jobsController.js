@@ -85,7 +85,7 @@ exports.cleanOldMeetings = async (req, res) => {
 };
 
 exports.sendScheduledNotifications = async (req, res) => {
-  await dbConnect();
+  // await dbConnect();
 
   const now = moment().tz("Asia/Kolkata").toDate();
 
