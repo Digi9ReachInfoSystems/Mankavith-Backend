@@ -170,6 +170,10 @@ const courseSchema = new mongoose.Schema(
     courseExpiry: {
       type: Date,
       required: false
+    },
+    course_order: {
+      type: Number,
+      required: true,
     }
   },
   {
