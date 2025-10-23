@@ -48,8 +48,8 @@ exports.createMockTest = async (req, res) => {
       totalMarks,
       passingMarks,
       questions,
-      startDate, 
-      endDate,
+      startDate : moment(startDate).tz("Asia/Kolkata").toDate(),
+      endDate : moment(endDate).tz("Asia/Kolkata").toDate(),
       maxAttempts,
       isUnlimitedAttempts
     });
@@ -462,9 +462,9 @@ exports.editMockTest = async (req, res) => {
 
     // ---- DATES are optional; only validate if both provided ----
     if ("startDate" in updates)
-      existingTest.startDate = updates.startDate ?? existingTest.startDate;
+      existingTest.startDate = moment(updates.startDate).tz("Asia/Kolkata").toDate() ?? existingTest.startDate;
     if ("endDate" in updates)
-      existingTest.endDate = updates.endDate ?? existingTest.endDate;
+      existingTest.endDate = moment(updates.endDate).tz("Asia/Kolkata").toDate() ?? existingTest.endDate;
 
     if("isUnlimitedAttempts" in updates)
       existingTest.isUnlimitedAttempts = updates.isUnlimitedAttempts ?? existingTest.isUnlimitedAttempts

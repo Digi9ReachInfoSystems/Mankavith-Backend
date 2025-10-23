@@ -1,5 +1,5 @@
 const Previous = require("../model/examModel");
-
+const  Question = require("../model/questionModel");
 exports.createExam = async (req, res) => {
     const {  title,description } = req.body;
 

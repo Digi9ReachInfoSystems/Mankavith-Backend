@@ -1193,6 +1193,11 @@ exports.getAllEnrolledCourses = async (req, res) => {
       })
     );
     subscribedCourses = subscribedCourses.filter((course) => course !== null);
+    subscribedCourses = subscribedCourses.sort((a, b) => {
+      const dateA = new Date(a.createdAt);
+      const dateB = new Date(b.createdAt);
+      return dateB - dateA;
+    })
     let enrolledCourses = user.subscription.map((sub) => sub.course_enrolled);
     const userProgress = await UserProgress.findOne({ user_id: userId });
     if (!userProgress) {
@@ -1300,6 +1305,11 @@ exports.getOngoingCourses = async (req, res) => {
       })
     );
     subscribedCourses = subscribedCourses.filter((course) => course !== null);
+    subscribedCourses = subscribedCourses.sort((a, b) => {
+      const dateA = new Date(a.createdAt);
+      const dateB = new Date(b.createdAt);
+      return dateB - dateA;
+    })
     let enrolledCourses = user.subscription.map((sub) => sub.course_enrolled);
 
     let filteredCourses = await Promise.all(
@@ -1377,6 +1387,11 @@ exports.getCompletedCourses = async (req, res) => {
       })
     );
     subscribedCourses = subscribedCourses.filter((course) => course !== null);
+    subscribedCourses = subscribedCourses.sort((a, b) => {
+      const dateA = new Date(a.createdAt);
+      const dateB = new Date(b.createdAt);
+      return dateB - dateA;
+    })
     let enrolledCourses = user.subscription.map((sub) => sub.course_enrolled);
 
     let filteredCourses = await Promise.all(
@@ -1455,6 +1470,11 @@ exports.getNotStartedCourses = async (req, res) => {
       })
     );
     filteredCourses = filteredCourses.filter(Boolean);
+    filteredCourses = filteredCourses.sort((a, b) => {
+      const dateA = new Date(a.createdAt);
+      const dateB = new Date(b.createdAt);
+      return dateB - dateA;
+    })
     res.status(200).json({
       success: true,
       enrolledCourses: filteredCourses,

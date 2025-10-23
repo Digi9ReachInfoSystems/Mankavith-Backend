@@ -176,6 +176,7 @@ exports.getAllCourses = async (req, res) => {
       .populate("student_enrolled")
       .populate("mockTests")
       .populate("recorded_sessions")
+      .sort({ createdAt: -1 });
 
     return res.status(200).json({
       success: true,
@@ -215,6 +216,7 @@ exports.getCoursesByCategory = async (req, res) => {
       .populate("student_enrolled")
       .populate("mockTests")
       .populate("recorded_sessions")
+      .sort({ createdAt: -1 });
 
     return res.status(200).json({
       success: true,
@@ -669,7 +671,7 @@ exports.getAllUserCourses = async (req, res) => {
     let courses = await Course.find({
       isPublished: true,
       // courseExpiry: { $gte: new Date() }
-    }).populate("subjects").populate("category");
+    }).populate("subjects").populate("category").sort({ createdAt: -1 });
     courses = courses.map(course => {
       if (user.subscription.find(sub => sub.course_enrolled.equals(course._id))) {
         return ({
@@ -716,7 +718,7 @@ exports.getAllUserCoursesByCategory = async (req, res) => {
     let courses = await Course.find({
       category: categoryExists._id, isPublished: true,
       //  courseExpiry: { $gte: new Date() } 
-    }).populate("subjects").populate("category");
+    }).populate("subjects").populate("category").sort({ createdAt: -1 });
     courses = courses.map(course => {
       if (user.subscription.find(sub => sub.course_enrolled.equals(course._id))) {
         return ({
@@ -1597,7 +1599,8 @@ exports.getAllCourseAdmin = async (req, res) => {
       .populate("student_feedback")
       .populate("student_enrolled")
       .populate("mockTests")
-      .populate("recorded_sessions");
+      .populate("recorded_sessions")
+      .sort({ createdAt: -1 });
     return res.status(200).json({
       success: true,
       data: courses,
@@ -1635,6 +1638,7 @@ exports.getCategoriesWithCourses = async (req, res) => {
       .populate("student_enrolled")
       .populate("mockTests")
       .populate("recorded_sessions")
+      .sort({ createdAt: -1 })
       .lean();
 
     const categoriesWithCourses = await Promise.all(
