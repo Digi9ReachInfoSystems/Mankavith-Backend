@@ -168,7 +168,7 @@ exports.getCouponsByUserId = async (req, res) => {
 exports.validateCoupon = async (req, res) => {
     try {
         const { userId, couponCode } = req.body;
-
+console.log(req.body);
         if (!userId || !couponCode) {
             return res.status(400).json({ success: false, message: "User ID and Coupon Code are required" });
         }

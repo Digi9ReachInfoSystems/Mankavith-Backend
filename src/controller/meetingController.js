@@ -14,6 +14,7 @@ const zoomAccountId = process.env.ZOOM_ACCOUNT_ID;
 const zoomClientId = process.env.ZOOM_CLIENT_ID;
 const zoomClientSecret = process.env.ZOOM_CLIENT_SECRET;
 const crypto = require('crypto');
+const { ObjectId } = require('mongoose').Types;
 async function getZoomAccessToken() {
   const res = await axios.post("https://zoom.us/oauth/token", null, {
     params: {
@@ -674,7 +675,7 @@ exports.createZoomMeetingMeOrOtherHost = async (req, res) => {
         students = students.concat(course.student_enrolled);
       }
     }
-    let uniqueStudentIds = [...new Set(students.map(id => id))];
+    const uniqueStudentIds = [...new Set(students.map(s => s.toString()))].map(id => new ObjectId(id));
     let studentEmails = [];
     for (const studentId of uniqueStudentIds) {
       const student = await User.findById(studentId);
