@@ -126,8 +126,15 @@ exports.addQuestionPaper = async (req, res) => {
 
 exports.getAllQuestionpapers = async (req, res) => {
   try {
+    // delete the tittle if it has no questions
     const questions = await Question.find();
-    res.json(questions);
+    questions.forEach(async (question) => {
+      if (question.papers.length === 0) {
+       await  Question.deleteOne({ _id: question._id });
+      }
+    })
+    const newQuestions = await Question.find();
+    res.json(newQuestions);
   } catch (error) {
     res.status(500).json({ error: "Failed to retrieve questions" });
   }

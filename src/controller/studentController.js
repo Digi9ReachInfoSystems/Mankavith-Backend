@@ -160,7 +160,7 @@ exports.deleteStudentById = async (req, res) => {
 
 exports.getTotalStudents = async (req, res) => {
     try {
-        const count = await Student.countDocuments();
+        const count = await User.countDocuments({ role: "user" });
         return res.status(200).json({
             success: true,
             count: count,  // Changed from 'data' to 'count' for clarity
