@@ -48,12 +48,12 @@ const couponSchema = new mongoose.Schema({
   coupon_image: {
     type: String,
     required: [true, "Coupon image is required"],
-    validate: {
-      validator: function (v) {
-        return /^(ftp|http|https):\/\/[^ "]+$/.test(v);// Ensure valid image URL
-      },
-      message: "Coupon image must be a valid URL ",
-    },
+    // validate: {
+    //   validator: function (v) {
+    //     return /^(ftp|http|https):\/\/[^ "]+$/.test(v);// Ensure valid image URL
+    //   },
+    //   message: "Coupon image must be a valid URL ",
+    // },
   },
 
   coupon_type: {

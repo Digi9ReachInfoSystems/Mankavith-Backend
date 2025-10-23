@@ -196,8 +196,8 @@ courseSchema.methods.calculateAverageRating = async function () {
   } else {
     const total = feedbacks.reduce((sum, fb) => sum + fb.rating, 0);
     const avg = total / feedbacks.length;
-    this.rating = avg;
-    this.course_rating = avg;
+    this.rating = avg.toFixed(1);
+    this.course_rating = avg.toFixed(1);
   }
 };
 
