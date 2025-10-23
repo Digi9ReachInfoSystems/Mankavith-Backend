@@ -14,7 +14,6 @@ const { generateCertificate } = require("../utils/certificateGenerationService")
 exports.createCourse = async (req, res) => {
   try {
     let courseData = req.body;
-
     // Validate category if provided
     if (courseData.category.length > 0) {
 
@@ -47,7 +46,13 @@ exports.createCourse = async (req, res) => {
       });
     }
 
-
+    // ✅ Reorder other courses if same order number already exists
+    if (courseData.course_order != null) {
+      await Course.updateMany(
+        { course_order: { $gte: courseData.course_order } },
+        { $inc: { course_order: 1 } }
+      );
+    }
     const newCourse = new Course({
       ...courseData,
       category: courseData.category || null, // Default to null if not provided
@@ -176,7 +181,7 @@ exports.getAllCourses = async (req, res) => {
       .populate("student_enrolled")
       .populate("mockTests")
       .populate("recorded_sessions")
-      .sort({ createdAt: -1 });
+      .sort({ course_order: 1 });
 
     return res.status(200).json({
       success: true,
@@ -216,7 +221,7 @@ exports.getCoursesByCategory = async (req, res) => {
       .populate("student_enrolled")
       .populate("mockTests")
       .populate("recorded_sessions")
-      .sort({ createdAt: -1 });
+      .sort({ course_order: 1 });
 
     return res.status(200).json({
       success: true,
@@ -338,6 +343,14 @@ exports.updateCourse = async (req, res) => {
     course.image = updateData.image ?? course.image;
     if (updateData.courseExpiry != null) {
       course.courseExpiry = updateData.courseExpiry;
+    }
+
+    if (updateData.course_order && updateData.course_order !== course.course_order) {
+      await Course.updateMany(
+        { course_order: { $gte: updateData.course_order } },
+        { $inc: { course_order: 1 } }
+      );
+      course.course_order = updateData.course_order;
     }
 
     const updatedCourse = await course.save();
@@ -671,7 +684,7 @@ exports.getAllUserCourses = async (req, res) => {
     let courses = await Course.find({
       isPublished: true,
       // courseExpiry: { $gte: new Date() }
-    }).populate("subjects").populate("category").sort({ createdAt: -1 });
+    }).populate("subjects").populate("category").sort({ course_order: 1 });
     courses = courses.map(course => {
       if (user.subscription.find(sub => sub.course_enrolled.equals(course._id))) {
         return ({
@@ -718,7 +731,7 @@ exports.getAllUserCoursesByCategory = async (req, res) => {
     let courses = await Course.find({
       category: categoryExists._id, isPublished: true,
       //  courseExpiry: { $gte: new Date() } 
-    }).populate("subjects").populate("category").sort({ createdAt: -1 });
+    }).populate("subjects").populate("category").sort({ course_order: 1 });
     courses = courses.map(course => {
       if (user.subscription.find(sub => sub.course_enrolled.equals(course._id))) {
         return ({
@@ -1600,7 +1613,7 @@ exports.getAllCourseAdmin = async (req, res) => {
       .populate("student_enrolled")
       .populate("mockTests")
       .populate("recorded_sessions")
-      .sort({ createdAt: -1 });
+      .sort({ course_order: 1 });
     return res.status(200).json({
       success: true,
       data: courses,

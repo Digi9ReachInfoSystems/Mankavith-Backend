@@ -67,7 +67,7 @@ exports.getTestimonialsById = async (req, res) => {
 
 exports.getAllTestimonials = async (req, res) => {
   try {
-    const testimonials = await Testimonials.find();
+    const testimonials = await Testimonials.find().sort({ createdAt: -1 });
     res.status(200).json(testimonials);
   } catch (error) {
     res.status(500).json({ error: "Failed to retrieve testimonials" });
