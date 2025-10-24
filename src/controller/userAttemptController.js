@@ -1500,7 +1500,7 @@ exports.getUserResults = async (req, res) => {
     const ranking = await UserRanking.findOne({
       userId: user_id,
       mockTestId,
-      subject: mockTest.subject,
+      // subject: mockTest.subject,
     }).populate("subject");
     if (!attempt) {
       res
