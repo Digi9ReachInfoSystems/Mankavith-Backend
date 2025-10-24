@@ -11,6 +11,18 @@ const Payment = require("../model/paymentModel");
 const Certificate = require("../model/certificatesModel");
 const { generateCertificate } = require("../utils/certificateGenerationService");
 // Create a new course (updated for category reference)
+
+async function normalizeCourseOrder() {
+  const courses = await Course.find().sort({ course_order: 1 });
+  for (let i = 0; i < courses.length; i++) {
+    const correctOrder = i + 1;
+    if (courses[i].course_order !== correctOrder) {
+      courses[i].course_order = correctOrder;
+      await courses[i].save();
+    }
+  }
+}
+
 exports.createCourse = async (req, res) => {
   try {
     let courseData = req.body;
@@ -52,6 +64,10 @@ exports.createCourse = async (req, res) => {
         { course_order: { $gte: courseData.course_order } },
         { $inc: { course_order: 1 } }
       );
+    } else {
+      // if no order given, place it at the end
+      const maxOrder = await Course.countDocuments();
+      courseData.course_order = maxOrder + 1;
     }
     const newCourse = new Course({
       ...courseData,
@@ -60,6 +76,8 @@ exports.createCourse = async (req, res) => {
 
 
     const savedCourse = await newCourse.save();
+    await normalizeCourseOrder();
+
     if (courseData.subjects.length > 0) {
       for (let i = 0; i < courseData.subjects.length; i++) {
         const subject = await Subject.findById(courseData.subjects[i]);
@@ -344,8 +362,17 @@ exports.updateCourse = async (req, res) => {
     if (updateData.courseExpiry != null) {
       course.courseExpiry = updateData.courseExpiry;
     }
+    if (
+      updateData.course_order &&
+      updateData.course_order !== course.course_order
+    ) {
+      const totalCourses = await Course.countDocuments();
 
-    if (updateData.course_order && updateData.course_order !== course.course_order) {
+      // Clamp order to valid range
+      if (updateData.course_order < 1) updateData.course_order = 1;
+      if (updateData.course_order > totalCourses) updateData.course_order = totalCourses;
+
+      // Shift others
       await Course.updateMany(
         { course_order: { $gte: updateData.course_order } },
         { $inc: { course_order: 1 } }
@@ -353,7 +380,10 @@ exports.updateCourse = async (req, res) => {
       course.course_order = updateData.course_order;
     }
 
+
     const updatedCourse = await course.save();
+    await normalizeCourseOrder();
+
     // const updatedCourse = await Course.findByIdAndUpdate(courseId, updateData, {
     //   new: true,
     //   runValidators: true,
@@ -1569,6 +1599,7 @@ exports.bulkDeleteCourse = async (req, res) => {
         result.push({ courseId, error: error.message });
       }
     }
+    await normalizeCourseOrder();
     // console.log(result);  
     res.status(200).json({
       success: true,
