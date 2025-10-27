@@ -19,11 +19,12 @@ exports.createMockTest = async (req, res) => {
       passingMarks,
       questions,
       subject,
-      startDate= moment().tz("Asia/Kolkata").toDate(),
+      startDate = moment().tz("Asia/Kolkata").toDate(),
       endDate,
       maxAttempts,
-      isUnlimitedAttempts=false
+      isUnlimitedAttempts = false
     } = req.body;
+    console.log("req.body", req.body.endDate);
 
     // Validate test window
     if (new Date(startDate) >= new Date(endDate)) {
@@ -48,8 +49,8 @@ exports.createMockTest = async (req, res) => {
       totalMarks,
       passingMarks,
       questions,
-      startDate : moment(startDate).tz("Asia/Kolkata").toDate(),
-      endDate : moment(endDate).tz("Asia/Kolkata").toDate(),
+      startDate: moment(startDate).tz("Asia/Kolkata").toDate(),
+      endDate: endDate && moment(endDate).tz("Asia/Kolkata").toDate() || null,
       maxAttempts,
       isUnlimitedAttempts
     });
@@ -214,9 +215,7 @@ exports.togglePublishStatus = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: `Mock test ${
-        publish ? "published" : "unpublished"
-      } successfully`,
+      message: `Mock test ${publish ? "published" : "unpublished" } successfully`,
       data: {
         isPublished: updatedTest.isPublished,
         title: updatedTest.title,
@@ -247,22 +246,22 @@ exports.getMockTestBysubjectId = async (req, res) => {
       $or: [
         {
           // Either: dates are within current range
-          startDate: { $lte: new Date() },
-          endDate: { $gte: new Date() },
+          startDate: { $lte: new moment().tz("Asia/Kolkata").toDate(), },
+          endDate: { $gte: new moment().tz("Asia/Kolkata").toDate() },
         },
         {
           // Or: dates are null (both start and end)
           startDate: null,
           endDate: null,
         },
-        {
-          // Or: start date is null but end date is in future
-          startDate: null,
-          endDate: { $gte: new Date() },
-        },
+        // {
+        //   // Or: start date is null but end date is in future
+        //   startDate: null,
+        //   endDate: { $gte: new Date() },
+        // },
         {
           // Or: end date is null but start date is in past
-          startDate: { $lte: new Date() },
+          startDate: { $lte: new moment().tz("Asia/Kolkata").toDate() },
           endDate: null,
         },
       ],
@@ -463,10 +462,12 @@ exports.editMockTest = async (req, res) => {
     // ---- DATES are optional; only validate if both provided ----
     if ("startDate" in updates)
       existingTest.startDate = moment(updates.startDate).tz("Asia/Kolkata").toDate() ?? existingTest.startDate;
-    if ("endDate" in updates)
+    if ("endDate" in updates) {
       existingTest.endDate = moment(updates.endDate).tz("Asia/Kolkata").toDate() ?? existingTest.endDate;
-
-    if("isUnlimitedAttempts" in updates)
+    }
+    if(!("endDate" in updates)) existingTest.endDate = null
+   
+    if ("isUnlimitedAttempts" in updates)
       existingTest.isUnlimitedAttempts = updates.isUnlimitedAttempts ?? existingTest.isUnlimitedAttempts
 
     if (existingTest.startDate && existingTest.endDate) {
@@ -685,7 +686,7 @@ exports.getAllUpcomingMockTests = async (req, res) => {
         }
       })
     );
-     const nowIST = new Date(
+    const nowIST = new Date(
       new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
     );
     const tests = await MockTest.find({
