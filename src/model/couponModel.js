@@ -44,6 +44,12 @@ const couponSchema = new mongoose.Schema({
     min: [0, "Discount amount must be greater than or equal to 0"],
     // max: [100, "Discount percentage must be less than or equal to 100"],
   },
+  discount_percentage: {
+    type: Number,
+    required: [true, "Discount percentage is required"],
+    min: [0, "Discount percentage must be greater than or equal to 0"],
+    max: [100, "Discount percentage must be less than or equal to 100"],
+  },
 
   coupon_image: {
     type: String,
