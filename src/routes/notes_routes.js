@@ -10,7 +10,7 @@ router.get('/total', authenticateJWT, getNoOfNotes);
 router.post('/notes', authenticateJWT, createNote);
 router.get('/notes', authenticateJWT, getAllNotes);
 router.get('/notes/:id', authenticateJWT, getNoteById);
-router.put('/notes/:id', authenticateJWT, updateNote);
+router.put('/notes/:id',  updateNote);
 router.delete('/notes/:id', authenticateJWT, deleteNote);
 router.delete('/notes/bulk/delete', authenticateJWT, bulkDeleteNotes);
 router.post("/allNotes/bySubjectIds", authenticateJWT, getAllNotesBySubjectIds);

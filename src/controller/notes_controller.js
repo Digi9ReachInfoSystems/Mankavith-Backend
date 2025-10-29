@@ -81,49 +81,69 @@ module.exports.updateNote = async (req, res) => {
   try {
     const { id } = req.params;
     let updatedData = req.body;
+
     const note = await Note.findById(id);
     if (!note) {
       return res.status(404).json({ success: false, message: 'Note not found' });
     }
-    await Promise.all(
-      note.subjects.map(async (subjectId) => {
-        const subject = await Subject.findById(subjectId);
-        if (!subject) {
-          return;
-        }
-        subject.notes.pull(id);
-        await subject.save();
-      })
-    );
 
-    // Validate subjects references
-    const validSubjects = await Subject.find({ '_id': { $in: updatedData.subjects } });
-    if (validSubjects.length !== updatedData.subjects.length) {
-      return res.status(400).json({ success: false, message: 'Some subjects are invalid' });
+    // ✅ Preserve order (important fix)
+    updatedData.order = note.order;
+
+    // ✅ Handle subjects only if provided
+    if (updatedData.subjects && Array.isArray(updatedData.subjects)) {
+      // Remove from old subjects
+      await Promise.all(
+        note.subjects.map(async (subjectId) => {
+          const subject = await Subject.findById(subjectId);
+          if (subject) {
+            subject.notes.pull(id);
+            await subject.save();
+          }
+        })
+      );
+
+      // Validate new subjects
+      const validSubjects = await Subject.find({ '_id': { $in: updatedData.subjects } });
+      if (validSubjects.length !== updatedData.subjects.length) {
+        return res.status(400).json({ success: false, message: 'Some subjects are invalid' });
+      }
+
+      // Add note to new subjects
+      await Promise.all(
+        updatedData.subjects.map(async (subjectId) => {
+          const subject = await Subject.findById(subjectId);
+          if (subject) {
+            subject.notes.addToSet(id);
+            await subject.save();
+          }
+        })
+      );
+    } else {
+      // Prevent overwriting subjects accidentally
+      delete updatedData.subjects;
     }
-    await Promise.all(
-      updatedData.subjects.map(async (subjectId) => {
-        const subject = await Subject.findById(subjectId);
-        if (!subject) {
-          updatedData.subjects = updatedData.subjects.filter(id => id !== subjectId);
-          return;
-        }
-        subject.notes.push(id);
-        await subject.save();
-      })
-    );
+
     const updatedNote = await Note.findByIdAndUpdate(id, updatedData, { new: true })
       .populate('subjects');
-    if (!updatedNote) {
-      return res.status(404).json({ success: false, message: 'Note not found' });
-    }
 
-    return res.status(200).json({ success: true, message: 'Note updated successfully', data: updatedNote });
+    return res.status(200).json({
+      success: true,
+      message: 'Note updated successfully',
+      data: updatedNote,
+    });
+
   } catch (error) {
     console.error('Error updating note:', error);
-    return res.status(500).json({ success: false, message: 'Error updating note', error: error.message });
+    return res.status(500).json({
+      success: false,
+      message: 'Error updating note',
+      error: error.message,
+    });
   }
 };
+
+
 
 // Delete Note
 module.exports.deleteNote = async (req, res) => {
