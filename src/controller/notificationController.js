@@ -6,21 +6,22 @@ const moment = require("moment-timezone");
 exports.sendNotification = async (req, res) => {
   try {
     const { title, description, time, notificationType } = req.body;
-
+     const scheduledTime = time ? moment(time).tz("Asia/Kolkata").toDate() : null;
     const notification = new Notification({
-      title, description, time,
+      title, description, time:scheduledTime,
       // image,
       notificationType
     });
     await notification.save();
     const now = moment().tz("Asia/Kolkata").toDate();
     const users = await User.find({ role: 'user' });
-    if (time == null || time < now) {
+    // console.log(`Found ${users.length} users to notify.`,scheduledTime,"now:",now);
+    if (scheduledTime != null && scheduledTime < now) {
       for (const user of users) {
         const userNotification = new UserNotification({
           title,
           description,
-          time,
+          time:scheduledTime,
           // image,
           user_ref: user._id,
           read: false
