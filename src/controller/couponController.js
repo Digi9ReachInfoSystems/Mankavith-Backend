@@ -10,6 +10,7 @@ exports.createCoupon = async (req, res) => {
             start_date,
             end_date,
             discount_amount,
+            discount_percentage,
             coupon_image,
             coupon_type,
             user_list,
@@ -28,6 +29,7 @@ exports.createCoupon = async (req, res) => {
             discount_amount,
             coupon_image,
             coupon_type,
+            discount_percentage,
             user_list,
             coupon_code,
         });
@@ -52,6 +54,7 @@ exports.updateCoupon = async (req, res) => {
             end_date,
             discount_amount,
             coupon_image,
+            discount_percentage,
             coupon_type,
             user_list,
             coupon_code,
@@ -73,6 +76,7 @@ exports.updateCoupon = async (req, res) => {
                 start_date: start_date || coupon.start_date,
                 end_date: end_date || coupon.end_date,
                 discount_amount: discount_amount || coupon.discount_amount,
+                discount_percentage: discount_percentage || coupon.discount_percentage,
                 coupon_image: coupon_image || coupon.coupon_image,
                 coupon_type: coupon_type || coupon.coupon_type,
                 user_list: coupon_type === "All" ? [] : user_list || coupon.user_list,
@@ -202,6 +206,7 @@ console.log(req.body);
             success: true,
             message: "Coupon is valid",
             discount: coupon.discount_amount,
+            discount_percentage: coupon.discount_percentage,
             couponId: coupon._id
         });
 
