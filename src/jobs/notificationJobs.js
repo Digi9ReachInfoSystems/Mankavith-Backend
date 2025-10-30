@@ -12,6 +12,7 @@ exports.sendScheduledNotifications = cron.schedule("* * * * *", async () => {
     console.log("🔄 Running cron job: send Scheduled Notification");
 
      const now = moment().tz("Asia/Kolkata").toDate();
+    //  console.log("Current time:", now);
 
     try {
       const dueNotifications = await Notification.find({
