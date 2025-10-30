@@ -1017,7 +1017,7 @@ async function recalculateTestRankings(mockTestId, subject) {
   for (let i = 0; i < rankings.length; i++) {
     // Same rank for same scores
     if (i > 0 && rankings[i].bestScore === rankings[i - 1].bestScore) {
-      rankings[i].rank = rankings[i - 1].rank;
+      // rankings[i].rank = rankings[i - 1].rank;
     } else {
       rankings[i].rank = currentRank;
     }
@@ -1027,25 +1027,25 @@ async function recalculateTestRankings(mockTestId, subject) {
   }
 }
 
-async function recalculateTestRankings(mockTestId) {
-  const rankings = await UserRanking.find({ mockTestId }).sort({
-    bestScore: -1,
-    lastUpdated: 1,
-  });
+// async function recalculateTestRankings(mockTestId) {
+//   const rankings = await UserRanking.find({ mockTestId }).sort({
+//     bestScore: -1,
+//     lastUpdated: 1,
+//   });
 
-  let currentRank = 1;
-  for (let i = 0; i < rankings.length; i++) {
-    // Same rank for same scores
-    if (i > 0 && rankings[i].bestScore === rankings[i - 1].bestScore) {
-      rankings[i].rank = rankings[i - 1].rank;
-    } else {
-      rankings[i].rank = currentRank;
-    }
-    currentRank++;
+//   let currentRank = 1;
+//   for (let i = 0; i < rankings.length; i++) {
+//     // Same rank for same scores
+//     if (i > 0 && rankings[i].bestScore === rankings[i - 1].bestScore) {
+//       rankings[i].rank = rankings[i - 1].rank;
+//     } else {
+//       rankings[i].rank = currentRank;
+//     }
+//     currentRank++;
 
-    await rankings[i].save();
-  }
-}
+//     await rankings[i].save();
+//   }
+// }
 
 exports.getSubmittedUsersByMockTest = async (req, res) => {
   try {
