@@ -87,8 +87,8 @@ module.exports.updateNote = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Note not found' });
     }
 
-    // ✅ Preserve order (important fix)
-    updatedData.order = note.order;
+    // ❌ Remove this line - allow order to be updated
+    // updatedData.order = note.order;
 
     // ✅ Handle subjects only if provided
     if (updatedData.subjects && Array.isArray(updatedData.subjects)) {
