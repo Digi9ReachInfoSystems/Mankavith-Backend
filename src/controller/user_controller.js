@@ -2178,6 +2178,7 @@ exports.bulkDeleteUsers = async (req, res) => {
           }
           await Feedback.findByIdAndDelete(feedback._id);
         });
+        const deleteUserRankings= await UserRanking.deleteMany({ userId: user._id });
         const deletedUser = await User.findByIdAndDelete(user._id);
         results.push({
           id,
@@ -2292,6 +2293,7 @@ exports.deleteStudents = async (req, res) => {
       }
       await Feedback.findByIdAndDelete(feedback._id);
     });
+    const deleteUserRankings= await UserRanking.deleteMany({ userId: user._id });
     const deletedUser = await User.findByIdAndDelete(user._id);
     res.status(200).json({
       success: true,
@@ -2305,6 +2307,7 @@ exports.deleteStudents = async (req, res) => {
       Payments: (await Payments.find({ userRef: user._id })).length,
       Certificates: certificates.length,
       Feedbacks: feedbacks.length,
+      userRankingsDeleted: deleteUserRankings
     });
   } catch (error) {
     console.error("Error deleting user:", error.message);
