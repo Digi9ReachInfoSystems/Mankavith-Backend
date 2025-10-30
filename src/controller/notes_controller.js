@@ -93,8 +93,10 @@ module.exports.updateNote = async (req, res) => {
     // ✅ Handle subjects only if provided
     if (updatedData.subjects && Array.isArray(updatedData.subjects)) {
       // Remove from old subjects
+      const subjectsToRemove = note.subjects.filter(subjId => !updatedData.subjects.includes(subjId.toString()));
+      const subjectsToAdd = updatedData.subjects.filter(subjId => !note.subjects.map(id => id.toString()).includes(subjId));
       await Promise.all(
-        note.subjects.map(async (subjectId) => {
+        subjectsToRemove.map(async (subjectId) => {
           const subject = await Subject.findById(subjectId);
           if (subject) {
             subject.notes.pull(id);
@@ -111,7 +113,7 @@ module.exports.updateNote = async (req, res) => {
 
       // Add note to new subjects
       await Promise.all(
-        updatedData.subjects.map(async (subjectId) => {
+        subjectsToAdd.map(async (subjectId) => {
           const subject = await Subject.findById(subjectId);
           if (subject) {
             subject.notes.addToSet(id);
