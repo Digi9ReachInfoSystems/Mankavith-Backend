@@ -1018,6 +1018,7 @@ async function recalculateTestRankings(mockTestId, subject) {
     // Same rank for same scores
     if (i > 0 && rankings[i].bestScore === rankings[i - 1].bestScore) {
       // rankings[i].rank = rankings[i - 1].rank;
+      rankings[i].rank = currentRank;
     } else {
       rankings[i].rank = currentRank;
     }
