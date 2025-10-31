@@ -1086,8 +1086,11 @@ exports.getCourseWithProgress = async (req, res) => {
         }],
       });
     const userProgressData = await UserProgress.findOne({ user_id: userId });
+    let updatedUserProgressData = null;
+    if (userProgressData) {
+      updatedUserProgressData = await userProgressData.save();
+    }
 
-    const updatedUserProgressData = await userProgressData.save();
     // Fetch course with nested subjects and lectures
     let course = await Course.findOne({ _id: courseId, isPublished: true })
       .populate({
