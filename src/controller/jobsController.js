@@ -13,7 +13,11 @@ exports.removeExpiredSubscriptions = async (req, res) => {
   const now = moment.tz("Asia/Kolkata").toDate();
 
   try {
-    const users = await User.find({ "subscription.expires_at": { $lte: now } });
+    const users = await User.find({
+      subscription: {
+        $elemMatch: { expires_at: { $lte: now } },
+      },
+    });
     let expiredCourseIds = [];
     for (let user of users) {
       expiredCourseIds = user.subscription.map((sub) => {

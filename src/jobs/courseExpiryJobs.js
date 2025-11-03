@@ -9,19 +9,23 @@ const Subject = require("../model/subject_model");
 const moment = require("moment-timezone");
 // Run job every night at 12:00 AM
 exports.removeExpiredSubscriptions =
-   cron.schedule("0 0 * * *", async () => {
-  // cron.schedule("* * * * *", async () => {
+  //  cron.schedule("0 0 * * *", async () => {
+  cron.schedule("* * * * *", async () => {
     // exports.removeExpiredSubscriptions = cron.schedule(
     //   "*/10 * * * * *",
     //   async () => {
     console.log("🔄 Running cron job: remove expired subscriptions");
 
     const now = moment.tz("Asia/Kolkata").toDate();
+    console.log("Current time (IST):", now);
 
     try {
       const users = await User.find({
-        "subscription.expires_at": { $lte: now },
+        subscription: {
+          $elemMatch: { expires_at: { $lte: now } },
+        },
       });
+      console.log(`Found ${users.length} users with expired subscriptions`, users.map(u => u._id));
       let expiredCourseIds = [];
       for (let user of users) {
         // Filter out expired subscriptions
