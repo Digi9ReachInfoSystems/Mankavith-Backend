@@ -9,8 +9,8 @@ const Subject = require("../model/subject_model");
 const moment = require("moment-timezone");
 // Run job every night at 12:00 AM
 exports.removeExpiredSubscriptions =
-  //  cron.schedule("0 0 * * *", async () => {
-  cron.schedule("* * * * *", async () => {
+   cron.schedule("0 0 * * *", async () => {
+  // cron.schedule("* * * * *", async () => {
     // exports.removeExpiredSubscriptions = cron.schedule(
     //   "*/10 * * * * *",
     //   async () => {
@@ -36,6 +36,7 @@ exports.removeExpiredSubscriptions =
             return null;
           }
         });
+        console.log("expiredCourseIds", expiredCourseIds);
         expiredCourseIds = expiredCourseIds.filter((id) => id !== null);
         // console.log("expiredCourseIds", expiredCourseIds);
 
