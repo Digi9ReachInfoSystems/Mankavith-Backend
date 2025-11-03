@@ -4,9 +4,13 @@ const Course = require("../model/course_model");
 const Meeting = require("../model/meetingsModel");
 const Notification = require("../model/notificationModel");
 const UserNotification = require("../model/userNotificationModel");
+const MockTest = require("../model/mockTestModel");
+const UserAttempt = require("../model/userAttemptModel");
+const UserRankings = require("../model/userRankingModel");
+const Subject = require("../model/subject_model");
 const moment = require("moment-timezone");
 exports.removeExpiredSubscriptions = async (req, res) => {
-  const now = new Date();
+  const now = moment.tz("Asia/Kolkata").toDate();
 
   try {
     const users = await User.find({ "subscription.expires_at": { $lte: now } });
@@ -20,7 +24,55 @@ exports.removeExpiredSubscriptions = async (req, res) => {
         }
       });
       expiredCourseIds = expiredCourseIds.filter((id) => id !== null);
+      let nonExpiredCourseIds = [];
+      nonExpiredCourseIds = user.subscription.map((sub) => {
+        if (sub.expires_at > now) {
+          return sub.course_enrolled;
+        } else {
+          return null;
+        }
+      });
+      nonExpiredCourseIds = nonExpiredCourseIds.filter((id) => id !== null);
 
+      //get subjects in expiredCourseIds
+      const subjectsInExpiredCourses = await Subject.find({
+        courses: { $in: expiredCourseIds },
+      }).select("_id");
+
+      //get subjects in nonExpiredCourseIds
+      const subjectsInNonExpiredCourses = await Subject.find({
+        courses: { $in: nonExpiredCourseIds },
+      }).select("_id");
+
+      //get subjects in expiredCourseIds and not in nonExpiredCourseIds
+      let subjectsToDeactivate = [];
+      subjectsToDeactivate = subjectsInExpiredCourses.filter(
+        (sub) =>
+          !subjectsInNonExpiredCourses.some((nsub) => nsub._id.equals(sub._id))
+      );
+      // console.log("subjectsToDeactivate", subjectsToDeactivate);
+
+      subjectsToDeactivate = subjectsToDeactivate.map((sub) => sub._id);
+      //get mocktests in expiredCourseIds and not in nonExpiredCourseIds
+      const mockTestsToDeactivate = await MockTest.find({
+        subject: { $in: subjectsToDeactivate },
+      });
+      // console.log("mockTestsToDeactivate", mockTestsToDeactivate);
+      //remove user attempts for mockTestsToDeactivate
+      for (let mt of mockTestsToDeactivate) {
+        await UserAttempt.deleteMany({ userId: user._id, mockTestId: mt._id });
+        console.log(
+          `🗑️ Deleted attempts for user ${user._id} for mock test ${mt._id}`
+        );
+      }
+
+      //remove user rankings for mockTestsToDeactivate
+      for (let mt of mockTestsToDeactivate) {
+        await UserRankings.deleteMany({ userId: user._id, mockTestId: mt._id });
+        console.log(
+          `🗑️ Deleted rankings for user ${user._id} for mock test ${mt._id}`
+        );
+      }
       user.subscription = user.subscription.filter(
         (sub) => sub.expires_at > now
       );
@@ -128,7 +180,7 @@ exports.removeOldNotifications = async (req, res) => {
       time: { $lt: oneMonthAgo },
       read: true
     });
-    
+
     res.json({ deleted: true, count: result.deletedCount });
   } catch (err) {
     console.log(err);

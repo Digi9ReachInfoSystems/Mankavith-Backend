@@ -629,9 +629,9 @@ exports.submitAttempt = async (req, res) => {
 
     // If no subjective questions, update rankings immediately
     if (isWithinWindow) {
-      if (!hasSubjective) {
+      // if (!hasSubjective) {
         await updateRankings(attempt);
-      }
+      // }
     }
     const questionIds = [];
 
@@ -967,15 +967,17 @@ async function updateRankings(attempt) {
   const attempts = await UserAttempt.find({
     userId: attempt.userId,
     mockTestId: attempt.mockTestId,
-    status: "evaluated",
+    status: { $in: ["evaluated", "submitted"] }, // Include both evaluated and submitted attempts
     isWithinTestWindow: true,
   }).sort({ submittedAt: -1 }); // 👈 newest first
+
+
 
   if (!attempts.length) return;
 
   // Instead of "best score", take the LAST submitted attempt
   const lastAttempt = attempts[0];
-
+ console.log("lastAttempt",lastAttempt);
   // Reset all attempts
   await UserAttempt.updateMany(
     { userId: attempt.userId, mockTestId: attempt.mockTestId },
