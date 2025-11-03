@@ -137,7 +137,7 @@ exports.addQuestionPaper = async (req, res) => {
     });
  
 
-    question.papers.sort((a, b) => parseYearMonth(a.year) - parseYearMonth(b.year));
+    question.papers.sort((a, b) => parseYearMonth(b.year) - parseYearMonth(a.year));
 
 
     await question.save();
