@@ -446,6 +446,7 @@ exports.completeLecturer = async (req, res) => {
                 user_ref: user_id,
                 course_ref: course_id,
                 certificate_url: urls.pdfUrl,
+                courseName: courseData.courseDisplayName,
             });
             await certificate.save();
         }

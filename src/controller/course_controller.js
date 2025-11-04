@@ -1103,6 +1103,7 @@ exports.getCourseWithProgress = async (req, res) => {
         }],
       });
     const userProgressData = await UserProgress.findOne({ user_id: userId });
+    console.log("userProgressData", userProgressData);
     let updatedUserProgressData = null;
     if (userProgressData) {
       updatedUserProgressData = await userProgressData.save();
