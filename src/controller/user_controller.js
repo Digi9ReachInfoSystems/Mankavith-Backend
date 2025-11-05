@@ -2256,10 +2256,10 @@ exports.deleteStudents = async (req, res) => {
     const userProgress = await UserProgress.findOneAndDelete({
       user_id: user._id,
     });
-    const payments = await Payments.find({ userRef: user._id });
-    payments.forEach(async (payment) => {
-      await Payments.findByIdAndDelete(payment._id);
-    });
+    // const payments = await Payments.find({ userRef: user._id });
+    // payments.forEach(async (payment) => {
+    //   await Payments.findByIdAndDelete(payment._id);
+    // });
     const certificates = await Certificate.find({ user_ref: user._id });
     certificates.forEach(async (certificate) => {
       await Certificate.findByIdAndDelete(certificate._id);
