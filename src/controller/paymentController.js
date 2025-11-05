@@ -50,6 +50,7 @@ exports.createOrder = async (req, res) => {
       receipt: `receipt_${Date.now()}`,
       payment_capture: 1, // auto-capture
     });
+    const courseDetails = await Course.findById(courseRef); 
 
     /* 3️⃣  Generate a payment-link tied to that order */
     const paymentLink = await razorpay.paymentLink.create({
@@ -86,6 +87,8 @@ exports.createOrder = async (req, res) => {
       razorpay_payment_link_id: paymentLink.id,
       razorpay_reference_id: paymentLink.reference_id,
       payment_link: paymentLink.short_url,
+      studentName: user.displayName,
+      courseName: courseDetails.courseName,
       status: "created",
       couponApplied,
       couponRef: couponApplied ? couponRef : null,

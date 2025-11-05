@@ -1596,8 +1596,8 @@ exports.bulkDeleteCourse = async (req, res) => {
             if (!foundSubscription) {
               return;
             }
-            const payment = await Payment.findByIdAndDelete(foundSubscription.payment_id);
-            const certificate = await Certificate.findOneAndDelete({ course_ref: courseId, user_ref: studentId });
+            // const payment = await Payment.findByIdAndDelete(foundSubscription.payment_id);
+            // const certificate = await Certificate.findOneAndDelete({ course_ref: courseId, user_ref: studentId });
             const userProgress = await UserProgress.findOne({ user_ref: studentId });
             if (userProgress) {
               userProgress.courseProgress = userProgress.courseProgress.filter(progress => !progress.course_id.equals(courseId));

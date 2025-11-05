@@ -6,10 +6,17 @@ const paymentSchema = new mongoose.Schema({
     ref: "User",
     required: true,
   },
+  studentName:{
+    type: String,
+    required: false,
+  },
   courseRef: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Course",
     required: true,
+  },
+  courseName: {
+    type: String,
   },
   transactionId: {
     type: String,
@@ -44,9 +51,9 @@ const paymentSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
-  couponApplied:{
-    type:Boolean,
-    default:false
+  couponApplied: {
+    type: Boolean,
+    default: false
   },
   couponRef: {
     type: mongoose.Schema.Types.ObjectId,
