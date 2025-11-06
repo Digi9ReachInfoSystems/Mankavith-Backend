@@ -231,6 +231,17 @@ courseSchema.pre("save", async function (next) {
     } else {
       this.no_of_notes = 0;
     }
+    if (this.subjects?.length > 0) {
+      const subjects = await mongoose.model('Subject').find({
+        _id: { $in: this.subjects }
+      }).select('lectures');
+
+      this.no_of_videos = subjects.reduce(
+        (sum, subject) => sum + (subject.lectures?.length || 0), 0
+      );
+    } else {
+      this.no_of_videos = 0;
+    }
 
     next();
   } catch (err) {
