@@ -9,6 +9,7 @@ const UserAttempt = require("../model/userAttemptModel");
 const UserRankings = require("../model/userRankingModel");
 const Subject = require("../model/subject_model");
 const moment = require("moment-timezone");
+const Certificate = require("../model/certificatesModel");
 exports.removeExpiredSubscriptions = async (req, res) => {
   console.log("Running removeExpiredSubscriptions job");
 
@@ -120,6 +121,10 @@ exports.removeExpiredSubscriptions = async (req, res) => {
           course.student_enrolled = course.student_enrolled.filter(
             (studentId) => !studentId.equals(user._id)
           );
+          const certificates = await Certificate.deleteMany({
+            course_ref: courseId,
+            user_ref: user._id,
+          });
           await course.save();
         }
         console.log(
