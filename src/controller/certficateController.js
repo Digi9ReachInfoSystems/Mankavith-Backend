@@ -188,7 +188,7 @@ exports.getCertificatesByUser = async (req, res) => {
   try {
     const userId = req.params.userId;
 
-    const certificates = await Certificate.find({ user_ref: userId })
+    const certificates = await Certificate.find({ user_ref: userId , isdisabled: false})
       .populate("course_ref", )
       .populate("user_ref", )
       .sort({ createdAt: -1 });

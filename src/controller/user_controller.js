@@ -1998,6 +1998,10 @@ exports.removeCourseSubscriptionToStudent = async (req, res) => {
           (sub) => !sub.course_enrolled.equals(course._id)
         );
       }
+      const certificate = await Certificate.deleteMany({
+        user_ref: user._id,
+        course_ref: course._id,
+      });
     }
     await user.save();
     res.status(200).json({

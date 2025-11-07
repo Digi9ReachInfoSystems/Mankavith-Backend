@@ -442,6 +442,12 @@ exports.publishCourse = async (req, res) => {
         message: "Course not found",
       });
     }
+    console.log("Current isPublished:", course.isPublished);
+    // if(course.isPublished){
+    const updateCertificates = await Certificate.updateMany({
+      course_ref: courseId
+    }, { isdisabled: course.isPublished });
+    // }
 
     const updatedCourse = await Course.findByIdAndUpdate(
       courseId,
@@ -1597,7 +1603,7 @@ exports.bulkDeleteCourse = async (req, res) => {
               return;
             }
             // const payment = await Payment.findByIdAndDelete(foundSubscription.payment_id);
-            // const certificate = await Certificate.findOneAndDelete({ course_ref: courseId, user_ref: studentId });
+            const certificate = await Certificate.findOneAndDelete({ course_ref: courseId, user_ref: studentId });
             const userProgress = await UserProgress.findOne({ user_ref: studentId });
             if (userProgress) {
               userProgress.courseProgress = userProgress.courseProgress.filter(progress => !progress.course_id.equals(courseId));
