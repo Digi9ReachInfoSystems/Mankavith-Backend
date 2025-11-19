@@ -290,6 +290,7 @@ exports.createKyc = async (req, res) => {
       present_address,
       current_occupation,
       how_did_you_get_to_know_us,
+      terms_and_conditions
       
     } = req.body;
 
@@ -316,7 +317,8 @@ exports.createKyc = async (req, res) => {
       !fathers_occupation ||
       !present_address ||
       !current_occupation ||
-      !how_did_you_get_to_know_us
+      !how_did_you_get_to_know_us ||
+      !terms_and_conditions
     ) {
       return res.status(400).json({ success: false, message: "All fields are required" });
     }
@@ -338,6 +340,7 @@ exports.createKyc = async (req, res) => {
       existingKyc.present_address = present_address;
       existingKyc.current_occupation = current_occupation;
       existingKyc.how_did_you_get_to_know_us = how_did_you_get_to_know_us;
+      existingKyc.terms_and_conditions = terms_and_conditions;
       existingKyc.status = "pending";
 
       const updatedKyc = await existingKyc.save();
@@ -372,6 +375,7 @@ exports.createKyc = async (req, res) => {
       present_address,
       current_occupation,
       how_did_you_get_to_know_us,
+      terms_and_conditions, 
       status: "pending"
     });
 
@@ -591,7 +595,8 @@ exports.updateKyc = async (req, res) => {
       fathers_occupation,
       present_address,
       current_occupation,
-      how_did_you_get_to_know_us
+      how_did_you_get_to_know_us,
+      terms_and_conditions
     } = req.body;
 
     // Validate required fields
@@ -615,6 +620,7 @@ exports.updateKyc = async (req, res) => {
     kyc.current_occupation = current_occupation || kyc.current_occupation;
     kyc.how_did_you_get_to_know_us = how_did_you_get_to_know_us || kyc.how_did_you_get_to_know_us;
     kyc.date_of_birth = date_of_birth || kyc.date_of_birth;
+    kyc.terms_and_conditions = terms_and_conditions || kyc.terms_and_conditions;
     kyc.userref = userref || kyc.userref;
     const updatedKyc = await kyc.save();
 

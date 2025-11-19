@@ -18,7 +18,7 @@ const questionSchema = new mongoose.Schema({
     type: Number, // Now storing index of correct answer
     required: function () { return this.type === 'mcq'; }
   },
-  expectedAnswer: { type: String }, // For subjective questions (optional)
+  expectedAnswer: { type: String }, 
   marks: { type: Number, required: true }
 }, { _id: true });
 
