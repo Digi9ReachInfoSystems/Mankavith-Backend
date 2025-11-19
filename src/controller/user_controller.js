@@ -16,6 +16,7 @@ const Payments = require("../model/paymentModel");
 const Certificate = require("../model/certificatesModel");
 const Feedback = require("../model/feedback");
 const axios = require("axios");
+const Subject = require("../model/subject_model");
 const {
   sendWelcomeEmail,
   sendAdminNotification,
@@ -140,11 +141,11 @@ exports.register = async (req, res) => {
       realTimeResponse: 1,
     });
     await sendWelcomeEmail(user.displayName, user.email);
-    const adminUser = await User.find({ role: "admin" ,isSuperAdmin: true});
-  
-        await sendAdminNotification(user.displayName, user.email,user.phone, "mankavit.clatcoaching11@gmail.com");
-    
-    
+    const adminUser = await User.find({ role: "admin", isSuperAdmin: true });
+
+    await sendAdminNotification(user.displayName, user.email, user.phone, "mankavit.clatcoaching11@gmail.com");
+
+
 
     if (response.data.type == "success") {
       res.status(200).json({
@@ -1610,22 +1611,22 @@ exports.createStudent = async (req, res) => {
       password
     );
     const admins = await User.find({ role: "admin" });
- 
-        await admincreateStudentMailtoadmins(
-          savedStudent.displayName,
-          savedStudent.email,
-          phone,
-          date_of_birth,
-          age,
-          college_name,
-          passing_year,
-          current_occupation,
-          fathers_name,
-          fathers_occupation,
-          present_address,
-         "mankavit.clatcoaching11@gmail.com"
-        );
-  
+
+    await admincreateStudentMailtoadmins(
+      savedStudent.displayName,
+      savedStudent.email,
+      phone,
+      date_of_birth,
+      age,
+      college_name,
+      passing_year,
+      current_occupation,
+      fathers_name,
+      fathers_occupation,
+      present_address,
+      "mankavit.clatcoaching11@gmail.com"
+    );
+
     res.status(200).json({
       success: true,
       message: "Student created successfully",
@@ -1914,6 +1915,69 @@ exports.removeCourseSubscriptionToStudent = async (req, res) => {
     if (!user.subscription) {
       user.subscription = []; // Initialize if undefined
     }
+    let expiredCourseIds = [];
+    expiredCourseIds = user.subscription.map((sub) => {
+      if (courseIds.includes(sub.course_enrolled.toString())) {
+        return sub.course_enrolled;
+      } else {
+        return null;
+      }
+    });
+    expiredCourseIds = expiredCourseIds.filter((id) => id !== null);
+    let nonExpiredCourseIds = [];
+    nonExpiredCourseIds = user.subscription.map((sub) => {
+      if (!courseIds.includes(sub.course_enrolled.toString())) {
+        return sub.course_enrolled;
+      } else {
+        return null;
+      }
+    });
+    nonExpiredCourseIds = nonExpiredCourseIds.filter((id) => id !== null);
+    const subjectsInExpiredCourses = await Subject.find({
+      courses: { $in: expiredCourseIds },
+    }).select("_id");
+    const subjectsInNonExpiredCourses = await Subject.find({
+      courses: { $in: nonExpiredCourseIds },
+    }).select("_id");
+    let subjectsToDeactivate = [];
+    subjectsToDeactivate = subjectsInExpiredCourses.filter(
+      (sub) =>
+        !subjectsInNonExpiredCourses.some((nsub) => nsub._id.equals(sub._id))
+    );
+    subjectsToDeactivate = subjectsToDeactivate.map((sub) => sub._id);
+    const mockTestsToDeactivate = await MockTest.find({
+      subject: { $in: subjectsToDeactivate },
+    });
+
+    //remove user attempts for mockTestsToDeactivate
+    for (let mt of mockTestsToDeactivate) {
+      await UserAttempt.deleteMany({ userId: user._id, mockTestId: mt._id });
+      console.log(
+        `🗑️ Deleted attempts for user ${user._id} for mock test ${mt._id}`
+      );
+    }
+
+    //remove user rankings for mockTestsToDeactivate
+    for (let mt of mockTestsToDeactivate) {
+      await UserRanking.deleteMany({ userId: user._id, mockTestId: mt._id });
+      console.log(
+        `🗑️ Deleted rankings for user ${user._id} for mock test ${mt._id}`
+      );
+    }
+    const userProgress = await UserProgress.findOne({
+      user_id: user._id,
+    });
+    if (userProgress) {
+      userProgress.courseProgress = userProgress.courseProgress.filter(progress => {
+        const isExpired = expiredCourseIds
+          .map(id => id.toString())
+          .includes(progress.course_id.toString());
+
+        return !isExpired;
+      });
+      console.log("Updated courseProgress", userProgress.courseProgress);
+      await userProgress.save();
+    }
     for (const courseId of courseIds) {
       const course = await Course.findById(courseId);
       if (!course) {
@@ -1934,6 +1998,10 @@ exports.removeCourseSubscriptionToStudent = async (req, res) => {
           (sub) => !sub.course_enrolled.equals(course._id)
         );
       }
+      const certificate = await Certificate.deleteMany({
+        user_ref: user._id,
+        course_ref: course._id,
+      });
     }
     await user.save();
     res.status(200).json({
@@ -1942,7 +2010,7 @@ exports.removeCourseSubscriptionToStudent = async (req, res) => {
       user: user,
     });
   } catch (error) {
-    console.error("Error adding courses to student:", error.message);
+    console.error("Error adding courses to student:", error.message,error);
     res
       .status(500)
       .json({ success: false, message: "Server error", error: error.message });
@@ -2141,10 +2209,10 @@ exports.bulkDeleteUsers = async (req, res) => {
         const userProgress = await UserProgress.findOneAndDelete({
           user_id: user._id,
         });
-        const payments = await Payments.find({ userRef: user._id });
-        payments.forEach(async (payment) => {
-          await Payments.findByIdAndDelete(payment._id);
-        });
+        // const payments = await Payments.find({ userRef: user._id });
+        // payments.forEach(async (payment) => {
+        //   await Payments.findByIdAndDelete(payment._id);
+        // });
         const certificates = await Certificate.find({ user_ref: user._id });
         certificates.forEach(async (certificate) => {
           await Certificate.findByIdAndDelete(certificate._id);
@@ -2178,7 +2246,7 @@ exports.bulkDeleteUsers = async (req, res) => {
           }
           await Feedback.findByIdAndDelete(feedback._id);
         });
-        const deleteUserRankings= await UserRanking.deleteMany({ userId: user._id });
+        const deleteUserRankings = await UserRanking.deleteMany({ userId: user._id });
         const deletedUser = await User.findByIdAndDelete(user._id);
         results.push({
           id,
@@ -2256,10 +2324,10 @@ exports.deleteStudents = async (req, res) => {
     const userProgress = await UserProgress.findOneAndDelete({
       user_id: user._id,
     });
-    const payments = await Payments.find({ userRef: user._id });
-    payments.forEach(async (payment) => {
-      await Payments.findByIdAndDelete(payment._id);
-    });
+    // const payments = await Payments.find({ userRef: user._id });
+    // payments.forEach(async (payment) => {
+    //   await Payments.findByIdAndDelete(payment._id);
+    // });
     const certificates = await Certificate.find({ user_ref: user._id });
     certificates.forEach(async (certificate) => {
       await Certificate.findByIdAndDelete(certificate._id);
@@ -2293,7 +2361,7 @@ exports.deleteStudents = async (req, res) => {
       }
       await Feedback.findByIdAndDelete(feedback._id);
     });
-    const deleteUserRankings= await UserRanking.deleteMany({ userId: user._id });
+    const deleteUserRankings = await UserRanking.deleteMany({ userId: user._id });
     const deletedUser = await User.findByIdAndDelete(user._id);
     res.status(200).json({
       success: true,
@@ -2688,15 +2756,15 @@ exports.collectDetailsOnQuestionPaperDownload = async (req, res) => {
   try {
     const { name, email, phoneNumber } = req.body;
     const userAdmins = await User.find({ role: "admin" });
- 
-   
-        await sendQuestionPaperDownloadAlert(
-          name,
-          email,
-          phoneNumber,
-          "mankavit.clatcoaching11@gmail.com"
-        );
-  
+
+
+    await sendQuestionPaperDownloadAlert(
+      name,
+      email,
+      phoneNumber,
+      "mankavit.clatcoaching11@gmail.com"
+    );
+
     res
       .status(200)
       .json({ success: true, message: "Details collected successfully" });
@@ -3105,8 +3173,8 @@ exports.sendPaperDownloadMail = async (req, res) => {
     const { email, name, phone } = req.body;
     const admins = await User.find({ role: "admin" });
 
-   
-        await sendAdminPaperDownloadMail(name, email, phone, "mankavit.clatcoaching11@gmail.com");
+
+    await sendAdminPaperDownloadMail(name, email, phone, "mankavit.clatcoaching11@gmail.com");
 
     return res
       .status(200)

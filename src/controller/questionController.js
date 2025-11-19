@@ -104,25 +104,88 @@ exports.removeQuestionPaper = async (req, res) => {
 exports.addQuestionPaper = async (req, res) => {
   const { title } = req.params;
   const { year, question_url } = req.body;
-  try {
-    const questionData = await Question.findOne({ title, "papers.year": Number(year) });
-    if (questionData) {
-      return res.status(409).json({ message: "This title already has a paper for that year." });
-    }
-    const question = await Question.findOneAndUpdate(
-      { title },
-      { $push: { papers: { year: year, question_url: question_url } } },
-      { new: true }
-    );
 
+  if (!title || !year || !question_url) {
+    return res.status(400).json({ message: "Missing required fields" });
+  }
+
+  try {
+    // Find question set by title
+    const question = await Question.findOne({ title });
     if (!question) {
       return res.status(404).json({ error: "Question not found" });
     }
-    res.status(200).json(question);
+
+    // ✅ Generate month-year key for new entry
+    const newKey = generateMonthYearKey(year);
+
+    // ✅ Check for duplicate (same month + year)
+    const duplicate = question.papers.some(
+      (p) => generateMonthYearKey(p.year) === newKey
+    );
+
+    if (duplicate) {
+      return res
+        .status(409)
+        .json({ message: "A paper for the same month and year already exists." });
+    }
+
+    
+    question.papers.push({
+      year: year.trim(),
+      question_url: question_url.trim(),
+    });
+ 
+
+    question.papers.sort((a, b) => parseYearMonth(b.year) - parseYearMonth(a.year));
+
+
+    await question.save();
+    return res.status(200).json(question);
+
   } catch (error) {
-    res.status(500).json({ error: "Failed to add question" });
+    console.error("❌ Error adding question paper:", error);
+    return res.status(500).json({ error: "Failed to add question" });
   }
+};
+
+function generateMonthYearKey(str) {
+  if (!str) return "0-0";
+
+  const months = {
+    jan: 1, january: 1,
+    feb: 2, february: 2,
+    mar: 3, march: 3,
+    apr: 4, april: 4,
+    may: 5,
+    jun: 6, june: 6,
+    jul: 7, july: 7,
+    aug: 8, august: 8,
+    sep: 9, sept: 9, september: 9,
+    oct: 10, october: 10,
+    nov: 11, november: 11,
+    dec: 12, december: 12,
+  };
+
+  const lower = str.toLowerCase();
+  //consider last 4 digit as year
+  const yearMatch = lower.match(/(\d{4})/g)?.pop();
+  const year =Number(yearMatch) || 0; // yearMatch 
+
+  // Extract first three letters (month name)
+  const monthAbbr = lower.slice(0, 3);
+  const month = months[monthAbbr] || 0;
+
+  return `${year}-${month}`; // Example: "2025-8" for Aug 2025
 }
+
+function parseYearMonth(str) {
+  if (!str) return 0;
+  const [year, month] = generateMonthYearKey(str).split("-").map(Number);
+  return year * 100 + (month || 0);
+}
+
+
 
 exports.getAllQuestionpapers = async (req, res) => {
   try {

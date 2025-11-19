@@ -366,18 +366,35 @@ exports.updateCourse = async (req, res) => {
       updateData.course_order &&
       updateData.course_order !== course.course_order
     ) {
+      const oldOrder = course.course_order;
+      const newOrder = updateData.course_order;
+
       const totalCourses = await Course.countDocuments();
 
-      // Clamp order to valid range
-      if (updateData.course_order < 1) updateData.course_order = 1;
-      if (updateData.course_order > totalCourses) updateData.course_order = totalCourses;
+      // Clamp the order to valid range
+      const validOrder = Math.min(Math.max(newOrder, 1), totalCourses);
 
-      // Shift others
-      await Course.updateMany(
-        { course_order: { $gte: updateData.course_order } },
-        { $inc: { course_order: 1 } }
-      );
-      course.course_order = updateData.course_order;
+      if (validOrder > oldOrder) {
+        // Moving course DOWN (e.g., 1 → 3)
+        await Course.updateMany(
+          {
+            course_order: { $gt: oldOrder, $lte: validOrder },
+            _id: { $ne: course._id },
+          },
+          { $inc: { course_order: -1 } }
+        );
+      } else {
+        // Moving course UP (e.g., 3 → 1)
+        await Course.updateMany(
+          {
+            course_order: { $gte: validOrder, $lt: oldOrder },
+            _id: { $ne: course._id },
+          },
+          { $inc: { course_order: 1 } }
+        );
+      }
+
+      course.course_order = validOrder;
     }
 
 
@@ -425,6 +442,12 @@ exports.publishCourse = async (req, res) => {
         message: "Course not found",
       });
     }
+    console.log("Current isPublished:", course.isPublished);
+    // if(course.isPublished){
+    const updateCertificates = await Certificate.updateMany({
+      course_ref: courseId
+    }, { isdisabled: course.isPublished });
+    // }
 
     const updatedCourse = await Course.findByIdAndUpdate(
       courseId,
@@ -1086,8 +1109,12 @@ exports.getCourseWithProgress = async (req, res) => {
         }],
       });
     const userProgressData = await UserProgress.findOne({ user_id: userId });
+    console.log("userProgressData", userProgressData);
+    let updatedUserProgressData = null;
+    if (userProgressData) {
+      updatedUserProgressData = await userProgressData.save();
+    }
 
-    const updatedUserProgressData = await userProgressData.save();
     // Fetch course with nested subjects and lectures
     let course = await Course.findOne({ _id: courseId, isPublished: true })
       .populate({
@@ -1575,7 +1602,7 @@ exports.bulkDeleteCourse = async (req, res) => {
             if (!foundSubscription) {
               return;
             }
-            const payment = await Payment.findByIdAndDelete(foundSubscription.payment_id);
+            // const payment = await Payment.findByIdAndDelete(foundSubscription.payment_id);
             const certificate = await Certificate.findOneAndDelete({ course_ref: courseId, user_ref: studentId });
             const userProgress = await UserProgress.findOne({ user_ref: studentId });
             if (userProgress) {

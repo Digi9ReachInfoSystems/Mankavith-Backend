@@ -15,7 +15,11 @@ const CertificateSchema = new mongoose.Schema({
     ref: "User",
     required: true,
   },
-
+  isdisabled: {
+    type: Boolean,
+    default: false,
+  },
+  courseName: { type: String },
   createdAt: { type: Date, default: Date.now },
 });
 module.exports = mongoose.model("Certificate", CertificateSchema);
