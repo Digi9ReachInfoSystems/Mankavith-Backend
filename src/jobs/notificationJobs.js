@@ -6,10 +6,7 @@ const moment = require("moment-timezone");
 // Run job every night at 12:00 AM
 exports.sendScheduledNotifications = cron.schedule("* * * * *", async () => {
 
-// exports.removeExpiredSubscriptions = cron.schedule(
-//   "*/10 * * * * *",
-//   async () => {
-    console.log("🔄 Running cron job: send Scheduled Notification");
+
 
      const now = moment().tz("Asia/Kolkata").toDate();
     //  console.log("Current time:", now);
@@ -61,7 +58,7 @@ exports.removeOlderNotifications = cron.schedule("* * * * *", async () => {
       read: true
     });
 
-    console.log(`🗑️ Deleted ${result.deletedCount} notifications older than 3 month`);
+    // console.log(`🗑️ Deleted ${result.deletedCount} notifications older than 3 month`);
   } catch (err) {
     console.error("Error cleaning old notifications:", err);
   }

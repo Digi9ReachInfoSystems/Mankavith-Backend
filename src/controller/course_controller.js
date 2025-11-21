@@ -1648,7 +1648,7 @@ exports.getAllCourseAdmin = async (req, res) => {
     const courses = await Course.find()
       .populate({
         path: "subjects",
-        select: "subjectName image description lectures notes",
+        select: "subjectName image descriptcreateion lectures notes",
         populate: [
           {
             path: "lectures",
