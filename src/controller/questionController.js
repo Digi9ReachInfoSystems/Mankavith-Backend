@@ -124,11 +124,11 @@ exports.addQuestionPaper = async (req, res) => {
       (p) => generateMonthYearKey(p.year) === newKey
     );
 
-    if (duplicate) {
-      return res
-        .status(409)
-        .json({ message: "A paper for the same month and year already exists." });
-    }
+    // if (duplicate) {
+    //   return res
+    //     .status(409)
+    //     .json({ message: "A paper for the same month and year already exists." });
+    // }
 
     
     question.papers.push({
