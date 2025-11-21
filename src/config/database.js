@@ -4,9 +4,6 @@ const connectDB = async () => {
         // Connect to MongoDB
 
         const mongoURI = process.env.MONGODB_URI_DEV;
-
-
-
         // const mongoURI = process.env.MONGODB_URI_PROD;
         
         await mongoose.connect(mongoURI, {
