@@ -216,7 +216,7 @@ exports.startAttempt = async (req, res) => {
       });
     }
     let isWithinWindow = true;
-      const now = new Date();
+    const now = new Date();
     if (mockTest.isUnlimitedAttempts === false) {
       if (attemptCount >= mockTest.maxAttempts) {
         return res.status(200).json({
@@ -224,9 +224,9 @@ exports.startAttempt = async (req, res) => {
           message: "Maximum attempts reached for this course",
         });
       }
-    
-      isWithinWindow =true;
-        // now >= new Date(mockTest.startDate) && now <= new Date(mockTest.endDate);
+
+      isWithinWindow = true;
+      // now >= new Date(mockTest.startDate) && now <= new Date(mockTest.endDate);
     }
 
 
@@ -630,7 +630,7 @@ exports.submitAttempt = async (req, res) => {
     // If no subjective questions, update rankings immediately
     if (isWithinWindow) {
       // if (!hasSubjective) {
-        await updateRankings(attempt);
+      await updateRankings(attempt);
       // }
     }
     const questionIds = [];
@@ -659,16 +659,16 @@ exports.submitAttempt = async (req, res) => {
     const user = await User.findById(user_id);
     const userAdmin = await User.find({ role: "admin" });
     // await userAdmin.map(async (admin) => {
-      sendMockTestSubmissionAlert(
-        user.displayName,
-        user.email,
-        attempt.mockTestId.title,
-        attempt.attemptNumber,
-        attempt.mcqScore,
-        // attempt.totalMarks,
-       "mankavit.clatcoaching11@gmail.com",
-        attempt._id
-      );
+    sendMockTestSubmissionAlert(
+      user.displayName,
+      user.email,
+      attempt.mockTestId.title,
+      attempt.attemptNumber,
+      attempt.mcqScore,
+      // attempt.totalMarks,
+      "mankavit.clatcoaching11@gmail.com",
+      attempt._id
+    );
     // });
 
     res.status(200).json({
@@ -961,7 +961,7 @@ exports.getUserAttempts = async (req, res) => {
 //   await recalculateTestRankings(attempt.mockTestId, attempt.subject);
 // }
 async function updateRankings(attempt) {
-  
+
 
   // Get all evaluated attempts for this user and mock test
   const attempts = await UserAttempt.find({
@@ -977,7 +977,7 @@ async function updateRankings(attempt) {
 
   // Instead of "best score", take the LAST submitted attempt
   const lastAttempt = attempts[0];
- console.log("lastAttempt",lastAttempt);
+  console.log("lastAttempt", lastAttempt);
   // Reset all attempts
   await UserAttempt.updateMany(
     { userId: attempt.userId, mockTestId: attempt.mockTestId },
@@ -1570,9 +1570,23 @@ exports.bulkDeleteUserAttempts = async (req, res) => {
           continue;
         }
 
-        const deletedAttempt = await UserAttempt.findByIdAndDelete(id);
-
-        if (!deletedAttempt) {
+        const attempt = await UserAttempt.findByIdAndDelete(id);
+        const userRanking = await UserRanking.findOneAndDelete({
+          userId: attempt.userId,
+          subject: attempt.subject,
+          bestAttemptId: attempt._id,
+        });
+        const userAttempts = await UserAttempt.find({
+          userId: attempt.userId,
+          attemptNumber: { $gt: attempt.attemptNumber },
+          subject: attempt.subject,
+        });
+        for (let i = 0; i < userAttempts.length; i++) {
+          userAttempts[i].attemptNumber -= 1;
+          await userAttempts[i].save();
+        }
+        const result = await updateRankings(attempt);
+        if (!attempt) {
           results.push({
             id,
             success: false,
@@ -1586,6 +1600,7 @@ exports.bulkDeleteUserAttempts = async (req, res) => {
             message: "Attempt deleted successfully",
           });
         }
+
       } catch (err) {
         console.error("Error:", err);
         results.push({
@@ -1855,7 +1870,7 @@ exports.getUserMockTestStats = async (req, res) => {
     });
 
     const mockTest = await MockTest.findById(mockTestId);
-   
+
     if (!mockTest) {
       return res
         .status(404)
@@ -1870,15 +1885,15 @@ exports.getUserMockTestStats = async (req, res) => {
         { status: "evaluating" },
       ],
     });
-     console.log(" mockTest", {
-        user: user,
-        mockTest: mockTest,
-        attemptCount: totalAttempts,
-        maxAttempts: mockTest.maxAttempts,
-        isUnlimited:mockTest.isUnlimitedAttempts,
-        resume: pausedAttempt ? true : false,
-        start:mockTest.isUnlimitedAttempts? true : (totalAttempts < mockTest.maxAttempts) ? true : false
-      });
+    console.log(" mockTest", {
+      user: user,
+      mockTest: mockTest,
+      attemptCount: totalAttempts,
+      maxAttempts: mockTest.maxAttempts,
+      isUnlimited: mockTest.isUnlimitedAttempts,
+      resume: pausedAttempt ? true : false,
+      start: mockTest.isUnlimitedAttempts ? true : (totalAttempts < mockTest.maxAttempts) ? true : false
+    });
     return res.status(200).json({
       success: true,
       data: {
@@ -1886,9 +1901,9 @@ exports.getUserMockTestStats = async (req, res) => {
         mockTest: mockTest,
         attemptCount: totalAttempts,
         maxAttempts: mockTest.maxAttempts,
-        isUnlimited:mockTest.isUnlimitedAttempts,
+        isUnlimited: mockTest.isUnlimitedAttempts,
         resume: pausedAttempt ? true : false,
-       start:mockTest.isUnlimitedAttempts? true : (totalAttempts < mockTest.maxAttempts) ? true : false
+        start: mockTest.isUnlimitedAttempts ? true : (totalAttempts < mockTest.maxAttempts) ? true : false
       }
     });
   } catch (err) {

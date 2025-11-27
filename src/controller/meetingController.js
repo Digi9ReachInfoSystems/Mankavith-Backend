@@ -1210,7 +1210,7 @@ exports.handleZoomWebhook = async (req, res) => {
           studentEmails.push(student.email);
         }
       }
-      meetingCancelledMail(meeting, meeting.host_email, studentEmails);
+      // meetingCancelledMail(meeting, meeting.host_email, studentEmails);
 
 
       await Meeting.findByIdAndDelete({ zoom_meeting_id: meetingId })
@@ -1245,7 +1245,7 @@ exports.handleZoomWebhook = async (req, res) => {
           studentEmails.push(student.email);
         }
       }
-      meetingStartedMail(meetingDoc, meetingDoc.host_email, studentEmails);
+      // meetingStartedMail(meetingDoc, meetingDoc.host_email, studentEmails);
 
     } else if (req.body.event === 'meeting.ended') {
       const meetingId = req.body.payload.object.id
