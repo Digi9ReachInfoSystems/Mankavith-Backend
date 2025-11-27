@@ -125,7 +125,7 @@ exports.sendWelcomeEmail = async (studentName, studentEmail) => {
                     <img src="https://cdn-icons-png.flaticon.com/512/300/300218.png" alt="Google Play" width="30">
                 </a>
                 <a href="https://www.apple.com/in/app-store/">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/6/67/App_Store_%28iOS%29.svg" alt="App Store" width="30">
+                    <img src="https://cdn-icons-png.flaticon.com/512/831/831276.png" alt="App Store" width="30" />
                 </a>
             </div>
         </div> 
@@ -544,7 +544,7 @@ exports.sendCoursePurchaseEmail = async (studentName, studentEmail, courseName, 
                     <img src="https://cdn-icons-png.flaticon.com/512/300/300218.png" alt="Google Play" width="30">
                 </a>
                 <a href="https://www.apple.com/in/app-store/">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/6/67/App_Store_%28iOS%29.svg" alt="App Store" width="30">
+                    <img src="https://cdn-icons-png.flaticon.com/512/831/831276.png" alt="App Store" width="30" />
                 </a>
                 </div>
             </div>
@@ -1255,7 +1255,7 @@ exports.sendwelcomeMailtoStudentAdminCreated = async (studentName, email, passwo
                     <img src="https://cdn-icons-png.flaticon.com/512/300/300218.png" alt="Google Play" width="30">
                 </a>
                 <a href="https://www.apple.com/in/app-store/">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/6/67/App_Store_%28iOS%29.svg" alt="App Store" width="30">
+                    <img src="https://cdn-icons-png.flaticon.com/512/831/831276.png" alt="App Store" width="30" />
                 </a>
             </div>
         </div> 
