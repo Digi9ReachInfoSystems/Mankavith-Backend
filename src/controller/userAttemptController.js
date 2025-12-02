@@ -129,85 +129,236 @@ const updateLastSavedTime = async (duration, lastSavedAt, timeSpent) => {
 //         });
 //     }
 // };
+// exports.startAttempt = async (req, res) => {
+//   try {
+//     const { mockTestId, subject, user_id } = req.body;
+
+//     // 1. Check for existing in-progress attempt (resume)
+//     let attemptExists = await UserAttempt.findOne({
+//       userId: user_id,
+//       mockTestId,
+//       // subject,
+//       status: "in-progress",
+//     }).populate("mockTestId");
+
+//     if (attemptExists) {
+//       // Calculate remaining time
+//       const totalDuration = attemptExists.mockTestId.duration; // in seconds
+//       const now = new Date();
+
+//       // const remainingTime = totalDuration - attemptExists.timeSpent;
+//       const storedMinutes = attemptExists.timeSpent || 0;
+//       const minutesPart = Math.floor(storedMinutes); // Get integer part (3)
+//       // console.log("minutesPart", timeSpent);
+//       let secondsPart = parseInt(String(storedMinutes).split(".")[1]);
+//       // console.log("secondsPart", secondsPart);
+//       if (typeof secondsPart !== "number" || isNaN(secondsPart)) {
+//         secondsPart = 0;
+//       }
+
+//       const totalTimeSpentInSeconds = minutesPart * 60 + secondsPart;
+
+//       let durationInSeconds =
+//         Math.floor(attemptExists.mockTestId.duration) * 60;
+
+//       let durationPart = parseInt(
+//         String(attemptExists.mockTestId.duration).split(".")[1]
+//       );
+//       if (typeof durationPart !== "number" || isNaN(durationPart)) {
+//         durationPart = 0;
+//       }
+//       durationInSeconds = durationInSeconds + durationPart;
+
+//       const remainingSeconds = durationInSeconds - totalTimeSpentInSeconds;
+//       // console.log("remainingSeconds", remainingSeconds);
+//       let remainingMinutes = Math.floor(remainingSeconds / 60);
+//       // console.log("remainingMinutes", remainingMinutes);
+//       let remainingSecondsPart = remainingSeconds % 60;
+
+//       const remainingTime = parseFloat(
+//         `${remainingMinutes}.${remainingSecondsPart
+//           .toString()
+//           .padStart(2, "0")}`
+//       ).toFixed(2);
+
+//       if (parseFloat(remainingTime) <= 0) {
+//         attemptExists.status = "submitted";
+//         await attemptExists.save();
+//         return res.status(400).json({
+//           success: false,
+//           message: "Time is up! Attempt auto-submitted",
+//           data: attemptExists,
+//         });
+//       }
+
+//       // Update lastResumeAt
+//       attemptExists.lastSavedAt = now;
+//       await attemptExists.save();
+
+//       return res.status(200).json({
+//         success: true,
+//         message: "Resuming in-progress attempt",
+//         data: attemptExists,
+//         remainingTime,
+//       });
+//     }
+//     const attemptCount = await UserAttempt.countDocuments({
+//       userId: user_id,
+//       mockTestId,
+//       // subject,
+//     });
+
+//     const mockTest = await MockTest.findById(mockTestId);
+//     if (!mockTest) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "Test not found",
+//       });
+//     }
+//     let isWithinWindow = true;
+//     const now = new Date();
+//     if (mockTest.isUnlimitedAttempts === false) {
+//       if (attemptCount >= mockTest.maxAttempts) {
+//         return res.status(200).json({
+//           success: false,
+//           message: "Maximum attempts reached for this course",
+//         });
+//       }
+
+//       isWithinWindow = true;
+//       // now >= new Date(mockTest.startDate) && now <= new Date(mockTest.endDate);
+//     }
+
+
+
+//     // Initialize answers array
+//     const answers = mockTest.questions.map((question) => ({
+//       questionId: question._id,
+//       answer: null,
+//       answerIndex: null, // For MCQ
+//       isCorrect: false,
+//       marksAwarded: 0,
+//     }));
+
+//     const attempt = new UserAttempt({
+//       userId: user_id,
+//       mockTestId,
+//       subject,
+//       attemptNumber: attemptCount + 1,
+//       answers,
+//       status: "in-progress",
+//       isWithinTestWindow: isWithinWindow, // Set based on current time
+//       lastSavedAt: now,
+//       timeSpent: "0",
+//     });
+
+//     await attempt.save();
+
+//     res.status(201).json({
+//       success: true,
+//       data: attempt,
+//       remainingTime: mockTest.duration.toString(),
+//       message: isWithinWindow
+//         ? "Attempt started (will count for rankings)"
+//         : "Attempt started (will NOT count for rankings)",
+//     });
+//   } catch (err) {
+//     res.status(500).json({
+//       success: false,
+//       message: err.message,
+//     });
+//   }
+// };
+
+// Assume UserAttempt and MockTest models are imported
+// const UserAttempt = require('../models/UserAttempt');
+// const MockTest = require('../models/MockTest');
+ 
+/**
+* Helper function to safely convert M.SS string/number format to total seconds (integer).
+* Example: "3.45" (3 minutes, 45 seconds) -> 225 seconds
+* @param {string | number} timeInMSDotSS - Time in minutes.seconds format.
+* @returns {number} Total time in seconds.
+*/
+const timeToTotalSeconds = (timeInMSDotSS) => {
+  const time = parseFloat(timeInMSDotSS) || 0;
+  if (time <= 0) return 0;
+  const minutesPart = Math.floor(time);
+ 
+  // Extract the fractional part, multiply by 100, and round to get seconds.
+  // This assumes the two digits after the decimal represent seconds (00-59).
+  const secondsPart = Math.round((time - minutesPart) * 100);
+ 
+  return (minutesPart * 60) + secondsPart;
+};
+ 
+/**
+* Helper function to convert total seconds (integer) back to the M.SS format string.
+* Example: 225 seconds -> "3.45"
+* @param {number} totalSeconds - Total time in seconds.
+* @returns {string} Time in "M.SS" format, padded.
+*/
+const totalSecondsToMSDotSS = (totalSeconds) => {
+    if (totalSeconds <= 0) return "0.00";
+ 
+    const remainingMinutes = Math.floor(totalSeconds / 60);
+    const remainingSecondsPart = totalSeconds % 60;
+ 
+    // Pad seconds part with '0' to ensure two digits (e.g., 5 seconds is '05')
+    return `${remainingMinutes}.${remainingSecondsPart.toString().padStart(2, "0")}`;
+};
+ 
+ 
 exports.startAttempt = async (req, res) => {
   try {
     const { mockTestId, subject, user_id } = req.body;
-
+ 
     // 1. Check for existing in-progress attempt (resume)
     let attemptExists = await UserAttempt.findOne({
       userId: user_id,
       mockTestId,
-      // subject,
       status: "in-progress",
-    }).populate("mockTestId");
-
+    }).populate("mockTestId"); // Ensure mockTestId is populated
+ 
     if (attemptExists) {
-      // Calculate remaining time
-      const totalDuration = attemptExists.mockTestId.duration; // in seconds
-      const now = new Date();
-
-      // const remainingTime = totalDuration - attemptExists.timeSpent;
-      const storedMinutes = attemptExists.timeSpent || 0;
-      const minutesPart = Math.floor(storedMinutes); // Get integer part (3)
-      // console.log("minutesPart", timeSpent);
-      let secondsPart = parseInt(String(storedMinutes).split(".")[1]);
-      // console.log("secondsPart", secondsPart);
-      if (typeof secondsPart !== "number" || isNaN(secondsPart)) {
-        secondsPart = 0;
-      }
-
-      const totalTimeSpentInSeconds = minutesPart * 60 + secondsPart;
-
-      let durationInSeconds =
-        Math.floor(attemptExists.mockTestId.duration) * 60;
-
-      let durationPart = parseInt(
-        String(attemptExists.mockTestId.duration).split(".")[1]
-      );
-      if (typeof durationPart !== "number" || isNaN(durationPart)) {
-        durationPart = 0;
-      }
-      durationInSeconds = durationInSeconds + durationPart;
-
-      const remainingSeconds = durationInSeconds - totalTimeSpentInSeconds;
-      // console.log("remainingSeconds", remainingSeconds);
-      let remainingMinutes = Math.floor(remainingSeconds / 60);
-      // console.log("remainingMinutes", remainingMinutes);
-      let remainingSecondsPart = remainingSeconds % 60;
-
-      const remainingTime = parseFloat(
-        `${remainingMinutes}.${remainingSecondsPart
-          .toString()
-          .padStart(2, "0")}`
-      ).toFixed(2);
-
-      if (parseFloat(remainingTime) <= 0) {
+      // --- RESUME LOGIC (Fixed Time Calculation) ---
+      const totalDurationInSeconds = timeToTotalSeconds(attemptExists.mockTestId.duration);
+      const totalTimeSpentInSeconds = timeToTotalSeconds(attemptExists.timeSpent);
+ 
+      const remainingSeconds = totalDurationInSeconds - totalTimeSpentInSeconds;
+      const remainingTime = totalSecondsToMSDotSS(remainingSeconds);
+ 
+      if (remainingSeconds <= 0) {
+        // If time is up, auto-submit the attempt
         attemptExists.status = "submitted";
-        await attemptExists.save();
+        // NOTE: You should ideally run the marking logic here before saving.
+        await attemptExists.save(); 
         return res.status(400).json({
           success: false,
           message: "Time is up! Attempt auto-submitted",
           data: attemptExists,
         });
       }
-
-      // Update lastResumeAt
-      attemptExists.lastSavedAt = now;
+ 
+      // Update lastSavedAt for resume
+      attemptExists.lastSavedAt = new Date();
       await attemptExists.save();
-
+ 
       return res.status(200).json({
         success: true,
         message: "Resuming in-progress attempt",
         data: attemptExists,
-        remainingTime,
+        remainingTime, // The safely calculated remaining time
       });
     }
+ 
+    // --- NEW ATTEMPT LOGIC ---
+ 
     const attemptCount = await UserAttempt.countDocuments({
       userId: user_id,
       mockTestId,
-      // subject,
     });
-
+ 
     const mockTest = await MockTest.findById(mockTestId);
     if (!mockTest) {
       return res.status(404).json({
@@ -215,31 +366,35 @@ exports.startAttempt = async (req, res) => {
         message: "Test not found",
       });
     }
-    let isWithinWindow = true;
-    const now = new Date();
-    if (mockTest.isUnlimitedAttempts === false) {
-      if (attemptCount >= mockTest.maxAttempts) {
-        return res.status(200).json({
-          success: false,
-          message: "Maximum attempts reached for this course",
-        });
-      }
-
-      isWithinWindow = true;
-      // now >= new Date(mockTest.startDate) && now <= new Date(mockTest.endDate);
+    // Check attempt limits
+    if (mockTest.isUnlimitedAttempts === false && attemptCount >= mockTest.maxAttempts) {
+      return res.status(200).json({
+        success: false,
+        message: `Maximum attempts (${mockTest.maxAttempts}) reached for this test`,
+      });
     }
-
-
-
-    // Initialize answers array
+    // Check if within the test window for ranking eligibility (Simplified)
+    let isWithinWindow = true; // Your previous logic always set this to true if limits weren't hit.
+    const now = new Date();
+    // You might want to implement this check if your MockTest has startDate/endDate fields:
+    /*
+    if (mockTest.startDate && mockTest.endDate) {
+        isWithinWindow = now >= new Date(mockTest.startDate) && now <= new Date(mockTest.endDate);
+    }
+    */
+ 
+ 
+    // Initialize answers array based on questions in the MockTest
     const answers = mockTest.questions.map((question) => ({
-      questionId: question._id,
+      // Ensure your Mongoose schema uses question._id for reference
+      questionId: question._id, 
       answer: null,
-      answerIndex: null, // For MCQ
+      answerIndex: null, 
       isCorrect: false,
       marksAwarded: 0,
     }));
-
+ 
+    // Create a new attempt record
     const attempt = new UserAttempt({
       userId: user_id,
       mockTestId,
@@ -247,25 +402,31 @@ exports.startAttempt = async (req, res) => {
       attemptNumber: attemptCount + 1,
       answers,
       status: "in-progress",
-      isWithinTestWindow: isWithinWindow, // Set based on current time
+      isWithinTestWindow: isWithinWindow, 
       lastSavedAt: now,
-      timeSpent: "0",
+      timeSpent: "0.00", // Initialized as "0.00" string for consistency
     });
-
+ 
     await attempt.save();
-
+ 
     res.status(201).json({
       success: true,
       data: attempt,
-      remainingTime: mockTest.duration.toString(),
+      // Ensure duration is returned as a string for consistency with M.SS format
+      remainingTime: mockTest.duration.toString(), 
       message: isWithinWindow
         ? "Attempt started (will count for rankings)"
         : "Attempt started (will NOT count for rankings)",
     });
   } catch (err) {
+    // 🛑 CRITICAL FIX: Log the full error stack for debugging server crashes.
+    console.error("Error in startAttempt:", err);
+    // Send a generic 500 status response
     res.status(500).json({
       success: false,
-      message: err.message,
+      message: "An internal server error occurred",
+      // Include the error message for development/debugging purposes
+      // message: err.message, 
     });
   }
 };
