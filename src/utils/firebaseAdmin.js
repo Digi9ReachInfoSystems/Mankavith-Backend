@@ -1,18 +1,18 @@
 const admin = require("firebase-admin");
-const path = require("path");
-const fs = require("fs");
 
-let serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT;
-
-if (!serviceAccountPath) {
-  serviceAccountPath = path.join(__dirname, "serviceAccountKey.json");
+if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
+  throw new Error("FIREBASE_SERVICE_ACCOUNT_BASE64 is missing");
 }
 
-if (!fs.existsSync(serviceAccountPath)) {
-  throw new Error(`Firebase service account not found at ${serviceAccountPath}`);
-}
+const serviceAccount = JSON.parse(
+  Buffer.from(
+    process.env.FIREBASE_SERVICE_ACCOUNT,
+    "base64"
+  ).toString("utf8")
+);
 
-const serviceAccount = require(serviceAccountPath);
+// 🔥 FIX NEWLINES (THIS IS THE KEY PART)
+serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, "\n");
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
