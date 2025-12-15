@@ -172,28 +172,78 @@ exports.register = async (req, res) => {
     });
   }
 };
+
+// helper to save FCM token safely
+// utils/saveFcmTokenIfPresent.js
+const saveFcmTokenIfPresent = async (user, fcmToken, device, platform) => {
+  if (!fcmToken || !user) return;
+
+  const deviceId = device?.deviceId || null;
+  const platformSafe = platform || device?.deviceType || "unknown";
+
+  // 1️⃣ If token already exists → DO NOTHING
+  const tokenExists = user.fcmTokens.some(t => t.token === fcmToken);
+  if (tokenExists) {
+    return;
+  }
+
+  // 2️⃣ If same deviceId exists → UPDATE token
+  if (deviceId) {
+    const deviceIndex = user.fcmTokens.findIndex(
+      t => t.deviceId && t.deviceId === deviceId
+    );
+
+    if (deviceIndex !== -1) {
+      user.fcmTokens[deviceIndex].token = fcmToken;
+      user.fcmTokens[deviceIndex].platform = platformSafe;
+      user.fcmTokens[deviceIndex].createdAt = new Date();
+      await user.save();
+      return;
+    }
+  }
+
+  // 3️⃣ Otherwise → ADD new token
+  user.fcmTokens.push({
+    token: fcmToken,
+    deviceId,
+    platform: platformSafe,
+    createdAt: new Date(),
+  });
+
+  await user.save();
+};
+
+
+
+
 exports.login = async (req, res) => {
-  const { email, password, device } = req.body;
-  // console.log(email, password, device);
-  const Email = email.toLowerCase();
+  const { email, password, device, fcmToken, platform } = req.body;
+  const Email = email?.toLowerCase();
+
   try {
-    if (Email == undefined || Email == "" || Email == null) {
-      return res
-        .status(400)
-        .json({ success: false, message: "E-mail cannot be empty " });
+    // ────────────── validations ──────────────
+    if (!Email) {
+      return res.status(400).json({
+        success: false,
+        message: "E-mail cannot be empty",
+      });
     }
 
     const validMail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(Email);
     if (!validMail) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Invalid email format" });
+      return res.status(400).json({
+        success: false,
+        message: "Invalid email format",
+      });
     }
-    if (password == undefined || password == "" || password == null) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Password cannot be empty " });
+
+    if (!password) {
+      return res.status(400).json({
+        success: false,
+        message: "Password cannot be empty",
+      });
     }
+
     const user = await User.findOne({ email: Email });
     if (!user) {
       return res.status(401).json({
@@ -201,11 +251,14 @@ exports.login = async (req, res) => {
         message: "Account with this email does not exist",
       });
     }
-    if (!user || !(await bcrypt.compare(password, user.password))) {
-      return res
-        .status(401)
-        .json({ success: false, message: "Invalid email or password" });
+
+    if (!(await bcrypt.compare(password, user.password))) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid email or password",
+      });
     }
+
     if (user.isBlocked) {
       return res.status(401).json({
         success: false,
@@ -213,12 +266,12 @@ exports.login = async (req, res) => {
           "Account is blocked please contact Support Team :- mankavit.clatcoaching11@gmail.com",
       });
     }
-    // if (user.deviceId && user.deviceId !== deviceId) {
-    //   return res.status(403).json({ success: false, message: "Already logged in on another device" });
-    // }
+
+    // ────────────── CASE 1: fresh login / expired session ──────────────
     if (!user.device || user?.device?.refreshTokenExpiry < Date.now()) {
       const expiryTime = Date.now() + 3600 * 1000;
       const expiryDate = new Date(expiryTime);
+
       const refreshToken = jwt.sign(
         { username: user.email, role: user.role },
         process.env.JWT_SECRET,
@@ -230,44 +283,54 @@ exports.login = async (req, res) => {
         process.env.JWT_SECRET,
         { expiresIn: "1h" }
       );
-      user.accessToken = accessToken;
 
+      user.accessToken = accessToken;
       user.refreshToken = refreshToken;
       user.isActive = true;
+
+      user.device = {
+        deviceId: device?.deviceId,
+        deviceType: device?.deviceType,
+        browser_name: device?.browser_name,
+        userAgent: device?.userAgent,
+        ipAddress: device?.ipAddress,
+        lastLogin: Date.now(),
+        refreshTokenExpiry: Date.now() + 7 * 24 * 60 * 60 * 1000,
+        isCurrent: true,
+      };
+
+      user.lastLogin = Date.now();
       await user.save();
-      let student;
+
+      // 🔔 SAVE FCM TOKEN HERE
+      await saveFcmTokenIfPresent(user, fcmToken, device, platform);
+
+      let student = null;
       if (user.role === "user") {
         student = await Student.findOne({ userRef: user._id });
       }
-      user.device = {
-        deviceId: device.deviceId,
-        deviceType: device.deviceType,
-        browser_name: device.browser_name,
-        userAgent: device.userAgent,
-        ipAddress: device.ipAddress,
-        lastLogin: Date.now(),
-        refreshTokenExpiry: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
-        isCurrent: true,
-      };
-      user.lastLogin = Date.now();
-      await user.save();
-      res.status(200).json({
+
+      return res.status(200).json({
         success: true,
         message: "Login successful",
         accessToken,
         refreshToken,
         alreadyLoggedIn: false,
-        user: user,
+        user,
         kyc_status: user.role === "user" ? user.kyc_status : null,
         expiresIn: expiryDate,
       });
-    } else if (
+    }
+
+    // ────────────── CASE 2: same device login ──────────────
+    if (
       user.device &&
-      user?.device?.deviceId === device.deviceId &&
-      user?.device?.ipAddress === device.ipAddress
+      user?.device?.deviceId === device?.deviceId &&
+      user?.device?.ipAddress === device?.ipAddress
     ) {
       const expiryTime = Date.now() + 3600 * 1000;
       const expiryDate = new Date(expiryTime);
+
       const refreshToken = jwt.sign(
         { username: user.email, role: user.role },
         process.env.JWT_SECRET,
@@ -279,45 +342,204 @@ exports.login = async (req, res) => {
         process.env.JWT_SECRET,
         { expiresIn: "1h" }
       );
-      user.accessToken = accessToken;
 
+      user.accessToken = accessToken;
       user.refreshToken = refreshToken;
       await user.save();
-      let student;
+
+      // 🔔 SAVE FCM TOKEN HERE
+      await saveFcmTokenIfPresent(user, fcmToken, device, platform);
+
+      let student = null;
       if (user.role === "user") {
         student = await Student.findOne({ userRef: user._id });
       }
-      res.status(200).json({
+
+      return res.status(200).json({
         success: true,
         message: "Login successful",
         accessToken,
-        alreadyLoggedIn: false,
         refreshToken: user.refreshToken,
-        user: user,
+        alreadyLoggedIn: false,
+        user,
         kyc_status: user.role === "user" ? user.kyc_status : null,
         expiresIn: expiryDate,
       });
-    } else {
-      const forceLoginData = jwt.sign(
-        { device: device, email: email, password: password },
-        process.env.JWT_SECRET,
-        { expiresIn: "1h" }
-      );
-      return res.status(200).json({
-        success: false,
-        message: "Already logged in on another device",
-        alreadyLoggedIn: true,
-        currentDevice: user.device,
-        forceLoginData,
-      });
     }
+
+    // ────────────── CASE 3: logged in on another device ──────────────
+    const forceLoginData = jwt.sign(
+      { device, email, password },
+      process.env.JWT_SECRET,
+      { expiresIn: "1h" }
+    );
+
+    return res.status(200).json({
+      success: false,
+      message: "Already logged in on another device",
+      alreadyLoggedIn: true,
+      currentDevice: user.device,
+      forceLoginData,
+    });
+
   } catch (error) {
-    console.error("error", error);
-    res
-      .status(500)
-      .json({ success: false, message: "Login failed", error: error.message });
+    console.error("Login error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Login failed",
+      error: error.message,
+    });
   }
 };
+
+
+
+// exports.login = async (req, res) => {
+//   const { email, password, device } = req.body;
+//   // console.log(email, password, device);
+//   const Email = email.toLowerCase();
+//   try {
+//     if (Email == undefined || Email == "" || Email == null) {
+//       return res
+//         .status(400)
+//         .json({ success: false, message: "E-mail cannot be empty " });
+//     }
+
+//     const validMail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(Email);
+//     if (!validMail) {
+//       return res
+//         .status(400)
+//         .json({ success: false, message: "Invalid email format" });
+//     }
+//     if (password == undefined || password == "" || password == null) {
+//       return res
+//         .status(400)
+//         .json({ success: false, message: "Password cannot be empty " });
+//     }
+//     const user = await User.findOne({ email: Email });
+//     if (!user) {
+//       return res.status(401).json({
+//         success: false,
+//         message: "Account with this email does not exist",
+//       });
+//     }
+//     if (!user || !(await bcrypt.compare(password, user.password))) {
+//       return res
+//         .status(401)
+//         .json({ success: false, message: "Invalid email or password" });
+//     }
+//     if (user.isBlocked) {
+//       return res.status(401).json({
+//         success: false,
+//         message:
+//           "Account is blocked please contact Support Team :- mankavit.clatcoaching11@gmail.com",
+//       });
+//     }
+//     // if (user.deviceId && user.deviceId !== deviceId) {
+//     //   return res.status(403).json({ success: false, message: "Already logged in on another device" });
+//     // }
+//     if (!user.device || user?.device?.refreshTokenExpiry < Date.now()) {
+//       const expiryTime = Date.now() + 3600 * 1000;
+//       const expiryDate = new Date(expiryTime);
+//       const refreshToken = jwt.sign(
+//         { username: user.email, role: user.role },
+//         process.env.JWT_SECRET,
+//         { expiresIn: "7d" }
+//       );
+
+//       const accessToken = jwt.sign(
+//         { username: user.email, role: user.role, refreshToken },
+//         process.env.JWT_SECRET,
+//         { expiresIn: "1h" }
+//       );
+//       user.accessToken = accessToken;
+
+//       user.refreshToken = refreshToken;
+//       user.isActive = true;
+//       await user.save();
+//       let student;
+//       if (user.role === "user") {
+//         student = await Student.findOne({ userRef: user._id });
+//       }
+//       user.device = {
+//         deviceId: device.deviceId,
+//         deviceType: device.deviceType,
+//         browser_name: device.browser_name,
+//         userAgent: device.userAgent,
+//         ipAddress: device.ipAddress,
+//         lastLogin: Date.now(),
+//         refreshTokenExpiry: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
+//         isCurrent: true,
+//       };
+//       user.lastLogin = Date.now();
+//       await user.save();
+//       res.status(200).json({
+//         success: true,
+//         message: "Login successful",
+//         accessToken,
+//         refreshToken,
+//         alreadyLoggedIn: false,
+//         user: user,
+//         kyc_status: user.role === "user" ? user.kyc_status : null,
+//         expiresIn: expiryDate,
+//       });
+//     } else if (
+//       user.device &&
+//       user?.device?.deviceId === device.deviceId &&
+//       user?.device?.ipAddress === device.ipAddress
+//     ) {
+//       const expiryTime = Date.now() + 3600 * 1000;
+//       const expiryDate = new Date(expiryTime);
+//       const refreshToken = jwt.sign(
+//         { username: user.email, role: user.role },
+//         process.env.JWT_SECRET,
+//         { expiresIn: "7d" }
+//       );
+
+//       const accessToken = jwt.sign(
+//         { username: user.email, role: user.role, refreshToken },
+//         process.env.JWT_SECRET,
+//         { expiresIn: "1h" }
+//       );
+//       user.accessToken = accessToken;
+
+//       user.refreshToken = refreshToken;
+//       await user.save();
+//       let student;
+//       if (user.role === "user") {
+//         student = await Student.findOne({ userRef: user._id });
+//       }
+//       res.status(200).json({
+//         success: true,
+//         message: "Login successful",
+//         accessToken,
+//         alreadyLoggedIn: false,
+//         refreshToken: user.refreshToken,
+//         user: user,
+//         kyc_status: user.role === "user" ? user.kyc_status : null,
+//         expiresIn: expiryDate,
+//       });
+//     } else {
+//       const forceLoginData = jwt.sign(
+//         { device: device, email: email, password: password },
+//         process.env.JWT_SECRET,
+//         { expiresIn: "1h" }
+//       );
+//       return res.status(200).json({
+//         success: false,
+//         message: "Already logged in on another device",
+//         alreadyLoggedIn: true,
+//         currentDevice: user.device,
+//         forceLoginData,
+//       });
+//     }
+//   } catch (error) {
+//     console.error("error", error);
+//     res
+//       .status(500)
+//       .json({ success: false, message: "Login failed", error: error.message });
+//   }
+// };
 
 exports.forceLogin = async (req, res) => {
   try {
@@ -3227,5 +3449,52 @@ exports.getMeetingHosts = async (req, res) => {
   } catch (error) {
     console.error("Get Meeting Hosts Error:", error);
     return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+
+
+
+
+exports.updateFcmToken = async (req, res) => {
+  const { fcmToken, userId, device, platform } = req.body;
+
+  // Validate input
+  if (!fcmToken) {
+    return res.status(400).json({ success: false, message: "FCM token is required" });
+  }
+
+  if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+    return res.status(400).json({ success: false, message: "Valid userId is required" });
+  }
+
+  try {
+    const user = await User.findById(userId);
+    if (!user) {
+      console.warn("FCM Update: User not found", userId);
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    // Log for debugging
+    console.log("Updating FCM token for user:", user.email);
+    console.log("New FCM token:", fcmToken.substring(0, 20) + "...");
+
+    // This is the critical call
+    await saveFcmTokenIfPresent(user, fcmToken, device, platform);
+
+    // Confirm it was saved
+    const updatedUser = await User.findById(userId, "fcmTokens");
+    console.log("FCM tokens after update:", updatedUser.fcmTokens.map(t => t.token));
+
+    return res.status(200).json({
+      success: true,
+      message: "FCM token registered",
+    });
+  } catch (error) {
+    console.error("FCM Update Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update FCM token",
+    });
   }
 };
