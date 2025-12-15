@@ -216,6 +216,16 @@ const saveFcmTokenIfPresent = async (user, fcmToken, device, platform) => {
 
 
 
+/*************  ✨ Windsurf Command ⭐  *************/
+/**
+ * @function login
+ * @description Logs in a user. If the user is already logged in on another device, it will return a forceLoginData which can be used to login the user on another device.
+ * @param {Object} req.body - The request body containing the email, password, device and fcmToken.
+ * @param {Object} res - The response object.
+ * @returns {Object} - A JSON response containing a success status, a message, and an accessToken, refreshToken, and expiresIn if the login is successful.
+ * @throws {Object} - A JSON response containing a success status, a message, and an error if the login fails.
+ */
+/*******  8048b15e-3d56-4bba-8d42-b4c8e17dc0cc  *******/
 exports.login = async (req, res) => {
   const { email, password, device, fcmToken, platform } = req.body;
   const Email = email?.toLowerCase();
