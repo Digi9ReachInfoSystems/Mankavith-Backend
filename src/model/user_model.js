@@ -13,6 +13,15 @@ const userSchema = new mongoose.Schema({
   college_name: { type: String },
   date_of_birth: { type: Date },
 
+  notifications: [
+    {
+      title: { type: String },
+      body: { type: String },
+      data: { type: Object },
+      isRead: { type: Boolean, default: false },
+      createdAt: { type: Date, default: Date.now }
+    }
+  ],
   subscription: [
     {
       payment_id: {
@@ -153,6 +162,16 @@ const userSchema = new mongoose.Schema({
       readOnly: { type: Boolean, default: false },
     },
   },
+  // inside your userSchema definition (add these fields)
+fcmTokens: [
+  {
+    token: { type: String },          // the FCM token string
+    deviceId: { type: String, default: null }, // optional device identifier
+    platform: { type: String, enum: ["web", "android", "ios", "unknown"], default: "unknown" },
+    createdAt: { type: Date, default: Date.now }
+  }
+],
+
 });
 
 // Create and export the User model

@@ -65,6 +65,7 @@ router.post("/check/token", userController.changePassword);
 router.post("/send/paperDownloadMail", userController.sendPaperDownloadMail);
 router.delete("/bulkdelete/subadmin", userController.bulkDeleteSubAdmins);
 router.get("/get/admins/meetingHosts", userController.getMeetingHosts);
-module.exports = router;
+
+router.post("/update/fcmToken", authenticateJWT,allowedRoles(["admin", "user"]), userController.updateFcmToken);
 
 module.exports = router;

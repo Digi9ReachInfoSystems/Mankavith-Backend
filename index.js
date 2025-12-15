@@ -115,6 +115,7 @@ const cloudfareR2Routes = require("./src/routes/cloudfarer2Routes");
 const { sendAdminPaperDownloadMail } = require("./src/middleware/mailService");
 const whyOurCourseRoutes = require("./src/routes/whyOurCourseRoutes");
 const courseInfoRoutes = require("./src/routes/courseInfoRoutes");
+const fcmRoutes = require("./src/routes/fcmRoutes");
 
 app.use("/user", userRoutes);
 app.use("/api/v1/course", courseRoutes);
@@ -160,7 +161,7 @@ app.use("/job", jobRoutes);
 app.use("/cloudfareR2", cloudfareR2Routes);
 app.use("/whyOurCourse", whyOurCourseRoutes);
 app.use("/courseInfo", courseInfoRoutes);
-
+app.use("/fcm", fcmRoutes);
 // app.post("/api/send/previousYearQuestionRequest", async (req, res) => {
 //   try {
 //     const { email, name,phone } = req.body;

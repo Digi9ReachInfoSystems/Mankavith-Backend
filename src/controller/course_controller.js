@@ -11,7 +11,7 @@ const Payment = require("../model/paymentModel");
 const Certificate = require("../model/certificatesModel");
 const { generateCertificate } = require("../utils/certificateGenerationService");
 // Create a new course (updated for category reference)
-
+const admin = require("../utils/firebaseAdmin");
 async function normalizeCourseOrder() {
   const courses = await Course.find().sort({ course_order: 1 });
   for (let i = 0; i < courses.length; i++) {
@@ -23,34 +23,121 @@ async function normalizeCourseOrder() {
   }
 }
 
+const { sendNotificationToUsers } = require("../utils/notificationService");
+
+// exports.createCourse = async (req, res) => {
+//   try {
+//     let courseData = req.body;
+//     // Validate category if provided
+//     if (courseData.category.length > 0) {
+
+//       courseData.category = await Promise.all(courseData.category.map(async (cat) => {
+//         const categoryExists = await Category.findById(cat);
+//         if (!categoryExists) {
+//           return null;
+//         }
+//         return cat;
+//       }));
+//       courseData.category = courseData.category.filter(cat => cat !== null);
+
+//       // const categoryExists = await Category.findById(courseData.category);
+//       // if (!categoryExists) {
+//       //   return res.status(400).json({
+//       //     success: false,
+//       //     message: "Category not found",
+//       //   });
+//       // }
+//     }
+
+//     // Check if course with this name already exists
+//     const existingCourse = await Course.findOne({
+//       courseName: courseData.courseName,
+//     });
+//     if (existingCourse) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Course with this name already exists.",
+//       });
+//     }
+
+//     // ✅ Reorder other courses if same order number already exists
+//     if (courseData.course_order != null) {
+//       await Course.updateMany(
+//         { course_order: { $gte: courseData.course_order } },
+//         { $inc: { course_order: 1 } }
+//       );
+//     } else {
+//       // if no order given, place it at the end
+//       const maxOrder = await Course.countDocuments();
+//       courseData.course_order = maxOrder + 1;
+//     }
+//     const newCourse = new Course({
+//       ...courseData,
+//       category: courseData.category || null, // Default to null if not provided
+//     });
+
+
+//     const savedCourse = await newCourse.save();
+//     await normalizeCourseOrder();
+
+//     if (courseData.subjects.length > 0) {
+//       for (let i = 0; i < courseData.subjects.length; i++) {
+//         const subject = await Subject.findById(courseData.subjects[i]);
+//         if (subject) {
+//           if (subject.courses.includes(savedCourse._id)) {
+//             continue;
+//           }
+//           subject.courses.push(savedCourse._id);
+//           await subject.save();
+//         }
+
+//       }
+//     }
+
+//     return res.status(201).json({
+//       success: true,
+//       message: "Course created successfully",
+//       data: savedCourse,
+//     });
+//   } catch (error) {
+//     console.error("Error creating course:", error.message);
+//     return res.status(500).json({
+//       success: false,
+//       message: "Server error. Could not create course.",
+//       error: error.message,
+//     });
+//   }
+// };
+
+
+
+
+
 exports.createCourse = async (req, res) => {
   try {
     let courseData = req.body;
-    // Validate category if provided
-    if (courseData.category.length > 0) {
 
-      courseData.category = await Promise.all(courseData.category.map(async (cat) => {
-        const categoryExists = await Category.findById(cat);
-        if (!categoryExists) {
-          return null;
-        }
-        return cat;
-      }));
-      courseData.category = courseData.category.filter(cat => cat !== null);
-
-      // const categoryExists = await Category.findById(courseData.category);
-      // if (!categoryExists) {
-      //   return res.status(400).json({
-      //     success: false,
-      //     message: "Category not found",
-      //   });
-      // }
+    // ─────────────────────────────────────────
+    // Validate categories
+    // ─────────────────────────────────────────
+    if (Array.isArray(courseData.category) && courseData.category.length > 0) {
+      courseData.category = (
+        await Promise.all(
+          courseData.category.map(async (cat) => {
+            const exists = await Category.findById(cat);
+            return exists ? cat : null;
+          })
+        )
+      ).filter(Boolean);
     }
 
-    // Check if course with this name already exists
+    // ─────────────────────────────────────────
+    // Check duplicate course name
+    // ─────────────────────────────────────────
     const existingCourse = await Course.findOne({
       courseName: courseData.courseName,
     });
+
     if (existingCourse) {
       return res.status(400).json({
         success: false,
@@ -58,47 +145,78 @@ exports.createCourse = async (req, res) => {
       });
     }
 
-    // ✅ Reorder other courses if same order number already exists
+    // ─────────────────────────────────────────
+    // Handle course order
+    // ─────────────────────────────────────────
     if (courseData.course_order != null) {
       await Course.updateMany(
         { course_order: { $gte: courseData.course_order } },
         { $inc: { course_order: 1 } }
       );
     } else {
-      // if no order given, place it at the end
       const maxOrder = await Course.countDocuments();
       courseData.course_order = maxOrder + 1;
     }
+
+    // ─────────────────────────────────────────
+    // Create course
+    // ─────────────────────────────────────────
     const newCourse = new Course({
       ...courseData,
-      category: courseData.category || null, // Default to null if not provided
+      category: courseData.category || [],
     });
-
 
     const savedCourse = await newCourse.save();
     await normalizeCourseOrder();
 
-    if (courseData.subjects.length > 0) {
-      for (let i = 0; i < courseData.subjects.length; i++) {
-        const subject = await Subject.findById(courseData.subjects[i]);
-        if (subject) {
-          if (subject.courses.includes(savedCourse._id)) {
-            continue;
-          }
+    // ─────────────────────────────────────────
+    // Attach subjects
+    // ─────────────────────────────────────────
+    if (Array.isArray(courseData.subjects)) {
+      for (const subjectId of courseData.subjects) {
+        const subject = await Subject.findById(subjectId);
+        if (subject && !subject.courses.includes(savedCourse._id)) {
           subject.courses.push(savedCourse._id);
           await subject.save();
         }
-
       }
     }
 
+    // ─────────────────────────────────────────
+    // 🔔 NOTIFICATION (ASYNC – FIRE & FORGET)
+    // ─────────────────────────────────────────
+ (async () => {
+      try {
+        const title = "New Course Published";
+        const body = `${savedCourse.courseDisplayName || savedCourse.courseName} is now available.`;
+        const data = {
+          type: "NEW_COURSE",
+          courseId: savedCourse._id.toString(),
+          courseName: savedCourse.courseDisplayName || savedCourse.courseName,
+        };
+
+        // Get all active user IDs
+        const users = await User.find({ isActive: true }, { _id: 1 });
+        const userIds = users.map(u => u._id);
+
+        if (userIds.length > 0) {
+          await sendNotificationToUsers({ title, body, data, userIds });
+        }
+      } catch (err) {
+        console.error("Course notification error:", err.message);
+      }
+    })();
+
+    // ─────────────────────────────────────────
+    // RESPONSE
+    // ─────────────────────────────────────────
     return res.status(201).json({
       success: true,
       message: "Course created successfully",
       data: savedCourse,
     });
   } catch (error) {
-    console.error("Error creating course:", error.message);
+    console.error("Create course error:", error.message);
     return res.status(500).json({
       success: false,
       message: "Server error. Could not create course.",
@@ -107,7 +225,10 @@ exports.createCourse = async (req, res) => {
   }
 };
 
-// Search courses by name and filter by category (updated)
+
+
+
+
 exports.searchCourses = async (req, res) => {
   try {
     const { name, category } = req.query;
