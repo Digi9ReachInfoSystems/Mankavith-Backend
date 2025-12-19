@@ -3495,7 +3495,7 @@ exports.updateFcmToken = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "FCM token registered",
+      message: "FCM token updated",
     });
   } catch (error) {
     console.error("FCM Update Error:", error);
