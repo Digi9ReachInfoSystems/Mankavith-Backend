@@ -3463,9 +3463,6 @@ exports.getMeetingHosts = async (req, res) => {
 };
 
 
-
-
-
 exports.updateFcmToken = async (req, res) => {
   const { fcmToken, userId, device, platform } = req.body;
 
