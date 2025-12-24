@@ -10,6 +10,10 @@ const UserRankings = require("../model/userRankingModel");
 const Subject = require("../model/subject_model");
 const moment = require("moment-timezone");
 const Certificate = require("../model/certificatesModel");
+
+
+const { sendNotificationToUsers } = require("../utils/notificationService");
+
 exports.removeExpiredSubscriptions = async (req, res) => {
   console.log("Running removeExpiredSubscriptions job");
 
@@ -223,3 +227,69 @@ exports.removeOldNotifications = async (req, res) => {
   }
 
 }
+
+
+const NOTIFICATION_WINDOWS = [
+  { days: 7, type: "COURSE_EXPIRY_7D", label: "in 7 days" },
+  { days: 2, type: "COURSE_EXPIRY_2D", label: "in 2 days" },
+  { days: 0, type: "COURSE_EXPIRED", label: "today" }
+];
+exports.runCourseExpiryNotification = async () => {
+   console.log("🔔 Running course expiry notification job");
+
+  const now = moment.tz("Asia/Kolkata");
+
+  const users = await User.find({
+    subscription: { $exists: true, $ne: [] },
+    isActive: true
+  });
+
+  for (const user of users) {
+    for (const sub of user.subscription) {
+      for (const window of NOTIFICATION_WINDOWS) {
+        const start = now.clone().add(window.days, "days").startOf("day");
+        const end = now.clone().add(window.days, "days").endOf("day");
+
+        if (!moment(sub.expires_at).isBetween(start, end, null, "[]")) continue;
+
+        const course = await Course.findById(sub.course_enrolled)
+          .select("courseName courseDisplayName");
+
+        if (!course) continue;
+
+        const alreadySent = user.notifications?.some(
+          n =>
+            n.data?.type === window.type &&
+            n.data?.courseId === course._id.toString()
+        );
+
+        if (alreadySent) continue;
+
+        const courseName = course.courseDisplayName || course.courseName;
+
+        let body;
+        if (window.days === 0) {
+          body = `${courseName} has expired. Renew to regain access.`;
+        } else {
+          body = `${courseName} will expire ${window.label}. Renew to continue learning.`;
+        }
+
+        await sendNotificationToUsers({
+          title: "Course Access Update",
+          body,
+          data: {
+            type: window.type,
+            courseId: course._id.toString(),
+            courseName,
+            expiresAt: sub.expires_at.toISOString()
+          },
+          userIds: [user._id]
+        });
+
+        console.log(
+          `✅ ${window.type} sent to ${user._id} for ${courseName}`
+        );
+      }
+    }
+  }
+};
