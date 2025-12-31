@@ -103,7 +103,16 @@ exports.sendCourseCreatedNotificationToUsers = async (course) => {
 
     }
     // collect api tokens
-    let tokens = users.flatMap(u => u.fcmToken);
+    const tokens = users
+      .map(user => {
+        const tokensArray = user.fcmTokens;
+        if (!tokensArray || tokensArray.length === 0) return null;
+
+        // ✅ last inserted token
+        return tokensArray[tokensArray.length - 1].token;
+      })
+      .filter(Boolean); // remove null/undefined
+
     //remove null tokens
     tokens = tokens.filter(t => t);
 
