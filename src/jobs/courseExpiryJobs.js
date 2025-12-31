@@ -8,6 +8,10 @@ const UserRankings = require("../model/userRankingModel");
 const Subject = require("../model/subject_model");
 const moment = require("moment-timezone");
 const Certificate = require("../model/certificatesModel");  
+
+
+
+
 // Run job every night at 12:00 AM
 // exports.removeExpiredSubscriptions =
 //    cron.schedule("0 0 * * *", async () => {
@@ -287,3 +291,4 @@ exports.removeExpiredSubscriptions = cron.schedule("* * * * *", async () => {
     }
   }
   );
+
