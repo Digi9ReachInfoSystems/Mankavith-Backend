@@ -25,6 +25,7 @@ const cloudfareR2Controller = require("./src/controller/cloudfarer2Controller");
 const { Vimeo } = require('@vimeo/vimeo');
 const axios = require('axios');
 app.use(cors());
+const admin = require("./src/utils/firebaseAdmin");
 // Start cron
 removeExpiredSubscriptions.start();
 removeOldMeetings.start();

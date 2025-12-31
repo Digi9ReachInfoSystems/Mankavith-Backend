@@ -23,7 +23,7 @@ async function normalizeCourseOrder() {
   }
 }
 
-const { sendNotificationToUsers } = require("../utils/notificationService");
+const { sendNotificationToUsers, sendCourseCreatedNotificationToUsers } = require("../utils/notificationService");
 
 // exports.createCourse = async (req, res) => {
 //   try {
@@ -185,27 +185,37 @@ exports.createCourse = async (req, res) => {
     // ─────────────────────────────────────────
     // 🔔 NOTIFICATION (ASYNC – FIRE & FORGET)
     // ─────────────────────────────────────────
- (async () => {
+//  (async () => {
+//       try {
+//         const title = "New Course Published";
+//         const body = `${savedCourse.courseDisplayName || savedCourse.courseName} is now available.`;
+//         const data = {
+//           type: "NEW_COURSE",
+//           courseId: savedCourse._id.toString(),
+//           courseName: savedCourse.courseDisplayName || savedCourse.courseName,
+//         };
+
+//         // Get all active user IDs
+//         const users = await User.find({ isActive: true }, { _id: 1 });
+//         const userIds = users.map(u => u._id);
+
+//         if (userIds.length > 0) {
+//           await sendNotificationToUsers({ title, body, data, userIds });
+//         }
+//       } catch (err) {
+//         console.error("Course notification error:", err.message);
+//       }
+//     })();
+
+
       try {
-        const title = "New Course Published";
-        const body = `${savedCourse.courseDisplayName || savedCourse.courseName} is now available.`;
-        const data = {
-          type: "NEW_COURSE",
-          courseId: savedCourse._id.toString(),
-          courseName: savedCourse.courseDisplayName || savedCourse.courseName,
-        };
 
-        // Get all active user IDs
-        const users = await User.find({ isActive: true }, { _id: 1 });
-        const userIds = users.map(u => u._id);
-
-        if (userIds.length > 0) {
-          await sendNotificationToUsers({ title, body, data, userIds });
-        }
+          await sendCourseCreatedNotificationToUsers(savedCourse);
+        
       } catch (err) {
         console.error("Course notification error:", err.message);
       }
-    })();
+
 
     // ─────────────────────────────────────────
     // RESPONSE

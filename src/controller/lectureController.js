@@ -9,6 +9,11 @@ const {
   GetObjectCommand,
   ListObjectsV2Command,
 } = require("@aws-sdk/client-s3");
+
+// const { uploadToCloudflareStream } = require("../utils/cloudflareStream");
+// const path = require("path");
+// const fs = require("fs-extra");
+// const { convertToHls } = require("../utils/convertToHls");
 const BUCKET_NAME = process.env.R2_BUCKET_NAME;
 const s3 = new S3Client({
   region: "auto",
@@ -86,6 +91,155 @@ exports.createLecture = async (req, res) => {
     res.status(500).json({ success: false, message: "Internal server error", error: error.message });
   }
 };
+
+
+
+// exports.createLecture = async (req, res) => {
+//   try {
+//     const { lectureName, description, duration, subjectRef } = req.body;
+//     const file = req.file;
+
+//     if (!file) {
+//       return res.status(400).json({ success: false, message: "Video file required" });
+//     }
+
+//     if (!lectureName) {
+//       return res.status(400).json({ success: false, message: "lectureName required" });
+//     }
+
+//     // 🔥 Upload MP4 → Cloudflare Stream
+//     const stream = await uploadToCloudflareStream(
+//       file.buffer,
+//       file.originalname
+//     );
+
+//     const subjects = subjectRef ? subjectRef.split(",") : [];
+
+//     const lecture = new Lecture({
+//       lectureName,
+//       description,
+//       duration,
+//       subjectRef: subjects,
+//       videoUrl: stream.hlsUrl,          // 👈 HLS URL ONLY
+//       streamId: stream.streamId,
+//       videoType: "HLS",
+//       thumbnail: stream.thumbnail,
+//     });
+
+//     const savedLecture = await lecture.save();
+
+//     if (subjects.length) {
+//       await Subject.updateMany(
+//         { _id: { $in: subjects } },
+//         { $push: { lectures: savedLecture._id } }
+//       );
+//     }
+
+//     res.status(201).json({ success: true, data: savedLecture });
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ success: false, message: err.message });
+//   }
+// };
+
+
+// exports.createLecture = async (req, res) => {
+//   try {
+//     const { lectureName, description, duration, subjectRef, folder } = req.body;
+//     const file = req.file;
+
+//     if (!lectureName) {
+//       return res.status(400).json({ success: false, message: "lectureName is required" });
+//     }
+
+//     if (!file) {
+//       return res.status(400).json({ success: false, message: "Video file is required" });
+//     }
+
+//     const timestamp = Date.now();
+
+//     /* -----------------------------
+//        1. Save MP4 temporarily
+//     ------------------------------ */
+//     const tmpDir = path.join(__dirname, "../tmp");
+//     await fs.ensureDir(tmpDir);
+
+//     const mp4Path = path.join(tmpDir, `${timestamp}-${file.originalname}`);
+//     await fs.writeFile(mp4Path, file.buffer);
+
+//     /* -----------------------------
+//        2. Convert MP4 → HLS
+//     ------------------------------ */
+//    const { outputDir: hlsOutputDir, playlistPath } = await convertToHls(mp4Path);
+
+
+//     /* -----------------------------
+//        3. Upload HLS files to S3
+//     ------------------------------ */
+//     const hlsFiles = await fs.readdir(hlsOutputDir);
+
+//     for (const fileName of hlsFiles) {
+//       const filePath = path.join(hlsOutputDir, fileName);
+//       const fileBuffer = await fs.readFile(filePath);
+
+//       const uploadParams = {
+//         Bucket: BUCKET_NAME,
+//         Key: `${folder}/${timestamp}/${fileName}`,
+//         Body: fileBuffer,
+//         ContentType: fileName.endsWith(".m3u8")
+//           ? "application/vnd.apple.mpegurl"
+//           : "video/mp2t",
+//       };
+
+//       await s3.send(new PutObjectCommand(uploadParams));
+//     }
+
+//     /* -----------------------------
+//        4. Cleanup temp files
+//     ------------------------------ */
+//     await fs.remove(mp4Path);
+//     await fs.remove(hlsOutputDir);
+
+//     /* -----------------------------
+//        5. Save lecture in DB
+//     ------------------------------ */
+//     const subjects = subjectRef ? subjectRef.split(",") : [];
+
+//     const lecture = new Lecture({
+//       lectureName,
+//       description,
+//       duration,
+//       videoUrl: `${folder}/${timestamp}/index.m3u8`, // ✅ STORE HLS
+//       subjectRef: subjects,
+//       folder,
+//     });
+
+//     const savedLecture = await lecture.save();
+
+//     if (subjects.length > 0) {
+//       for (const subjectId of subjects) {
+//         const subject = await Subject.findById(subjectId);
+//         if (subject) {
+//           subject.lectures.push(savedLecture._id);
+//           await subject.save();
+//         }
+//       }
+//     }
+
+//     return res.status(201).json({ success: true, data: savedLecture });
+//   } catch (error) {
+//     console.error("Error creating lecture:", error);
+//     return res.status(500).json({
+//       success: false,
+//       message: "Internal server error",
+//       error: error.message,
+//     });
+//   }
+// };
+
+
+
+
 
 // @desc    Get all Lectures
 // @route   GET /lecture
