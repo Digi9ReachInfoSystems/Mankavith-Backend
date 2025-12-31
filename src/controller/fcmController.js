@@ -33,9 +33,12 @@ exports.registerToken = async (req, res) => {
     //     fcmToken: token, // for backward compatibility
     //   }
     // );
-    await User.updateOne(
+    const updatedUser = await User.updateOne(
       { _id: userId },
-      {  fcmToken: token, // for backward compatibility
+      {
+        $set: {
+          fcmToken: token
+        }
       }
     );
 
@@ -43,6 +46,7 @@ exports.registerToken = async (req, res) => {
       success: true,
       message: "Token registered (no auth)",
       userId,
+      updatedUser
     });
   } catch (err) {
     console.error("Register token error:", err);
@@ -64,7 +68,8 @@ exports.unregisterToken = async (req, res) => {
 
     await User.updateOne(
       { _id: userId },
-      { $pull: { fcmTokens: { token } },
+      {
+        $pull: { fcmTokens: { token } },
         fcmToken: null
       }
     );
