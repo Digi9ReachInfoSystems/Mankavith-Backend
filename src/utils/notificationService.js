@@ -103,17 +103,26 @@ exports.sendCourseCreatedNotificationToUsers = async (course) => {
 
     }
     // collect api tokens
-    const tokens = users
+    let tokens = users
       .map(user => {
-        const tokensArray = user.fcmTokens;
-        if (!tokensArray || tokensArray.length === 0) return null;
-
-        // ✅ last inserted token
-        return tokensArray[tokensArray.length - 1].token;
+        return user.fcmToken;
       })
       .filter(Boolean); // remove null/undefined
-
+    console.log(`Collected ${tokens.length} tokens for course creation notification.`);
     //remove null tokens
+    tokens = tokens.filter(t => t);
+
+    // let tokens = users
+    //   .map(user => {
+    //     const tokensArray = user.fcmTokens;
+    //     if (!tokensArray || tokensArray.length === 0) return null;
+
+    //     // ✅ last inserted token
+    //     return tokensArray[tokensArray.length - 1].token;
+    //   })
+    //   .filter(Boolean); // remove null/undefined
+    // console.log(`Collected ${tokens.length} tokens for course creation notification.`);
+    // //remove null tokens
     tokens = tokens.filter(t => t);
 
     const response = await admin.messaging().sendEachForMulticast({
