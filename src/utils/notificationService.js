@@ -1,7 +1,10 @@
 // services/notificationService.js
 const User = require("../model/user_model");
 const admin = require("../utils/firebaseAdmin");
-
+const UserNotification = require('../model/userNotificationModel');
+const mongoose = require('mongoose');
+const moment = require("moment-timezone");
+const Notification = require('../model/notificationModel');
 exports.sendNotificationToUsers = async ({
   title,
   body,
@@ -66,5 +69,53 @@ exports.sendNotificationToUsers = async ({
     }
   } catch (err) {
     console.error("Notification error:", err);
+  }
+};
+
+
+exports.sendCourseCreatedNotificationToUsers = async (course) => {
+  try {
+    // console.log("Sending course creation notifications...", course.courseDisplayName);
+    const users = await User.find({ role: "user", fcmToken: { $exists: true }, isBlocked: false });
+
+    if (!users.length) return;
+
+    const title = "New Course Coming Soon!";
+    const body = `Check out our upcoming course: ${course.courseDisplayName}`;
+    // 🔔 Save in-app notification    s
+    const now = moment().tz("Asia/Kolkata").toDate();
+    const notification = new Notification({
+      title, description: body, time: now,
+      sent: true,
+      // image,
+      notificationType: "In-App",
+    });
+    for (const user of users) {
+      const userNotification = new UserNotification({
+        title,
+        description: body,
+        time: now,
+        // image,
+        user_ref: user._id,
+        read: false
+      });
+      await userNotification.save();
+
+    }
+    // collect api tokens
+    let tokens = users.flatMap(u => u.fcmToken);
+    //remove null tokens
+    tokens = tokens.filter(t => t);
+
+    const response = await admin.messaging().sendEachForMulticast({
+      tokens,
+      notification: { title, body },
+      data: {
+        score: '850',
+        time: '2:45'
+      },
+    });
+  } catch (err) {
+    console.error("Course creation notification error:", err);
   }
 };

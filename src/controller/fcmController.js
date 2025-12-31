@@ -30,6 +30,7 @@ exports.registerToken = async (req, res) => {
             createdAt: new Date(),
           },
         },
+        fcmToken: token, // for backward compatibility
       }
     );
 
@@ -58,7 +59,9 @@ exports.unregisterToken = async (req, res) => {
 
     await User.updateOne(
       { _id: userId },
-      { $pull: { fcmTokens: { token } } }
+      { $pull: { fcmTokens: { token } },
+        fcmToken: null
+      }
     );
 
     return res.json({

@@ -162,6 +162,10 @@ const userSchema = new mongoose.Schema({
       readOnly: { type: Boolean, default: false },
     },
   },
+  fcmToken: {
+    type: String,
+    default: null
+  },
   // inside your userSchema definition (add these fields)
 fcmTokens: [
   {
