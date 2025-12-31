@@ -19,18 +19,23 @@ exports.registerToken = async (req, res) => {
       });
     }
 
+    // await User.updateOne(
+    //   { _id: userId, "fcmTokens.token": { $ne: token } },
+    //   {
+    //     $push: {
+    //       fcmTokens: {
+    //         token,
+    //         deviceId: deviceId || null,
+    //         platform: platform || "unknown",
+    //         createdAt: new Date(),
+    //       },
+    //     },
+    //     fcmToken: token, // for backward compatibility
+    //   }
+    // );
     await User.updateOne(
-      { _id: userId, "fcmTokens.token": { $ne: token } },
-      {
-        $push: {
-          fcmTokens: {
-            token,
-            deviceId: deviceId || null,
-            platform: platform || "unknown",
-            createdAt: new Date(),
-          },
-        },
-        fcmToken: token, // for backward compatibility
+      { _id: userId },
+      {  fcmToken: token, // for backward compatibility
       }
     );
 
