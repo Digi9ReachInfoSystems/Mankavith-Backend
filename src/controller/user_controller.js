@@ -3481,17 +3481,25 @@ exports.updateFcmToken = async (req, res) => {
       console.warn("FCM Update: User not found", userId);
       return res.status(404).json({ success: false, message: "User not found" });
     }
+    const updatedUser = await User.updateOne(
+          { _id: userId },
+          {
+            $set: {
+              fcmToken: fcmToken
+            }
+          }
+        );
 
     // Log for debugging
-    console.log("Updating FCM token for user:", user.email);
-    console.log("New FCM token:", fcmToken.substring(0, 20) + "...");
+    // console.log("Updating FCM token for user:", user.email);
+    // console.log("New FCM token:", fcmToken.substring(0, 20) + "...");
 
     // This is the critical call
-    await saveFcmTokenIfPresent(user, fcmToken, device, platform);
+    // await saveFcmTokenIfPresent(user, fcmToken, device, platform);
 
-    // Confirm it was saved
-    const updatedUser = await User.findById(userId, "fcmTokens");
-    console.log("FCM tokens after update:", updatedUser.fcmTokens.map(t => t.token));
+    // // Confirm it was saved
+    // const updatedUser = await User.findById(userId, "fcmTokens");
+    // console.log("FCM tokens after update:", updatedUser.fcmTokens.map(t => t.token));
 
     return res.status(200).json({
       success: true,
