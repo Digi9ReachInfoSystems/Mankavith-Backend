@@ -354,9 +354,12 @@ exports.courseExpiryReminderJob = async (req, res) => {
 
             await user.save();
             console.log(`✅ Expiry alert sent to user ${user._id}`);
+            
         }
+        res.json({ success: true });
     } catch (err) {
         console.error("❌ Expiry notification cron error:", err);
+        res.status(500).json({ success: false, error: err.message });
     }
 
 }
