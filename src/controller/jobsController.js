@@ -10,7 +10,7 @@ const UserRankings = require("../model/userRankingModel");
 const Subject = require("../model/subject_model");
 const moment = require("moment-timezone");
 const Certificate = require("../model/certificatesModel");
-
+const admin = require("../utils/firebaseAdmin");
 
 const { sendNotificationToUsers } = require("../utils/notificationService");
 
