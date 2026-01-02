@@ -20,6 +20,7 @@ const webhookController = require("./src/controller/razor_pay_webhook");
 const { removeExpiredSubscriptions } = require("./src/jobs/courseExpiryJobs");
 const { removeOldMeetings } = require("./src/jobs/oldMeetingJobs");
 const {sendScheduledNotifications,removeOlderNotifications} = require("./src/jobs/notificationJobs");
+const { sendSubscriptionExpiryAlerts } = require("./src/jobs/courExpiryReminder");
 const meetingController = require("./src/controller/meetingController");
 const cloudfareR2Controller = require("./src/controller/cloudfarer2Controller");
 const { Vimeo } = require('@vimeo/vimeo');
@@ -31,7 +32,7 @@ removeExpiredSubscriptions.start();
 removeOldMeetings.start();
 sendScheduledNotifications.start();
 removeOlderNotifications.start();
-
+sendSubscriptionExpiryAlerts.start();
 app.post(
   "/api/webhooks/razorpay-webhook",
   express.raw({ type: "application/json" }),
@@ -118,7 +119,8 @@ const whyOurCourseRoutes = require("./src/routes/whyOurCourseRoutes");
 const courseInfoRoutes = require("./src/routes/courseInfoRoutes");
 const fcmRoutes = require("./src/routes/fcmRoutes");
 
-const testing = require("./src/test/course-expiry")
+const testing = require("./src/test/course-expiry");
+
 
 app.use("/user", userRoutes);
 app.use("/api/v1/course", courseRoutes);

@@ -49,6 +49,10 @@ const userSchema = new mongoose.Schema({
         type: Date,
         default: Date.now,
       },
+      expiry_notification_sent: {
+        type: Boolean,
+        default: false,
+      },
     },
   ],
   photo_url: {
