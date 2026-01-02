@@ -192,6 +192,7 @@ exports.handleWebhook = async (req, res) => {
           payment_Status: "success",
           course_enrolled: payment.courseRef,
           is_subscription_active: true,
+          expiry_notification_sent: false,
           expires_at: new Date(new Date().setDate(new Date().getDate() + courseData.duration)),
           created_at: new Date(),
         }
