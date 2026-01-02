@@ -534,7 +534,7 @@ exports.saveAnswer = async (req, res) => {
   try {
     const { attemptId, questionId, answer, user_id, userAnswerIndex, status } =
       req.body;
-
+ console.log("saveAnswer called with:", req.body);
     const attempt = await UserAttempt.findOne({
       _id: attemptId,
       userId: user_id,

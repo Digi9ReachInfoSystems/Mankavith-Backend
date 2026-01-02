@@ -76,7 +76,7 @@ exports.sendNotificationToUsers = async ({
 exports.sendCourseCreatedNotificationToUsers = async (course) => {
   try {
     // console.log("Sending course creation notifications...", course.courseDisplayName);
-    const users = await User.find({ role: "user", fcmToken: { $exists: true }, isBlocked: false });
+    const users = await User.find({ role: "user",  isBlocked: false });
 
     if (!users.length) return;
 
@@ -100,10 +100,19 @@ exports.sendCourseCreatedNotificationToUsers = async (course) => {
         read: false
       });
       await userNotification.save();
-
+    }
+    const fcmTokenUsers= await User.find({
+      role: "user",
+      isBlocked: false,
+      // fcmToken: { $exists: true, $ne: null }
+      fcmToken: { $exists: true },
+    });
+    if(!fcmTokenUsers.length){
+      console.log("No users with FCM tokens found for course creation notification.");
+      return;
     }
     // collect api tokens
-    let tokens = users
+    let tokens = fcmTokenUsers
       .map(user => {
         return user.fcmToken;
       })
