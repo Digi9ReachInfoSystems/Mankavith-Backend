@@ -25,7 +25,7 @@ exports.sendSubscriptionExpiryAlerts = cron.schedule("* * * * *", async () => {
 
         for (const user of users) {
             const tokens = user.fcmToken ? [user.fcmToken] : [];
-            if (!tokens.length) continue;
+            // if (!tokens.length) continue;
 
             for (const sub of user.subscription) {
                 if (
@@ -45,19 +45,22 @@ exports.sendSubscriptionExpiryAlerts = cron.schedule("* * * * *", async () => {
                         read: false,
                         time: new Date()
                     });
-                    try {
-                        const response = await admin.messaging().sendEachForMulticast({
-                            tokens,
-                            notification: { title, body },
-                            data: {
-                                type: "COURSE_EXPIRY",
-                                courseId: sub.course_enrolled?._id?.toString() || ""
-                            }
-                        });
-                        // console.log(`Sent FCM to user ${user._id}:`, response);
-                    } catch (err) { 
-                        console.error(`Error sending FCM to user ${user._id}:`, err);
+                    if (tokens.length>0) {
+                        try {
+                            const response = await admin.messaging().sendEachForMulticast({
+                                tokens,
+                                notification: { title, body },
+                                data: {
+                                    type: "COURSE_EXPIRY",
+                                    courseId: sub.course_enrolled?._id?.toString() || ""
+                                }
+                            });
+                            // console.log(`Sent FCM to user ${user._id}:`, response);
+                        } catch (err) {
+                            console.error(`Error sending FCM to user ${user._id}:`, err);
+                        }
                     }
+
 
 
                     sub.expiry_notification_sent = true;
